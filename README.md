@@ -110,7 +110,7 @@ Your output is a direct answer to the issue laid out here:
 ## Results
 
 See the results for the 3 example cases [here](/5_IPR_Nachwuchstagung/top-3.csv).  
-See the results for all 33 Swiss cases analysed [here](https://choiceoflawdataverse.blob.core.windows.net/cold-case-analysis/case_analysis_results.xlsx).  
+See the results for all 33 Swiss cases analyzed [here](https://choiceoflawdataverse.blob.core.windows.net/cold-case-analysis/case_analysis_results.xlsx).  
 See the full comparison between ground truths and case analyzer outputs [here](/5_IPR_Nachwuchstagung/ground_truths_output_comparison.xlsx).  
 
 ### Selected Cases
