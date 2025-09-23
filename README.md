@@ -3,6 +3,11 @@
 - [Presentation slides (PDF)](/5_IPR_Nachwuchstagung/presentation_slides.pdf)
 - [Handout (PDF)](/5_IPR_Nachwuchstagung/handout.pdf)
 
+## Documentation
+- **[📋 Architecture & Data Flow](docs/ARCHITECTURE.md)** - Comprehensive system documentation with diagrams
+- **[🔄 Workflows & Processes](docs/WORKFLOWS.md)** - Detailed workflow diagrams and data flow patterns
+- **[🤖 Agent Workflow](docs/agent.md)** - LangGraph agent implementation details
+
 ## Overview
 - [What is the Case Analyzer?](#what-is-the-case-analyzer)
 - [How to run the Case Analyzer on your machine](#how-to-run-the-case-analyzer-on-your-machine)
