@@ -9,7 +9,7 @@ from components.input_handler import render_input_phase
 from components.col_processor import render_col_processing
 from components.theme_classifier import render_theme_classification
 from components.analysis_workflow import render_analysis_workflow
-from utils.state_manager import create_initial_analysis_state, get_col_state, update_col_state
+from utils.state_manager import create_initial_analysis_state, get_col_state, update_col_state, set_processing, is_processing
 
 
 def render_initial_input_phase():
@@ -41,8 +41,10 @@ def render_initial_input_phase():
         st.markdown("## Choice of Law Analysis")
         st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
         
-        if st.button("Extract Choice of Law Section", type="primary", key="extract_col_btn"):
+        if st.button("Extract Choice of Law Section", type="primary", key="extract_col_btn", disabled=is_processing()):
             if full_text and case_citation.strip():
+                set_processing(True)
+                with st.spinner("Extracting Choice of Law section..."):
                     # Get final jurisdiction data
                     final_jurisdiction_data = get_final_jurisdiction_data()
                     
@@ -62,7 +64,8 @@ def render_initial_input_phase():
                     
                     # Update session state
                     st.session_state.col_state = state
-                    st.rerun()
+                set_processing(False)
+                st.rerun()
             else:
                 if not full_text:
                     st.warning("Please enter a court decision to analyze.")

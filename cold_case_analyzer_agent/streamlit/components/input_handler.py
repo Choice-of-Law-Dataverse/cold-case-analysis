@@ -4,7 +4,7 @@ Input handling components for the CoLD Case Analyzer.
 """
 import streamlit as st
 from utils.pdf_handler import extract_text_from_pdf
-from utils.state_manager import load_demo_case
+from utils.state_manager import load_demo_case, is_processing
 
 
 def render_case_citation_input():
@@ -23,6 +23,7 @@ def render_case_citation_input():
         key="case_citation",
         placeholder="e.g., Federal Court, 20.12.2005 - BGE 132 III 285",
         label_visibility="collapsed",
+        disabled=is_processing()
     )
 
 
@@ -35,6 +36,7 @@ def render_email_input():
         key="user_email",
         placeholder="name@example.com",
         label_visibility="collapsed",
+        disabled=is_processing()
     )
 
 
@@ -49,7 +51,8 @@ def render_pdf_uploader():
         "Or drag and drop a PDF file here:",
         type=["pdf"],
         key="pdf_upload",
-        help="Upload a PDF to extract the full text automatically"
+        help="Upload a PDF to extract the full text automatically",
+        disabled=is_processing()
     )
     
     if pdf_file is not None:
@@ -80,7 +83,8 @@ def render_text_input():
         "Paste the court decision text here:",
         height=200,
         help="Enter the full text of the court decision to extract the Choice of Law section.",
-        key="full_text_input"
+        key="full_text_input",
+        disabled=is_processing()
     )
 
 
@@ -95,7 +99,7 @@ def render_demo_button(full_text):
         bool: True if demo button was shown and potentially clicked
     """
     if not full_text.strip():
-        if st.button("Use Demo Case", on_click=load_demo_case, key="demo_button"):
+        if st.button("Use Demo Case", on_click=load_demo_case, key="demo_button", disabled=is_processing()):
             return True
     return False
 

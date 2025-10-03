@@ -5,6 +5,7 @@ Choice of Law section processing components.
 import streamlit as st
 from tools.col_extractor import extract_col_section
 from utils.debug_print_state import print_state
+from utils.state_manager import set_processing, is_processing
 
 
 def display_jurisdiction_info(col_state):
@@ -99,9 +100,10 @@ def handle_first_extraction_scoring(col_state):
             value=100,
             step=1,
             help="Provide a score for the quality of the first extraction",
-            key="col_first_score_input"
+            key="col_first_score_input",
+            disabled=is_processing()
         )
-        if st.button("Submit Score", key="submit_col_score"):
+        if st.button("Submit Score", key="submit_col_score", disabled=is_processing()):
             col_state["col_first_score"] = score_input
             col_state["col_first_score_submitted"] = True
             st.rerun()
@@ -139,22 +141,26 @@ def render_feedback_input(col_state):
         "Enter feedback to improve the Choice of Law Section:",
         height=150,
         key="col_feedback",
-        help="Provide feedback to refine the extracted Choice of Law Section."
+        help="Provide feedback to refine the extracted Choice of Law Section.",
+        disabled=is_processing()
     )
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Submit Feedback", key="submit_col_feedback"):
+        if st.button("Submit Feedback", key="submit_col_feedback", disabled=is_processing()):
             if feedback:
-                col_state["col_section_feedback"].append(feedback)
-                result = extract_col_section(col_state)
-                col_state.update(result)
+                set_processing(True)
+                with st.spinner("Refining extraction based on feedback..."):
+                    col_state["col_section_feedback"].append(feedback)
+                    result = extract_col_section(col_state)
+                    col_state.update(result)
+                set_processing(False)
                 st.rerun()
             else:
                 st.warning("Please enter feedback to improve the extraction.")
     
     with col2:
-        if st.button("Proceed to Edit Section", key="proceed_col_edit"):
+        if st.button("Proceed to Edit Section", key="proceed_col_edit", disabled=is_processing()):
             col_state["col_ready_edit"] = True
             st.rerun()
 
@@ -172,25 +178,29 @@ def render_edit_section(col_state):
         value=last_extraction,
         height=200,
         key="col_edit_section",
-        help="Modify the extracted section before proceeding to theme classification"
+        help="Modify the extracted section before proceeding to theme classification",
+        disabled=is_processing()
     )
     
     print_state("\n\n\nCurrent CoLD State\n\n", col_state)
     
-    if st.button("Submit and Classify"):
+    if st.button("Submit and Classify", disabled=is_processing()):
         if edited_extraction:
-            # Save edited extraction and run classification
-            col_state["col_section"].append(edited_extraction)
-            col_state["col_done"] = True
-            col_state["classification"] = []
-            col_state["theme_feedback"] = []
-            col_state["theme_eval_iter"] = 0
-            
-            from tools.themes_classifier import theme_classification_node
-            init_result = theme_classification_node(col_state)
-            col_state.update(init_result)
-            
-            print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+            set_processing(True)
+            with st.spinner("Classifying themes..."):
+                # Save edited extraction and run classification
+                col_state["col_section"].append(edited_extraction)
+                col_state["col_done"] = True
+                col_state["classification"] = []
+                col_state["theme_feedback"] = []
+                col_state["theme_eval_iter"] = 0
+                
+                from tools.themes_classifier import theme_classification_node
+                init_result = theme_classification_node(col_state)
+                col_state.update(init_result)
+                
+                print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+            set_processing(False)
             st.rerun()
         else:
             st.warning("Please edit the extracted section before proceeding.")

@@ -5,6 +5,7 @@ Streamlit component for enhanced jurisdiction detection with precise jurisdictio
 import streamlit as st
 from tools.precise_jurisdiction_detector import detect_precise_jurisdiction
 from tools.jurisdiction_detector import detect_legal_system_type
+from utils.state_manager import set_processing, is_processing
 
 def render_jurisdiction_detection(full_text: str):
     """
@@ -35,10 +36,11 @@ def render_jurisdiction_detection(full_text: str):
 
     # Phase 1: Detect Jurisdiction Button
     if not st.session_state["precise_jurisdiction_detected"]:
-        detect_clicked = st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary")
+        detect_clicked = st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary", disabled=is_processing())
         
         if detect_clicked:
             if full_text.strip():
+                set_processing(True)
                 with st.spinner("Analyzing jurisdiction..."):
                     # Detect precise jurisdiction (now returns just the jurisdiction name)
                     jurisdiction_name = detect_precise_jurisdiction(full_text)
@@ -55,7 +57,8 @@ def render_jurisdiction_detection(full_text: str):
                     
                     st.session_state["legal_system_type"] = legal_system
                     
-                    st.rerun()
+                set_processing(False)
+                st.rerun()
             else:
                 st.warning("Please enter the court decision text before detecting jurisdiction.")
                 
@@ -88,10 +91,11 @@ def render_jurisdiction_detection(full_text: str):
                 "How accurate is this jurisdiction identification? (0-100)",
                 min_value=0, max_value=100, value=100, step=1,
                 key="precise_jurisdiction_eval_slider",
-                help="Rate the accuracy of both the specific jurisdiction and legal system identification"
+                help="Rate the accuracy of both the specific jurisdiction and legal system identification",
+                disabled=is_processing()
             )
             
-            if st.button("Submit Evaluation", key="submit_precise_jurisdiction_eval"):
+            if st.button("Submit Evaluation", key="submit_precise_jurisdiction_eval", disabled=is_processing()):
                 st.session_state["precise_jurisdiction_eval_score"] = score
                 st.session_state["precise_jurisdiction_eval_submitted"] = True
                 st.rerun()
@@ -114,7 +118,8 @@ def render_jurisdiction_detection(full_text: str):
                 options=jurisdiction_names,
                 index=0,
                 key="jurisdiction_manual_select",
-                help="Select a different jurisdiction if the detection was incorrect"
+                help="Select a different jurisdiction if the detection was incorrect",
+                disabled=is_processing()
             )
             
             # Legal system override
@@ -130,10 +135,11 @@ def render_jurisdiction_detection(full_text: str):
                 options=legal_system_options,
                 index=0,
                 key="legal_system_manual_select",
-                help="Override the legal system classification if needed"
+                help="Override the legal system classification if needed",
+                disabled=is_processing()
             )
             
-            if st.button("Confirm Final Jurisdiction", key="confirm_final_jurisdiction", type="primary"):
+            if st.button("Confirm Final Jurisdiction", key="confirm_final_jurisdiction", type="primary", disabled=is_processing()):
                 # Apply overrides if selected
                 if selected_jurisdiction != "Keep Current Detection":
                     # Find the selected jurisdiction data

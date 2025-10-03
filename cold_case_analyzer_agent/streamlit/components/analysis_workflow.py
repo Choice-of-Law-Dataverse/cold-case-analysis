@@ -6,6 +6,7 @@ import streamlit as st
 from components.database import save_to_db
 from components.pil_provisions_handler import display_pil_provisions, handle_pil_provisions_editing, update_pil_provisions_state
 from utils.debug_print_state import print_state
+from utils.state_manager import set_processing, is_processing
 
 
 def get_step_display_name(step_name, state):
@@ -127,8 +128,10 @@ def execute_analysis_step(state, name, func):
         bool: True if step was executed, False if already completed
     """
     if not state.get(f"{name}_printed"):
-        result = func(state)
-        state.update(result)
+        set_processing(True)
+        with st.spinner(f"Analyzing {get_step_display_name(name, state)}..."):
+            result = func(state)
+            state.update(result)
         
         # Get proper display name for the step
         display_name = get_step_display_name(name, state)
@@ -157,6 +160,7 @@ def execute_analysis_step(state, name, func):
             state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
         
         state[f"{name}_printed"] = True
+        set_processing(False)
         st.rerun()
         return True
     return False
@@ -184,9 +188,10 @@ def handle_step_scoring(state, name):
             max_value=100,
             value=100,
             step=1,
-            key=f"{name}_score_input"
+            key=f"{name}_score_input",
+            disabled=is_processing()
         )
-        if st.button(f"Submit {display_name} Score", key=f"submit_{name}_score"):
+        if st.button(f"Submit {display_name} Score", key=f"submit_{name}_score", disabled=is_processing()):
             # Record user score and add to history
             state[f"{name}_score"] = score
             state[score_key] = True
@@ -221,7 +226,8 @@ def handle_step_editing(state, name, steps):
                 f"Edit {display_name}:",
                 value=state.get(edit_key, last),
                 height=200,
-                key=f"{name}_edit_area"
+                key=f"{name}_edit_area",
+                disabled=is_processing()
             )
     else:
         # Standard editing for other steps
@@ -232,10 +238,11 @@ def handle_step_editing(state, name, steps):
             f"Edit {display_name}:",
             value=state.get(edit_key, last),
             height=200,
-            key=f"{name}_edit_area"
+            key=f"{name}_edit_area",
+            disabled=is_processing()
         )
     
-    if st.button(f"Submit Edited {display_name}", key=f"submit_edited_{name}"):
+    if st.button(f"Submit Edited {display_name}", key=f"submit_edited_{name}", disabled=is_processing()):
         # Special handling for PIL provisions storage
         if name == "pil_provisions":
             update_pil_provisions_state(state, name, edited)

@@ -9,6 +9,8 @@ def initialize_col_state():
     """Initialize the COL state in session state if not present."""
     if 'col_state' not in st.session_state:
         st.session_state.col_state = {}
+    if 'is_processing' not in st.session_state:
+        st.session_state.is_processing = False
 
 
 def create_initial_analysis_state(case_citation, username, model, full_text, final_jurisdiction_data, user_email=None):
@@ -66,3 +68,23 @@ def load_demo_case():
     st.session_state.full_text_input = get_demo_case_text()
     # Also set a representative demo case citation
     st.session_state.case_citation = "Federal Court, 20.12.2005 - BGE 132 III 285"
+
+
+def set_processing(is_processing):
+    """
+    Set the processing state.
+    
+    Args:
+        is_processing: Boolean indicating if an operation is in progress
+    """
+    st.session_state.is_processing = is_processing
+
+
+def is_processing():
+    """
+    Check if an operation is currently in progress.
+    
+    Returns:
+        bool: True if processing, False otherwise
+    """
+    return st.session_state.get('is_processing', False)
