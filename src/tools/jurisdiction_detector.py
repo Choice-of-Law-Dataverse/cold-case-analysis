@@ -2,6 +2,8 @@
 """
 Detects the jurisdiction type of a court decision: Civil-law, Common-law, or No court decision using an LLM.
 """
+from typing import Any
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
@@ -51,7 +53,15 @@ def get_jurisdiction_legal_system_mapping():
 
     return mapping
 
-def detect_legal_system_by_jurisdiction(jurisdiction_name: str) -> str:
+def _coerce_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content if item is not None)
+    return str(content) if content is not None else ""
+
+
+def detect_legal_system_by_jurisdiction(jurisdiction_name: str) -> str | None:
     """
     Detect legal system type based on jurisdiction name alone.
     Returns 'Civil-law jurisdiction', 'Common-law jurisdiction', or None if unknown.
@@ -97,7 +107,7 @@ def detect_legal_system_type(jurisdiction_name: str, text: str) -> str:
         SystemMessage(content="You are an expert in legal systems and court decisions."),
         HumanMessage(content=prompt)
     ])
-    result = response.content.strip()
+    result = _coerce_to_text(getattr(response, "content", "")).strip()
 
     # Enforce output to be one of the three categories
     allowed = ["Civil-law jurisdiction", "Common-law jurisdiction", "No court decision"]

@@ -1,7 +1,9 @@
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Sequence
 
 import pandas as pd
 import requests
@@ -18,8 +20,14 @@ except ImportError:
     NOCODB_BASE_URL = os.getenv("NOCODB_BASE_URL")
     NOCODB_API_TOKEN = os.getenv("NOCODB_API_TOKEN")
 
+
+@dataclass(frozen=True)
+class FilterCondition:
+    column: str
+    value: Any
+
 class NocoDBService:
-    def __init__(self, base_url: str, api_token: str = None):
+    def __init__(self, base_url: str, api_token: str | None = None):
         if not base_url:
             raise ValueError("NocoDB base URL not configured")
         self.base_url = base_url.rstrip("/")
@@ -45,19 +53,24 @@ class NocoDBService:
         # return full payload directly
         return payload
 
-    def list_rows(self, table: str, filters: list = None, limit: int = 100) -> list:
+    def list_rows(
+        self,
+        table: str,
+        filters: Sequence[FilterCondition] | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
         """
         Fetch records for a given table via NocoDB API, applying optional filters and paging through all pages.
         """
         logger = logging.getLogger(__name__)
-        records = []
+        records: list[dict[str, Any]] = []
         offset = 0
         # build where parameter if filters provided
         where_clauses = []
         if filters:
-            for f in filters:
-                col = f.column
-                val = f.value
+            for filter_condition in filters:
+                col = filter_condition.column
+                val = filter_condition.value
                 # choose operator based on column name and value type
                 if "Relevant for Case Analysis" in col and val in ["true", "false", True, False]:
                     op = "eq"  # Use equals for boolean fields
@@ -70,7 +83,7 @@ class NocoDBService:
         where_param = "~and".join(where_clauses) if where_clauses else None
         while True:
             url = f"{self.base_url}/{table}"
-            params = {"limit": limit, "offset": offset}
+            params: dict[str, Any] = {"limit": limit, "offset": offset}
             if where_param:
                 params["where"] = where_param
             logger.debug("NocoDBService.list_rows: GET %s with params %s", url, params)
@@ -96,110 +109,64 @@ class NocoDBService:
             offset += limit
         return records
 
-def remove_fields_prefix(df):
-    df.columns = df.columns.str.replace("fields.", "")
+def remove_fields_prefix(df: pd.DataFrame) -> pd.DataFrame:
+    df.columns = df.columns.str.replace("fields.", "", regex=False)
     return df
 
-def process_list_like_values(df):
+
+def process_list_like_values(df: pd.DataFrame) -> pd.DataFrame:
     for col in df.columns:
-        if df[col].apply(lambda x: isinstance(x, list)).any():
+        list_mask = df[col].apply(lambda value: isinstance(value, list))
+        if bool(list_mask.any()):
             df[col] = df[col].apply(
-                lambda x: ",".join(map(str, x)) if isinstance(x, list) else x
+                lambda value: ",".join(map(str, value)) if isinstance(value, list) else value
             )
     return df
 
-def fetch_themes_dataframe():
-    # Create filter for "Relevant for Case Analysis" = True
-    class Filter:
-        def __init__(self, column, value):
-            self.column = column
-            self.value = value
+def fetch_themes_dataframe() -> pd.DataFrame:
+    if not NOCODB_BASE_URL:
+        return pd.DataFrame({"Theme": [], "Definition": []})
 
-    # Try different boolean representations that NocoDB might accept
-    filters = [Filter("Relevant for Case Analysis", 1)]  # Try numeric boolean
+    filters = [FilterCondition("Relevant for Case Analysis", 1)]
 
-    # You'll need to add these NocoDB config variables to your config.py
-    # For now, using placeholder names - adjust as needed
     nocodb_service = NocoDBService(
-        base_url=NOCODB_BASE_URL,  # Add this to config.py
-        api_token=NOCODB_API_TOKEN  # Add this to config.py
+        base_url=NOCODB_BASE_URL,
+        api_token=NOCODB_API_TOKEN,
     )
+
+    def _records_to_dataframe(records: list[dict[str, Any]]) -> pd.DataFrame:
+        if not records:
+            return pd.DataFrame({"Theme": [], "Definition": []})
+        df: pd.DataFrame = pd.DataFrame(records)
+        df = process_list_like_values(df)
+        if "Relevant for Case Analysis" in df.columns:
+            mask = df["Relevant for Case Analysis"].isin([True, "true", "True", 1])
+            df = df.loc[mask]
+        if df.empty:
+            return pd.DataFrame({"Theme": [], "Definition": []})
+        available_cols = [col for col in ("Keywords", "Definition") if col in df.columns]
+        if not available_cols:
+            return pd.DataFrame({"Theme": [], "Definition": []})
+        df = df.loc[:, available_cols]
+        if "Keywords" in df.columns:
+            df = df.rename(columns={"Keywords": "Theme"})
+        return df.reset_index(drop=True)
 
     try:
         records = nocodb_service.list_rows("Glossary", filters=filters)
+        processed = _records_to_dataframe(records)
+        if not processed.empty:
+            return processed
+    except Exception as error:
+        print(f"Error fetching themes from NocoDB: {error}")
 
-        if not records:
-            return pd.DataFrame(columns=["Theme", "Definition"])
-
-        # Convert to DataFrame
-        df = pd.DataFrame(records)
-
-        # Process the data similar to Airtable version
-        df = process_list_like_values(df)
-
-        # Filter and select the required columns (double-check in case API filter didn't work)
-        if "Relevant for Case Analysis" in df.columns:
-            # Try multiple boolean representations
-            df = df[
-                (df["Relevant for Case Analysis"] == True) |
-                (df["Relevant for Case Analysis"] == "true") |
-                (df["Relevant for Case Analysis"] == "True") |
-                (df["Relevant for Case Analysis"] == 1)
-            ]
-
-        # Select Keywords and Definition columns
-        required_cols = ["Keywords", "Definition"]
-        available_cols = [col for col in required_cols if col in df.columns]
-
-        if not available_cols:
-            return pd.DataFrame(columns=["Theme", "Definition"])
-
-        df = df[available_cols]
-
-        # Rename Keywords to Theme
-        if "Keywords" in df.columns:
-            df = df.rename(columns={"Keywords": "Theme"})
-
-        df = df.reset_index(drop=True)
-        return df
-
-    except Exception as e:
-        print(f"Error fetching themes from NocoDB: {e}")
-
-        # Fallback: try without filters and filter in pandas
-        try:
-            print("Trying without API filters...")
-            records = nocodb_service.list_rows("Glossary", filters=None)
-
-            if not records:
-                return pd.DataFrame(columns=["Theme", "Definition"])
-
-            df = pd.DataFrame(records)
-            df = process_list_like_values(df)
-
-            # Filter in pandas instead of API
-            if "Relevant for Case Analysis" in df.columns:
-                df = df[
-                    (df["Relevant for Case Analysis"] == True) |
-                    (df["Relevant for Case Analysis"] == "true") |
-                    (df["Relevant for Case Analysis"] == "True") |
-                    (df["Relevant for Case Analysis"] == 1)
-                ]
-
-            required_cols = ["Keywords", "Definition"]
-            available_cols = [col for col in required_cols if col in df.columns]
-
-            if available_cols:
-                df = df[available_cols]
-                if "Keywords" in df.columns:
-                    df = df.rename(columns={"Keywords": "Theme"})
-                df = df.reset_index(drop=True)
-                return df
-
-        except Exception as e2:
-            print(f"Fallback also failed: {e2}")
-
-        return pd.DataFrame(columns=["Theme", "Definition"])
+    try:
+        print("Trying without API filters...")
+        fallback_records = nocodb_service.list_rows("Glossary", filters=None)
+        return _records_to_dataframe(fallback_records)
+    except Exception as fallback_error:
+        print(f"Fallback also failed: {fallback_error}")
+        return pd.DataFrame({"Theme": [], "Definition": []})
 
 def filter_themes_by_list(themes_list: list[str]) -> str:
     """
@@ -209,14 +176,15 @@ def filter_themes_by_list(themes_list: list[str]) -> str:
     if not themes_list or THEMES_TABLE_DF.empty:
         return "No themes available."
     # fast in‐memory filter
-    filtered_df = THEMES_TABLE_DF[THEMES_TABLE_DF["Theme"].isin(themes_list)]
+    filtered_df = THEMES_TABLE_DF.loc[THEMES_TABLE_DF["Theme"].isin(themes_list)]
     return format_themes_table(filtered_df)
 
 def fetch_themes_list() -> list[str]:
     # just return the cached list
     return THEMES_TABLE_DF["Theme"].dropna().tolist()
 
-def format_themes_table(df):
+
+def format_themes_table(df: pd.DataFrame) -> str:
     if df.empty:
         return "No themes available."
     table_str = "| Theme | Definition |\n"
