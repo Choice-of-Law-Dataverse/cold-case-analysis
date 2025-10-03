@@ -14,14 +14,14 @@ def initialize_col_state():
 def create_initial_analysis_state(case_citation, username, model, full_text, final_jurisdiction_data, user_email=None):
     """
     Create the initial analysis state dictionary.
-    
+
     Args:
         case_citation: The case citation
         username: The current user
         model: The selected LLM model
         full_text: The full court decision text
         final_jurisdiction_data: The jurisdiction detection results
-        
+
     Returns:
         dict: Initial state dictionary
     """
@@ -43,7 +43,7 @@ def create_initial_analysis_state(case_citation, username, model, full_text, fin
 def update_col_state(state_updates):
     """
     Update the COL state with new data.
-    
+
     Args:
         state_updates: Dictionary of updates to apply to col_state
     """
@@ -53,7 +53,7 @@ def update_col_state(state_updates):
 def get_col_state():
     """
     Get the current COL state.
-    
+
     Returns:
         dict: Current col_state dictionary
     """

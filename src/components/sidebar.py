@@ -41,14 +41,14 @@ def render_sidebar():
         6. Extract the Choice of Law section, evaluate it, and provide feedback
         7. Classify the court decision into themes, evaluate the classification, and edit if necessary
         8. Analyze the decision step-by-step, providing evaluations and edits as needed
-        
+
         The analysis will include:
         - Abstract
         - Relevant Facts
         - Private International Law Provisions
         - Choice of Law Issue
         - Court's Position
-                    
+
         After evaluating and optionally editing the Court's Position, the analysis will be saved to a database. Note that results are only saved if you complete the analysis steps and click "Submit" at the end.
         You can clear the history at any time to start fresh.
         """)
@@ -62,7 +62,7 @@ def render_sidebar():
                 - Detected jurisdiction (e.g., Germany, USA, India)
                 - Legal system type (Civil law vs. Common law)
                 - Jurisdiction-specific legal context
-                
+
                 This improves analysis accuracy by providing relevant legal framework information to the AI model.
                 """)
 

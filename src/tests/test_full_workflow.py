@@ -19,16 +19,16 @@ def test_full_workflow():
     indian_text = """
     IN THE SUPREME COURT OF INDIA
     CIVIL APPELLATE JURISDICTION
-    
+
     Case No: Civil Appeal No. 1234 of 2023
-    
+
     Petitioner: ABC Ltd. v. Respondent: XYZ Corp.
-    
+
     Before: Hon'ble Justice A.B. Singh and Hon'ble Justice C.D. Sharma
-    
+
     JUDGMENT
-    
-    This case involves a dispute regarding a contract between an Indian company and a foreign entity. 
+
+    This case involves a dispute regarding a contract between an Indian company and a foreign entity.
     The question of applicable law arises in this international commercial dispute involving choice of law principles.
     """
 

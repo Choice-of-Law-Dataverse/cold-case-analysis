@@ -10,10 +10,10 @@ import streamlit as st
 def parse_pil_provisions(raw_content):
     """
     Parse PIL provisions content from various formats into structured data.
-    
+
     Args:
         raw_content: Raw PIL provisions content (could be string or list)
-        
+
     Returns:
         dict: Structured PIL data with categories
     """
@@ -90,10 +90,10 @@ def parse_pil_provisions(raw_content):
 def format_pil_for_display(parsed_data):
     """
     Format parsed PIL data for user-friendly display.
-    
+
     Args:
         parsed_data: Structured PIL data
-        
+
     Returns:
         str: Formatted content for display
     """
@@ -133,10 +133,10 @@ def format_pil_for_display(parsed_data):
 def format_pil_for_storage(edited_content):
     """
     Convert edited content back to storage format.
-    
+
     Args:
         edited_content: User-edited content string
-        
+
     Returns:
         list: Content formatted for storage (maintains compatibility)
     """
@@ -146,7 +146,7 @@ def format_pil_for_storage(edited_content):
 def display_pil_provisions(state, step_name="pil_provisions"):
     """
     Display PIL provisions in a user-friendly format.
-    
+
     Args:
         state: Current analysis state
         step_name: Name of the PIL provisions step
@@ -217,13 +217,13 @@ def display_pil_provisions(state, step_name="pil_provisions"):
 def handle_pil_provisions_editing(state, step_name, display_name, formatted_content):
     """
     Handle the editing interface for PIL provisions.
-    
+
     Args:
         state: Current analysis state
         step_name: Name of the PIL provisions step
         display_name: Display name for the step
         formatted_content: Formatted content for editing
-        
+
     Returns:
         bool: True if editing interface was shown
     """
@@ -252,13 +252,13 @@ def handle_pil_provisions_editing(state, step_name, display_name, formatted_cont
 def update_pil_provisions_state(state, step_name, edited_content):
     """
     Update the state with edited PIL provisions content.
-    
+
     Args:
-        state: Current analysis state  
+        state: Current analysis state
         step_name: Name of the PIL provisions step
         edited_content: User-edited content
     """
     # Store in compatible format
-    formatted_for_storage = format_pil_for_storage(edited_content)
+    format_pil_for_storage(edited_content)
     state[step_name][-1] = edited_content  # Update last entry
     state[f"{step_name}_edited"] = edited_content  # Store edited version

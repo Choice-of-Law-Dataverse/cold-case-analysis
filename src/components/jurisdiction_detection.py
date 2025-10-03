@@ -11,10 +11,10 @@ from tools.precise_jurisdiction_detector import detect_precise_jurisdiction
 def render_jurisdiction_detection(full_text: str):
     """
     Render the enhanced jurisdiction detection interface.
-    
+
     Args:
         full_text: The court decision text to analyze
-        
+
     Returns:
         bool: True if jurisdiction detection is complete and confirmed
     """
@@ -157,7 +157,7 @@ def render_jurisdiction_detection(full_text: str):
 def get_final_jurisdiction_data():
     """
     Get the final jurisdiction data after detection and confirmation.
-    
+
     Returns:
         dict: Final jurisdiction information
     """

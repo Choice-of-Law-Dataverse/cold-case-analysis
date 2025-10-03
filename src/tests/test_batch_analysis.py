@@ -1,6 +1,7 @@
 import csv
 import sys
 from pathlib import Path
+from typing import Any
 
 
 def test_batch_latam_analysis():
@@ -62,7 +63,7 @@ def test_batch_latam_analysis():
             print(f"\nProcessing: {txt_path.name}")
             try:
                 text = txt_path.read_text(encoding="utf-8")
-                state = {"full_text": text}
+                state: dict[str, Any] = {"full_text": text}
 
                 # 1. Precise jurisdiction detection
                 try:
@@ -147,10 +148,10 @@ def test_batch_latam_analysis():
                     state["abstract"] = ["Error in generation"]
 
                 # Gather latest outputs with safe extraction
-                def safe_get_last(data, default=""):
-                    """Safely get the last item from a list or return default."""
-                    if isinstance(data, list) and data:
-                        return data[-1]
+                def safe_get_last(data: Any, default: Any) -> Any:
+                    """Safely get the last item from a list-like input."""
+                    if isinstance(data, list):
+                        return data[-1] if data else default
                     return data if data else default
 
                 row = [

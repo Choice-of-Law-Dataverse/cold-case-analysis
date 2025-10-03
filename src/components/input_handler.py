@@ -11,7 +11,7 @@ from utils.state_manager import load_demo_case
 def render_case_citation_input():
     """
     Render the case citation input field.
-    
+
     Returns:
         str: The entered case citation
     """
@@ -42,7 +42,7 @@ def render_email_input():
 def render_pdf_uploader():
     """
     Render the PDF uploader and handle automatic text extraction.
-    
+
     Returns:
         bool: True if PDF was successfully processed
     """
@@ -69,7 +69,7 @@ def render_pdf_uploader():
 def render_text_input():
     """
     Render the main text input area for court decision text.
-    
+
     Returns:
         str: The entered court decision text
     """
@@ -88,10 +88,10 @@ def render_text_input():
 def render_demo_button(full_text):
     """
     Render the demo case button if no text is entered.
-    
+
     Args:
         full_text: Current text in the input area
-        
+
     Returns:
         bool: True if demo button was shown and potentially clicked
     """
@@ -104,7 +104,7 @@ def render_demo_button(full_text):
 def render_input_phase():
     """
     Render the complete input phase (citation, PDF, text, demo).
-    
+
     Returns:
         tuple: (case_citation, full_text) - the citation and decision text
     """

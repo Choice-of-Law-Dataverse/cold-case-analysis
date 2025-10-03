@@ -2,20 +2,20 @@
 FACTS_PROMPT = """
 TASK: Extract and synthesize factual elements essential for understanding the choice of law analysis into a single, coherent paragraph.
 INSTRUCTIONS:
-1.	Output Requirement: 
+1.	Output Requirement:
 Provide an answer as concise as possible, up to 300 words containing all relevant facts in narrative form.
 2.	Content Priority:
-Elaborate on facts including, but not limited to the following, as long as they are relevant for the private international law (PIL) and choice of law discussion in the decision: 
+Elaborate on facts including, but not limited to the following, as long as they are relevant for the private international law (PIL) and choice of law discussion in the decision:
 -	Party characteristics (nationality, domicile, place of business/incorporation)
 -	Nature and geography of the underlying transaction/relationship
 -	Express or implied choice of law indicators
 -	Specific circumstances that created the choice of law issue
-3.	Writing Guidelines: 
+3.	Writing Guidelines:
 -	Use flowing, connected sentences rather than listing facts in points
 -	Employ transitional phrases to link different factual elements
--	Maintain chronological or logical progression 
+-	Maintain chronological or logical progression
 -	Keep sentences concise but substantive
-4.	Inclusion Standards: 
+4.	Inclusion Standards:
 -	Include: Connecting factors, transactional geography, choice of law clauses, foreign law invocations, conflict triggers
 -	Exclude: Specific amounts, exact dates, individual names, procedural details, unrelated contract terms
 5.	OUTPUT FORMAT:
@@ -63,23 +63,23 @@ CONSTRAINTS:
 ABSTRACT_PROMPT = """
 TASK: Create a concise abstract summarizing this PIL case's choice of law analysis and outcome.
 INSTRUCTIONS:
-1.	Primary Approach: 
+1.	Primary Approach:
 Synthesize a comprehensive abstract using the analytical components you have previously extracted from this judgment.
-2.	Content Integration: Your abstract must incorporate: 
+2.	Content Integration: Your abstract must incorporate:
 -	Essential facts establishing the PIL context
 -	The choice of law issue(s) the court addressed
 -	The court's position
-3.	Structure Requirements: 
+3.	Structure Requirements:
 -	Write exactly one paragraph
 -	Begin with the factual context that created the PIL issue
 -	Progress through the legal question and court's reasoning
 -	Conclude with the precedential principle established
-4.	Writing Standards: 
+4.	Writing Standards:
 -	Use clear, professional language
 -	Maintain logical flow from facts to legal conclusion
 -	Focus on PIL methodology and choice of law principles, not case-specific outcomes
 -	Include sufficient detail for legal research purposes while remaining concise
-5.  Fallback Instruction: 
+5.  Fallback Instruction:
 If an official “abstract”, “headnote”/ “case note” exists in the judgment text, extract it instead of synthesizing. Please translate it into English and state that it is a verbatim translation.
 
 6.	OUTPUT FORMAT:
