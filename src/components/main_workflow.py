@@ -43,7 +43,7 @@ def render_initial_input_phase():
         st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
 
         from utils.state_manager import is_processing, set_processing
-        
+
         if st.button("Extract Choice of Law Section", type="primary", key="extract_col_btn", disabled=is_processing()):
             if full_text and case_citation.strip():
                     set_processing(True)
@@ -67,7 +67,7 @@ def render_initial_input_phase():
 
                         # Update session state
                         st.session_state.col_state = state
-                    
+
                     set_processing(False)
                     st.rerun()
             else:

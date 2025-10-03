@@ -228,7 +228,7 @@ def handle_pil_provisions_editing(state, step_name, display_name, formatted_cont
         bool: True if editing interface was shown
     """
     from utils.state_manager import is_processing
-    
+
     edit_key = f"{step_name}_edited"
 
     # Show editing interface

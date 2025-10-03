@@ -73,7 +73,7 @@ def load_demo_case():
 def set_processing(is_processing: bool):
     """
     Set the processing state to disable/enable UI elements.
-    
+
     Args:
         is_processing: True to disable UI elements, False to enable them
     """
@@ -83,7 +83,7 @@ def set_processing(is_processing: bool):
 def is_processing() -> bool:
     """
     Check if the application is currently processing.
-    
+
     Returns:
         bool: True if processing, False otherwise
     """

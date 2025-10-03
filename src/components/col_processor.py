@@ -92,7 +92,7 @@ def handle_first_extraction_scoring(col_state):
         col_state: The current analysis state
     """
     from utils.state_manager import is_processing
-    
+
     if not col_state.get("col_first_score_submitted"):
         # Score input restricted to 0–100
         score_input = st.slider(
@@ -140,7 +140,7 @@ def render_feedback_input(col_state):
         col_state: The current analysis state
     """
     from utils.state_manager import is_processing, set_processing
-    
+
     feedback = st.text_area(
         "Enter feedback to improve the Choice of Law Section:",
         height=150,
@@ -177,7 +177,7 @@ def render_edit_section(col_state):
         col_state: The current analysis state
     """
     from utils.state_manager import is_processing, set_processing
-    
+
     last_extraction = col_state.get("col_section", [""])[-1]
     edited_extraction = st.text_area(
         "Edit extracted Choice of Law section:",

@@ -34,7 +34,7 @@ def handle_theme_scoring(state):
         bool: True if scoring is complete
     """
     from utils.state_manager import is_processing
-    
+
     if not state.get("theme_first_score_submitted"):
         score = st.slider(
             "Evaluate these themes (0-100):",
@@ -67,7 +67,7 @@ def handle_theme_editing(state, last_theme, valid_themes):
         valid_themes: List of valid theme options
     """
     from utils.state_manager import is_processing
-    
+
     if not state.get("theme_done"):
         # Parse default selection and filter to only include valid themes
         default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]

@@ -132,7 +132,7 @@ def execute_analysis_step(state, name, func):
         bool: True if step was executed, False if already completed
     """
     from utils.state_manager import set_processing
-    
+
     if not state.get(f"{name}_printed"):
         set_processing(True)
         with st.spinner(f"Analyzing {get_step_display_name(name, state)}..."):
@@ -184,7 +184,7 @@ def handle_step_scoring(state, name):
         bool: True if scoring is complete
     """
     from utils.state_manager import is_processing
-    
+
     score_key = f"{name}_score_submitted"
     display_name = get_step_display_name(name, state)
 
@@ -219,7 +219,7 @@ def handle_step_editing(state, name, steps):
         steps: List of all analysis steps
     """
     from utils.state_manager import is_processing, set_processing
-    
+
     display_name = get_step_display_name(name, state)
 
     # Special handling for PIL provisions
