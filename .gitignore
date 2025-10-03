@@ -161,17 +161,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Data
-cold_case_analyzer/data/*.csv
-cold_case_analyzer/data/*.xlsx
-cold_case_analyzer/data/evaluations/*
-cold_case_analyzer/data/ic2s2/*
-cold_case_analyzer/data/raw/*
-!cold_case_analyzer/data/processed/*
-!cold_case_analyzer/data/concepts.xlsx
-!cold_case_analyzer/data/cases.xlsx
-!cold_case_analyzer/data/ground_truth.csv
-cold_case_analyzer/data/metric_anova_comparison.png
 
 # dvc
 .dvc/
@@ -180,9 +169,14 @@ cold_case_analyzer/data/metric_anova_comparison.png
 # ic2s2
 ic2s2_2025/
 
+# ruff
+.ruff_cache/
+
 # langgraph dependencies
 agent_langgraph_basics-Dateien/
 agent_langgraph_basics.htm
 
 # Streamlit secrets
-cold_case_analyzer_agent/streamlit/.streamlit/secrets.toml
+src/streamlit/.streamlit/secrets.toml
+
+.DS_Store
