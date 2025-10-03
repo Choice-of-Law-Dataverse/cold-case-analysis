@@ -5,93 +5,110 @@
 ## Working Effectively
 
 ### Environment Setup
-- Python 3.12.3 with pip package manager
+- **Python Version**: Python 3.12.3 (specified in `.python-version`)
+- **Package Manager**: Uses `uv` for dependency management (modern Python package manager) or `pip`
 - **NEVER CANCEL** build or install commands - they may take several minutes
 - Bootstrap the repository:
-  - `cp blueprint.env .env` - Create environment file from template
-  - `pip install -r requirements.txt` - Install dependencies. Takes ~60 seconds. NEVER CANCEL. Set timeout to 180+ seconds.
-  - For Streamlit app: `pip install pymupdf4llm psycopg2-binary` - Install missing dependencies (not in requirements.txt)
+  ```bash
+  # Create environment file from template
+  cp .env.example .env
+  
+  # Edit .env and add your OPENAI_API_KEY
+  
+  # Install dependencies using uv (recommended if available)
+  uv sync
+  
+  # OR install using pip (if uv not available)
+  pip install -e .
+  ```
 
-### Running Applications
+### Running the Application
 
-#### 1. Main CLI Case Analyzer (cold_case_analyzer)
-- **Entry point**: `python cold_case_analyzer/main.py`
-- **Interactive tool**: Provides menu to select data source (Own data/Airtable) and model (gpt-4o, gpt-4o-mini, llama3.1)
-- **Data requirements**: Requires `cold_case_analyzer/data/cases.xlsx` with pre-defined column format
-- **API Key**: Requires OPENAI_API_KEY in .env file for LLM functionality
-- **Processing time**: Analysis can take several minutes per case. NEVER CANCEL operations.
-
-#### 2. Streamlit Web Application (cold_case_analyzer_agent/streamlit)
-- **Entry point**: `streamlit run app.py --server.port=8501 --server.address=0.0.0.0`
-- **Working directory**: Must run from `cold_case_analyzer_agent/streamlit/`
+#### Streamlit Web Application (Primary Interface)
+- **Entry point**: `streamlit run src/app.py --server.port=8501 --server.address=0.0.0.0`
+- **Working directory**: Run from repository root
 - **URL**: http://localhost:8501
-- **Demo data**: Click "Use Demo Case" to load BGE 132 III 285 Swiss court case for testing
+- **Demo data**: Click "Use Demo Case" button in the UI to load a Swiss court case for testing
 - **Features**: 
-  - Interactive case analysis workflow
-  - Jurisdiction detection
-  - Choice of Law section extraction
-  - Legal theme classification
-  - Step-by-step analysis with user feedback
-- **Authentication**: Optional login system (credentials in USER_CREDENTIALS env var)
-- **Dependencies**: Requires OPENAI_API_KEY, optional database connection (PostgreSQL)
-
-#### 3. LangGraph Analysis Engine (cold_case_analyzer/cca_langgraph)
-- **Entry point**: `python cold_case_analyzer/cca_langgraph/main.py`
-- **Purpose**: Advanced workflow orchestration using LangGraph for court case analysis
-- **Features**: Graph-based analysis with interrupts for user feedback
-- **Models**: Uses gpt-4.1-nano model by default
-- **Components**: 
-  - Node-based workflow (jurisdiction detection, theme classification, etc.)
-  - Interrupt handlers for human-in-the-loop analysis
-  - Memory checkpointing for workflow state
+  - Interactive case analysis workflow with step-by-step validation
+  - Jurisdiction detection (Civil Law, Common Law, India)
+  - Choice of Law section extraction with user feedback
+  - Legal theme classification against predefined taxonomy
+  - Comprehensive analysis phases: Abstract, Relevant Facts, PIL Provisions, Choice of Law Issue, Court's Position
+  - PDF upload support for court decisions
+  - Optional user authentication and database persistence
+- **Authentication**: Optional login system (credentials in `USER_CREDENTIALS` env var)
+- **Dependencies**: Requires `OPENAI_API_KEY` in .env file; optional PostgreSQL database connection
 
 ### Docker Setup
-- **Location**: `cold_case_analyzer_agent/streamlit/Dockerfile`
-- **Known issue**: Docker build may fail due to SSL certificate issues in some environments
-- **Workaround**: Use native Python environment instead of Docker for development
-- **Entry script**: `docker-entrypoint.sh` generates secrets.toml and runs Streamlit
+- **Location**: `Dockerfile` in repository root
+- Docker support available but native Python environment recommended for development
+- Docker configuration generates necessary Streamlit secrets from environment variables
 
 ### Testing
-- **Test location**: `cold_case_analyzer_agent/streamlit/tests/`
-- **Run tests**: `pytest tests/ -v --tb=short`
+- **Test location**: `src/tests/`
+- **Run tests**: 
+  ```bash
+  # Run all tests
+  pytest src/tests/ -v
+  
+  # Run specific test file
+  pytest src/tests/test_prompt_logic.py -v
+  ```
 - **Requirements**: 
-  - Set OPENAI_API_KEY=test_key in .env file
-  - Some tests may have import issues due to module path dependencies
-  - Tests exist for prompt logic, workflow integration, and system functionality
-- **Test timeout**: Set timeout to 300+ seconds for test runs. NEVER CANCEL.
+  - Set `OPENAI_API_KEY=test_key` in .env file for tests that don't require actual API calls
+  - Some tests may require actual OpenAI API access
+  - Tests cover prompt logic, workflow integration, system prompts, and full analysis workflow
+- **Test timeout**: Set timeout to 300+ seconds for integration test runs. NEVER CANCEL.
+
+### Linting and Code Quality
+- **Linter**: Uses `ruff` for linting and code formatting (install with dev dependencies)
+- **Type Checker**: Uses `pyright` for static type checking (install with dev dependencies)
+- **Installing dev tools**:
+  ```bash
+  # Install dev dependencies
+  pip install pytest pytest-asyncio pytest-mock ruff pyright
+  ```
+- **Run linting**:
+  ```bash
+  ruff check src/
+  ruff format src/
+  ```
+- **Configuration**: See `pyproject.toml` for linting rules
 
 ## Validation
 
 ### Always perform these validation steps after making changes:
 
 1. **Basic Python environment**:
-   - `python --version` (should show Python 3.12.3)
-   - `pip install -r requirements.txt` 
-   - `python -c "import streamlit; print('✓ Streamlit works')"`
-
-2. **CLI Case Analyzer**:
-   - `cd /path/to/repo && python cold_case_analyzer/main.py`
-   - Verify interactive menu appears (select Own data → gpt-4o for basic test)
-   - Use Ctrl+C to exit if no data available
-
-3. **LangGraph Analysis Engine**:
-   - `cd cold_case_analyzer/cca_langgraph && python main.py`
-   - Verify graph-based workflow interface
-   - Requires OPENAI_API_KEY for LLM functionality
-   - Uses gpt-4.1-nano model by default
-
-4. **Streamlit Application Manual Validation**:
-   - `cd cold_case_analyzer_agent/streamlit`
-   - `streamlit run app.py --server.port=8501 --server.address=0.0.0.0`
-   - Navigate to http://localhost:8501
-   - Click "Use Demo Case" button
-   - Verify BGE 132 III 285 case data loads in citation and text fields
-   - Click "Detect Jurisdiction" to test basic workflow
-   - **Expected**: App loads Swiss Federal Supreme Court case with jurisdiction detection interface
-
-5. **Dependencies check**:
    ```bash
-   python -c "import pymupdf4llm, psycopg2, langgraph; print('✓ All deps available')"
+   python --version  # Should show Python 3.12.3
+   
+   # Install dependencies (use uv if available, otherwise pip)
+   uv sync
+   # OR
+   pip install -e .
+   
+   python -c "import streamlit; print('✓ Streamlit works')"
+   ```
+
+2. **Streamlit Application Validation**:
+   ```bash
+   cd /home/runner/work/cold-case-analysis/cold-case-analysis
+   streamlit run src/app.py --server.port=8501 --server.address=0.0.0.0
+   # Navigate to http://localhost:8501
+   # Click "Use Demo Case" button
+   # Verify case data loads and "Detect Jurisdiction" button appears
+   ```
+
+3. **Run tests**:
+   ```bash
+   pytest src/tests/ -v --tb=short
+   ```
+
+4. **Lint check**:
+   ```bash
+   ruff check src/
    ```
 
 ## Common Tasks
@@ -99,88 +116,181 @@
 ### Repository Structure
 ```
 cold-case-analysis/
-├── README.md                           # Main project documentation
-├── requirements.txt                    # Python dependencies for CLI
-├── blueprint.env                       # Environment template
-├── cold_case_analyzer/                 # Main CLI application
-│   ├── main.py                         # CLI entry point
-│   ├── cca_langgraph/                  # LangGraph workflow engine
-│   │   ├── main.py                     # LangGraph entry point
-│   │   ├── nodes/                      # Workflow nodes
-│   │   └── tools/                      # Analysis tools
-│   ├── data/                           # Input data (cases.xlsx, concepts.xlsx)
-│   ├── case_analyzer/                  # Core analysis logic
-│   └── evaluator/                      # Result evaluation tools
-├── cold_case_analyzer_agent/           # Web application
-│   ├── streamlit/                      # Streamlit web app
-│   │   ├── app.py                      # Web app entry point
-│   │   ├── requirements.txt            # Web app dependencies
-│   │   ├── tests/                      # Test suite
-│   │   ├── components/                 # UI components
-│   │   ├── utils/                      # Utility functions
-│   │   └── tools/                      # Analysis tools
-│   ├── Dockerfile                      # Empty/placeholder
-│   └── docker-compose.yaml            # Empty/placeholder
-└── docs/                               # Additional documentation
+├── .github/
+│   └── copilot-instructions.md        # This file - Copilot agent instructions
+├── src/                                # Main application source code
+│   ├── app.py                          # Streamlit application entry point
+│   ├── config.py                       # Application configuration
+│   ├── components/                     # UI components and workflow phases
+│   │   ├── auth.py                     # Authentication & model selection
+│   │   ├── input_handler.py            # Case input handling (PDF, text, demo)
+│   │   ├── jurisdiction_detection.py   # Jurisdiction detection phase
+│   │   ├── col_processor.py            # Choice of Law extraction phase
+│   │   ├── theme_classifier.py         # Theme classification phase
+│   │   ├── analysis_workflow.py        # Analysis workflow execution
+│   │   ├── pil_provisions_handler.py   # PIL provisions extraction
+│   │   ├── main_workflow.py            # Main workflow orchestration
+│   │   ├── sidebar.py                  # Sidebar rendering
+│   │   ├── database.py                 # Database persistence
+│   │   └── css.py                      # Custom CSS styling
+│   ├── tools/                          # Analysis tools and LLM integration
+│   │   ├── jurisdiction_detector.py    # Legal system type detection
+│   │   ├── precise_jurisdiction_detector.py  # Precise jurisdiction detection
+│   │   ├── col_extractor.py            # Choice of Law section extraction
+│   │   ├── themes_classifier.py        # Theme classification
+│   │   └── case_analyzer.py            # Main case analysis logic
+│   ├── utils/                          # Utility functions
+│   │   ├── state_manager.py            # Session state management
+│   │   ├── data_loaders.py             # Data loading utilities
+│   │   ├── pdf_handler.py              # PDF processing
+│   │   ├── system_prompt_generator.py  # Dynamic system prompt generation
+│   │   └── themes_extractor.py         # Theme extraction utilities
+│   ├── prompts/                        # Prompt templates by jurisdiction
+│   │   ├── legal_system_type_detection.py    # Legal system detection prompt
+│   │   ├── precise_jurisdiction_detection_prompt.py  # Jurisdiction detection
+│   │   ├── prompt_selector.py          # Dynamic prompt selection logic
+│   │   ├── civil_law/                  # Civil law jurisdiction prompts
+│   │   ├── common_law/                 # Common law jurisdiction prompts
+│   │   ├── india/                      # India-specific prompts
+│   │   └── README.md                   # Prompt documentation (auto-generated)
+│   ├── data/                           # Data files
+│   │   ├── jurisdictions.csv           # Jurisdiction reference data
+│   │   └── themes.csv                  # Legal theme taxonomy
+│   └── tests/                          # Test suite
+│       ├── test_prompt_logic.py        # Prompt selection logic tests
+│       ├── test_dynamic_prompts.py     # Dynamic prompt generation tests
+│       ├── test_system_prompts.py      # System prompt tests
+│       ├── test_workflow_integration.py # Workflow integration tests
+│       └── test_full_workflow.py       # End-to-end workflow tests
+├── docs/                               # Documentation
+│   ├── QUICK_START.md                  # Quick start guide
+│   ├── ARCHITECTURE.md                 # Architecture documentation
+│   ├── WORKFLOWS.md                    # Workflow documentation
+│   ├── agent.md                        # Agent workflow documentation
+│   └── DYNAMIC_SYSTEM_PROMPTS_README.md  # Dynamic prompts documentation
+├── latam_case_analysis/                # Additional Latin America case tools
+├── pyproject.toml                      # Project configuration & dependencies
+├── uv.lock                             # Dependency lock file
+├── .env.example                        # Environment variables template
+├── Dockerfile                          # Docker configuration
+└── README.md                           # Main project documentation
 ```
 
 ### Key Files to Check When Making Changes
-- **Config files**: `cold_case_analyzer/config.py`, `cold_case_analyzer_agent/streamlit/config.py`
-- **Environment**: `.env` (created from blueprint.env)
-- **Main entry points**: `cold_case_analyzer/main.py`, `cold_case_analyzer/cca_langgraph/main.py`, `cold_case_analyzer_agent/streamlit/app.py`
-- **Dependencies**: `requirements.txt` (root), `cold_case_analyzer_agent/streamlit/requirements.txt`
+- **Config files**: `src/config.py`
+- **Environment**: `.env` (created from `.env.example`)
+- **Main entry point**: `src/app.py`
+- **Dependencies**: `pyproject.toml` (modern Python project configuration)
+- **Prompt templates**: Files in `src/prompts/civil_law/`, `src/prompts/common_law/`, `src/prompts/india/`
+- **Workflow components**: Files in `src/components/`
+- **Analysis tools**: Files in `src/tools/`
 
-### Data Formats
-- **Input cases**: Excel format (`cold_case_analyzer/data/cases.xlsx`) with columns: ID, Original text, Quote
-- **Concepts**: Excel format (`cold_case_analyzer/data/concepts.xlsx`) for legal theme classification
-- **Ground truth**: CSV format for evaluation comparisons
+### Data Files
+- **Jurisdiction reference**: `src/data/jurisdictions.csv` - Maps jurisdictions to legal systems
+- **Theme taxonomy**: `src/data/themes.csv` - Legal themes for classification
+- **Demo case**: Embedded in code via `src/utils/data_loaders.py`
 
 ### API Integration
-- **OpenAI**: Primary LLM provider (GPT-4o, GPT-4o-mini models)
-- **Llama API**: Alternative LLM provider (llama3.1 model) 
-- **Airtable**: Optional data source (requires AIRTABLE_API_KEY, AIRTABLE_BASE_ID)
-- **PostgreSQL**: Optional database for Streamlit app results
+- **OpenAI**: Primary LLM provider (GPT-4o, GPT-4o-mini models, configurable in `src/config.py`)
+- **Model selection**: Available through UI, different models for authenticated vs guest users
+- **Airtable**: Optional external data source (configured via environment variables)
+- **NocoDB**: Optional NoCode database interface
+- **PostgreSQL**: Optional database for persistence (configured via `SQL_CONN_STRING`)
+
+### Dynamic System Prompts
+The application uses **jurisdiction-specific system prompts** that are dynamically generated based on:
+- Detected legal system type (Civil Law, Common Law, India)
+- Precise jurisdiction (e.g., Switzerland, USA, India)
+- Analysis phase (jurisdiction detection, CoL extraction, theme classification, analysis)
+
+See `src/utils/system_prompt_generator.py` and `docs/DYNAMIC_SYSTEM_PROMPTS_README.md` for details.
 
 ### Performance Notes
-- **CLI analysis**: Each court case takes several minutes to process
 - **Streamlit startup**: App takes ~5-10 seconds to fully load
-- **Install time**: Main requirements.txt takes ~60 seconds, Streamlit requirements may timeout due to large dependencies
+- **Install time**: Dependencies installation takes ~60 seconds with uv
+- **LLM analysis**: Each analysis step can take 10-30 seconds depending on case complexity
 - **Memory usage**: LLM processing can be memory intensive for longer court decisions
 
 ## Troubleshooting
 
 ### Common Issues
-1. **ModuleNotFoundError for 'pymupdf4llm'**: Install with `pip install pymupdf4llm`
-2. **ModuleNotFoundError for 'psycopg2'**: Install with `pip install psycopg2-binary`
-3. **OPENAI_API_KEY not set**: Copy blueprint.env to .env and set your API key
-4. **Streamlit won't start**: Check you're in the correct directory (`cold_case_analyzer_agent/streamlit/`)
-5. **Docker build fails**: Use native Python environment due to SSL certificate issues
-6. **Test import errors**: Tests have module path dependencies, run from correct directory
-7. **Interactive CLI hangs**: CLI tools are interactive, use appropriate timeout settings
+1. **OPENAI_API_KEY not set**: 
+   - Copy `.env.example` to `.env` and add your API key
+   - Required format: `OPENAI_API_KEY="sk-your-key-here"`
+
+2. **ModuleNotFoundError**: 
+   - Run `uv sync` or `pip install -e .` to install all dependencies
+   - Ensure you're using Python 3.12.3
+
+3. **Streamlit won't start**: 
+   - Check you're running from repository root
+   - Command: `streamlit run src/app.py`
+   - Verify OPENAI_API_KEY is set in .env
+
+4. **Test failures**: 
+   - Ensure OPENAI_API_KEY is set (can use dummy value like "test_key" for some tests)
+   - Run from repository root: `pytest src/tests/ -v`
+
+5. **Import errors in tests**: 
+   - Tests may have hardcoded paths that need adjustment
+   - Check sys.path modifications in test files
+
+6. **Linting errors**:
+   - Run `ruff check src/` to see issues
+   - Run `ruff format src/` to auto-fix formatting
+   - Configuration in `pyproject.toml`
 
 ### Expected Timeouts
-- **pip install -r requirements.txt**: 180+ seconds (NEVER CANCEL)
+- **uv sync or pip install -e .**: 120+ seconds (NEVER CANCEL)
 - **Streamlit app startup**: 30+ seconds (NEVER CANCEL)
-- **Case analysis**: 300+ seconds per case (NEVER CANCEL)
-- **Test execution**: 300+ seconds (NEVER CANCEL)
+- **LLM API calls**: 30-60 seconds per call (NEVER CANCEL)
+- **Test execution**: 300+ seconds for full suite (NEVER CANCEL)
 
 ### Environment Variables Required
+See `.env.example` for complete configuration. Key variables:
+
 ```bash
-# Required for LLM functionality
-OPENAI_API_KEY=your_openai_api_key_here
+# REQUIRED - LLM functionality
+OPENAI_API_KEY="sk-your-openai-api-key-here"
+OPENAI_MODEL="gpt-5-nano"  # Default model
 
-# Optional for alternative LLM
-LLAMA_API_KEY=your_llama_api_key_here
+# OPTIONAL - Database persistence
+SQL_CONN_STRING="postgresql+psycopg2://username:password@host:port/database"
 
-# Optional for Airtable data source
-AIRTABLE_API_KEY=your_airtable_key
-AIRTABLE_BASE_ID=your_base_id
-AIRTABLE_CD_TABLE=your_table_name
-AIRTABLE_CONCEPTS_TABLE=your_concepts_table
+# OPTIONAL - External data sources
+AIRTABLE_API_KEY="your_airtable_api_key"
+AIRTABLE_BASE_ID="your_airtable_base_id"
+NOCODB_BASE_URL="https://your-nocodb-instance/api/v1/db/data/noco/project_id"
+NOCODB_API_TOKEN="your_nocodb_api_token"
 
-# Optional for authentication
-USER_CREDENTIALS={"username":"password"}
+# OPTIONAL - Authentication (JSON format)
+USER_CREDENTIALS='{"admin":"password","user":"password"}'
 
-# Optional for database
-SQL_CONN_STRING=postgresql://user:pass@host:port/db
+# OPTIONAL - PostgreSQL (for Docker deployment)
+POSTGRESQL_HOST="localhost"
+POSTGRESQL_PORT="5432"
+POSTGRESQL_DATABASE="database_name"
+POSTGRESQL_USERNAME="username"
+POSTGRESQL_PASSWORD="password"
 ```
+
+## Development Workflow
+
+### Making Changes
+1. **Create a new feature/fix**: Work on focused, minimal changes
+2. **Test locally**: Run the Streamlit app and verify changes work
+3. **Run tests**: `pytest src/tests/ -v` to ensure nothing breaks
+4. **Lint code**: `ruff check src/` and fix any issues
+5. **Update documentation**: If you change prompts, run `python src/prompts/populate_readme.py`
+
+### Adding New Prompts
+1. Add prompt file in appropriate jurisdiction folder (`src/prompts/civil_law/`, `common_law/`, or `india/`)
+2. Follow naming convention: `*_prompt.py` with uppercase `*_PROMPT` variables
+3. Run `python src/prompts/populate_readme.py` to update `src/prompts/README.md`
+4. Test prompt selection logic: `pytest src/tests/test_prompt_logic.py -v`
+
+### Modifying Workflows
+1. Workflow phases are in `src/components/`
+2. Main orchestration in `src/components/main_workflow.py`
+3. Each phase component handles its own UI, state management, and LLM calls
+4. Test changes with the Streamlit app using the "Use Demo Case" button
