@@ -1,2 +1,0 @@
-Summarize the court's position on the choice of law issue within a court decision. Your response is phrased in a general way, generalizing the issue so that it could be applied to other private international law cases. If there are any legal provisions mentioned, use their English name/abbreviation.
-Your output is a direct answer to the issue laid out here:

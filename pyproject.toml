@@ -1,0 +1,61 @@
+[project]
+name = "cold-case-analysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-core>=0.3.77",
+    "langchain-openai>=0.3.34",
+    "pandas>=2.3.3",
+    "psycopg2-binary>=2.9.10",
+    "pymupdf4llm>=0.0.27",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.5",
+    "streamlit>=1.50.0",
+]
+
+[dependency-groups]
+dev = [
+    "colorama>=0.4.6",
+    "iniconfig>=2.0.0",
+    "mypy-extensions>=1.0.0",
+    "packaging>=24.2",
+    "pathspec>=0.12.1",
+    "platformdirs>=4.3.6",
+    "pluggy>=1.5.0",
+    "polyfactory>=2.20.0",
+    "pre-commit>=4.1.0",
+    "pytest-asyncio>=0.26.0",
+    "pytest-mock>=3.14.0",
+    "pytest>=8.3.4",
+    "ruff>=0.9.9",
+    "pyright>=1.1.404",
+]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[tool.ruff]
+line-length = 128
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "Q",  # flake8-quotes
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = ["E501"]
+isort = { combine-as-imports = true, known-first-party = ["chai"] }
