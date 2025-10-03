@@ -12,11 +12,11 @@ from utils.debug_print_state import print_state
 def get_step_display_name(step_name, state):
     """
     Get the proper display name for an analysis step based on jurisdiction.
-    
+
     Args:
         step_name: The internal step name (e.g., "relevant_facts")
         state: The current analysis state (to determine jurisdiction)
-        
+
     Returns:
         str: The formatted display name for the step
     """
@@ -39,7 +39,7 @@ def get_step_display_name(step_name, state):
 def display_analysis_history(state):
     """
     Display chronological chat history of analysis.
-    
+
     Args:
         state: The current analysis state
     """
@@ -61,7 +61,7 @@ def display_analysis_history(state):
 def display_completion_message(state):
     """
     Display the completion message and save to database.
-    
+
     Args:
         state: The current analysis state
     """
@@ -81,10 +81,10 @@ def display_completion_message(state):
 def get_analysis_steps(state):
     """
     Get the analysis steps based on jurisdiction type.
-    
+
     Args:
         state: The current analysis state
-        
+
     Returns:
         list: List of (name, function) tuples for analysis steps
     """
@@ -122,12 +122,12 @@ def get_analysis_steps(state):
 def execute_analysis_step(state, name, func):
     """
     Execute a single analysis step.
-    
+
     Args:
         state: The current analysis state
         name: Name of the analysis step
         func: Function to execute for this step
-        
+
     Returns:
         bool: True if step was executed, False if already completed
     """
@@ -170,11 +170,11 @@ def execute_analysis_step(state, name, func):
 def handle_step_scoring(state, name):
     """
     Handle scoring for an analysis step.
-    
+
     Args:
         state: The current analysis state
         name: Name of the analysis step
-        
+
     Returns:
         bool: True if scoring is complete
     """
@@ -204,7 +204,7 @@ def handle_step_scoring(state, name):
 def handle_step_editing(state, name, steps):
     """
     Handle editing for an analysis step.
-    
+
     Args:
         state: The current analysis state
         name: Name of the analysis step
@@ -265,7 +265,7 @@ def handle_step_editing(state, name, steps):
 def process_current_analysis_step(state):
     """
     Process the current analysis step.
-    
+
     Args:
         state: The current analysis state
     """
@@ -286,7 +286,7 @@ def process_current_analysis_step(state):
 def render_analysis_workflow(state):
     """
     Render the complete analysis workflow.
-    
+
     Args:
         state: The current analysis state
     """

@@ -134,9 +134,9 @@ def load_css():
         border-right: 1px solid #E2E8F0 !important; /* optional, clean border */
         position: relative;
     }
-                
+
     .cold-sidebar-footer {
-        margin: 24px 0 0 0;            
+        margin: 24px 0 0 0;
     }
 
     .cold-sidebar-footer img {

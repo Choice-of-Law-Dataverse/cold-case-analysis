@@ -12,9 +12,9 @@ test_content = """**Judicial Precedents:**
 - Shamil Bank of Bahrain EC v Beximco Pharmaceuticals Ltd
 
 **Textbooks/Academic Sources:**
-- Dicey, Morris & Collins: Used extensively to interpret the conflict rules under the Rome Convention, particularly regarding the recognition of foreign laws such as Jewish law and rules of incorporation, and to explain how law of a country is the relevant legal system in conflict of laws. 
-- Professor Burrows: Cited to discuss the modern approach to rescission for duress and the notion that counter-restitution can be flexible or monetary, influencing the court's understanding of the legal principles applicable to duress and mistake. 
-- Lord Diplock in Amin Rasheed Shipping Corp v Kuwait Insurance Co: Cited to support the principle that the choice of law in a contract involves law of a country, not non-national systems like general principles or lex mercatoria. 
+- Dicey, Morris & Collins: Used extensively to interpret the conflict rules under the Rome Convention, particularly regarding the recognition of foreign laws such as Jewish law and rules of incorporation, and to explain how law of a country is the relevant legal system in conflict of laws.
+- Professor Burrows: Cited to discuss the modern approach to rescission for duress and the notion that counter-restitution can be flexible or monetary, influencing the court's understanding of the legal principles applicable to duress and mistake.
+- Lord Diplock in Amin Rasheed Shipping Corp v Kuwait Insurance Co: Cited to support the principle that the choice of law in a contract involves law of a country, not non-national systems like general principles or lex mercatoria.
 - Lord Blackburn in Erlanger v New Sombrero Phosphate: Cited regarding the principle that counter-restitution is generally required to rescind a contract, informing the court's approach to restitutio in integrum.
 
 **Statutory Provisions:**

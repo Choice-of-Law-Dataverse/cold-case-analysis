@@ -9,7 +9,7 @@ AVAILABLE JURISDICTIONS:
 ANALYSIS GUIDELINES:
 Look for the following key indicators in the text:
 
-1. **Court Names**: 
+1. **Court Names**:
    - Supreme courts, constitutional courts, high courts, appellate courts
    - Administrative courts, commercial courts, specialized tribunals
    - Federal vs. state/provincial court indicators

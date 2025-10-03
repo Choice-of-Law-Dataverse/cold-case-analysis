@@ -11,7 +11,7 @@ from utils.debug_print_state import print_state
 def display_jurisdiction_info(col_state):
     """
     Display jurisdiction information if available.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -39,7 +39,7 @@ def display_jurisdiction_info(col_state):
 def display_case_info(col_state):
     """
     Display case citation and full text.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -58,7 +58,7 @@ def display_case_info(col_state):
 def display_col_extractions(col_state):
     """
     Display the history of COL extractions and feedback.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -87,7 +87,7 @@ def display_col_extractions(col_state):
 def handle_first_extraction_scoring(col_state):
     """
     Handle scoring for the first COL extraction.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -115,7 +115,7 @@ def handle_first_extraction_scoring(col_state):
 def handle_col_feedback_phase(col_state):
     """
     Handle the COL feedback and editing phase.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -132,7 +132,7 @@ def handle_col_feedback_phase(col_state):
 def render_feedback_input(col_state):
     """
     Render the feedback input interface.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -163,7 +163,7 @@ def render_feedback_input(col_state):
 def render_edit_section(col_state):
     """
     Render the edit section interface.
-    
+
     Args:
         col_state: The current analysis state
     """
@@ -200,7 +200,7 @@ def render_edit_section(col_state):
 def render_col_processing(col_state):
     """
     Render the complete COL processing interface.
-    
+
     Args:
         col_state: The current analysis state
     """

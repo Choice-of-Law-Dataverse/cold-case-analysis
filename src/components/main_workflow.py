@@ -16,7 +16,7 @@ from utils.state_manager import create_initial_analysis_state, get_col_state
 def render_initial_input_phase():
     """
     Render the initial input phase before any processing has begun.
-    
+
     Returns:
         bool: True if ready to proceed to COL extraction, False otherwise
     """
