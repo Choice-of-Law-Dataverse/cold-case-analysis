@@ -131,37 +131,42 @@ def execute_analysis_step(state, name, func):
     Returns:
         bool: True if step was executed, False if already completed
     """
+    from utils.state_manager import set_processing
+    
     if not state.get(f"{name}_printed"):
-        result = func(state)
-        state.update(result)
+        set_processing(True)
+        with st.spinner(f"Analyzing {get_step_display_name(name, state)}..."):
+            result = func(state)
+            state.update(result)
 
-        # Get proper display name for the step
-        display_name = get_step_display_name(name, state)
+            # Get proper display name for the step
+            display_name = get_step_display_name(name, state)
 
-        # Display analysis step label
-        st.markdown(f"**{display_name}**")
+            # Display analysis step label
+            st.markdown(f"**{display_name}**")
 
-        # Special handling for PIL provisions
-        if name == "pil_provisions":
-            formatted_content = display_pil_provisions(state, name)
-            if formatted_content:
-                st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
-                # Store formatted content for chat history
-                state.setdefault("chat_history", []).append(("machine", f"{display_name}: {formatted_content}"))
+            # Special handling for PIL provisions
+            if name == "pil_provisions":
+                formatted_content = display_pil_provisions(state, name)
+                if formatted_content:
+                    st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
+                    # Store formatted content for chat history
+                    state.setdefault("chat_history", []).append(("machine", f"{display_name}: {formatted_content}"))
+                else:
+                    # Fallback to original format
+                    out = state.get(name)
+                    last = out[-1] if isinstance(out, list) else out
+                    st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
+                    state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
             else:
-                # Fallback to original format
+                # Standard handling for other steps
                 out = state.get(name)
                 last = out[-1] if isinstance(out, list) else out
                 st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
                 state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
-        else:
-            # Standard handling for other steps
-            out = state.get(name)
-            last = out[-1] if isinstance(out, list) else out
-            st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
-            state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
 
-        state[f"{name}_printed"] = True
+            state[f"{name}_printed"] = True
+        set_processing(False)
         st.rerun()
         return True
     return False
@@ -178,6 +183,8 @@ def handle_step_scoring(state, name):
     Returns:
         bool: True if scoring is complete
     """
+    from utils.state_manager import is_processing
+    
     score_key = f"{name}_score_submitted"
     display_name = get_step_display_name(name, state)
 
@@ -189,9 +196,10 @@ def handle_step_scoring(state, name):
             max_value=100,
             value=100,
             step=1,
-            key=f"{name}_score_input"
+            key=f"{name}_score_input",
+            disabled=is_processing()
         )
-        if st.button(f"Submit {display_name} Score", key=f"submit_{name}_score"):
+        if st.button(f"Submit {display_name} Score", key=f"submit_{name}_score", disabled=is_processing()):
             # Record user score and add to history
             state[f"{name}_score"] = score
             state[score_key] = True
@@ -210,6 +218,8 @@ def handle_step_editing(state, name, steps):
         name: Name of the analysis step
         steps: List of all analysis steps
     """
+    from utils.state_manager import is_processing, set_processing
+    
     display_name = get_step_display_name(name, state)
 
     # Special handling for PIL provisions
@@ -226,7 +236,8 @@ def handle_step_editing(state, name, steps):
                 f"Edit {display_name}:",
                 value=state.get(edit_key, last),
                 height=200,
-                key=f"{name}_edit_area"
+                key=f"{name}_edit_area",
+                disabled=is_processing()
             )
     else:
         # Standard editing for other steps
@@ -237,28 +248,32 @@ def handle_step_editing(state, name, steps):
             f"Edit {display_name}:",
             value=state.get(edit_key, last),
             height=200,
-            key=f"{name}_edit_area"
+            key=f"{name}_edit_area",
+            disabled=is_processing()
         )
 
-    if st.button(f"Submit Edited {display_name}", key=f"submit_edited_{name}"):
-        # Special handling for PIL provisions storage
-        if name == "pil_provisions":
-            update_pil_provisions_state(state, name, edited)
-        else:
-            # Standard handling for other steps
-            state[name][-1] = edited
-            state[f"{name}_edited"] = edited
+    if st.button(f"Submit Edited {display_name}", key=f"submit_edited_{name}", disabled=is_processing()):
+        set_processing(True)
+        with st.spinner(f"Processing {display_name}..."):
+            # Special handling for PIL provisions storage
+            if name == "pil_provisions":
+                update_pil_provisions_state(state, name, edited)
+            else:
+                # Standard handling for other steps
+                state[name][-1] = edited
+                state[f"{name}_edited"] = edited
 
-        # Add to chat history
-        state.setdefault("chat_history", []).append(("user", edited))
+            # Add to chat history
+            state.setdefault("chat_history", []).append(("user", edited))
 
-        # Advance to next step or complete analysis
-        if state["analysis_step"] < len(steps) - 1:
-            state["analysis_step"] += 1
-        else:
-            state["analysis_done"] = True
+            # Advance to next step or complete analysis
+            if state["analysis_step"] < len(steps) - 1:
+                state["analysis_step"] += 1
+            else:
+                state["analysis_done"] = True
 
-        print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
+            print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
+        set_processing(False)
         st.rerun()
 
 

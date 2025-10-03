@@ -42,27 +42,33 @@ def render_initial_input_phase():
         st.markdown("## Choice of Law Analysis")
         st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
 
-        if st.button("Extract Choice of Law Section", type="primary", key="extract_col_btn"):
+        from utils.state_manager import is_processing, set_processing
+        
+        if st.button("Extract Choice of Law Section", type="primary", key="extract_col_btn", disabled=is_processing()):
             if full_text and case_citation.strip():
-                    # Get final jurisdiction data
-                    final_jurisdiction_data = get_final_jurisdiction_data()
+                    set_processing(True)
+                    with st.spinner("Extracting Choice of Law section..."):
+                        # Get final jurisdiction data
+                        final_jurisdiction_data = get_final_jurisdiction_data()
 
-                    # Create initial analysis state
-                    state = create_initial_analysis_state(
-                case_citation=st.session_state.get("case_citation"),
-                        username=st.session_state.get("user"),
-                        model=st.session_state.get("llm_model_select"),
-                        full_text=full_text,
-                        final_jurisdiction_data=final_jurisdiction_data,
-                        user_email=st.session_state.get("user_email")
-                    )
+                        # Create initial analysis state
+                        state = create_initial_analysis_state(
+                    case_citation=st.session_state.get("case_citation"),
+                            username=st.session_state.get("user"),
+                            model=st.session_state.get("llm_model_select"),
+                            full_text=full_text,
+                            final_jurisdiction_data=final_jurisdiction_data,
+                            user_email=st.session_state.get("user_email")
+                        )
 
-                    # Extract COL section
-                    result = extract_col_section(state)
-                    state.update(result)
+                        # Extract COL section
+                        result = extract_col_section(state)
+                        state.update(result)
 
-                    # Update session state
-                    st.session_state.col_state = state
+                        # Update session state
+                        st.session_state.col_state = state
+                    
+                    set_processing(False)
                     st.rerun()
             else:
                 if not full_text:

@@ -33,6 +33,8 @@ def handle_theme_scoring(state):
     Returns:
         bool: True if scoring is complete
     """
+    from utils.state_manager import is_processing
+    
     if not state.get("theme_first_score_submitted"):
         score = st.slider(
             "Evaluate these themes (0-100):",
@@ -40,9 +42,10 @@ def handle_theme_scoring(state):
             max_value=100,
             value=100,
             step=1,
-            key="theme_first_score_input"
+            key="theme_first_score_input",
+            disabled=is_processing()
         )
-        if st.button("Submit Theme Score", key="submit_theme_score"):
+        if st.button("Submit Theme Score", key="submit_theme_score", disabled=is_processing()):
             state["theme_first_score"] = score
             state["theme_first_score_submitted"] = True
             st.rerun()
@@ -63,6 +66,8 @@ def handle_theme_editing(state, last_theme, valid_themes):
         last_theme: The last classified theme
         valid_themes: List of valid theme options
     """
+    from utils.state_manager import is_processing
+    
     if not state.get("theme_done"):
         # Parse default selection and filter to only include valid themes
         default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]
@@ -83,10 +88,11 @@ def handle_theme_editing(state, last_theme, valid_themes):
             "Adjust themes:",
             options=valid_themes,
             default=filtered_defaults,
-            key="theme_select"
+            key="theme_select",
+            disabled=is_processing()
         )
 
-        if st.button("Submit Final Themes"):
+        if st.button("Submit Final Themes", disabled=is_processing()):
             if selected:
                 new_sel = ", ".join(selected)
                 state.setdefault("classification", []).append(new_sel)

@@ -15,6 +15,8 @@ def render_case_citation_input():
     Returns:
         str: The entered case citation
     """
+    from utils.state_manager import is_processing
+    
     st.markdown("**Case Citation (required):**")
     st.caption(
         "This field should include the issuing court, party names (claimant/respondent), the official case or docket number, and the decision date. Citation styles differ by jurisdiction; use the native format. Examples — CH: Federal Court, 20.12.2005 - BGE 132 III 285; CAN: Nike Informatic Systems v Avac, 1979 CanLII 667 (British Columbia)."
@@ -24,11 +26,14 @@ def render_case_citation_input():
         key="case_citation",
         placeholder="e.g., Federal Court, 20.12.2005 - BGE 132 III 285",
         label_visibility="collapsed",
+        disabled=is_processing()
     )
 
 
 def render_email_input():
     """Render optional email input for contact consent."""
+    from utils.state_manager import is_processing
+    
     st.markdown("**Contact Email (optional):**")
     st.caption("If you agree to be contacted about your contributed cases and analyses, provide an email address.")
     return st.text_input(
@@ -36,6 +41,7 @@ def render_email_input():
         key="user_email",
         placeholder="name@example.com",
         label_visibility="collapsed",
+        disabled=is_processing()
     )
 
 
@@ -73,6 +79,8 @@ def render_text_input():
     Returns:
         str: The entered court decision text
     """
+    from utils.state_manager import is_processing
+    
     # Ensure default session state for text input
     if "full_text_input" not in st.session_state:
         st.session_state.full_text_input = ""
@@ -81,7 +89,8 @@ def render_text_input():
         "Paste the court decision text here:",
         height=200,
         help="Enter the full text of the court decision to extract the Choice of Law section.",
-        key="full_text_input"
+        key="full_text_input",
+        disabled=is_processing()
     )
 
 
@@ -95,8 +104,10 @@ def render_demo_button(full_text):
     Returns:
         bool: True if demo button was shown and potentially clicked
     """
+    from utils.state_manager import is_processing
+    
     if not full_text.strip():
-        if st.button("Use Demo Case", on_click=load_demo_case, key="demo_button"):
+        if st.button("Use Demo Case", on_click=load_demo_case, key="demo_button", disabled=is_processing()):
             return True
     return False
 
