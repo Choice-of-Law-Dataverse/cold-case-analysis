@@ -13,13 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 logger = logging.getLogger(__name__)
 
-# Add these to your config.py file:
-# NOCODB_BASE_URL = os.getenv("NOCODB_BASE_URL")
-# NOCODB_API_TOKEN = os.getenv("NOCODB_API_TOKEN")
 try:
     from config import NOCODB_API_TOKEN, NOCODB_BASE_URL
 except ImportError:
-    # Fallback if not yet added to config
     NOCODB_BASE_URL = os.getenv("NOCODB_BASE_URL")
     NOCODB_API_TOKEN = os.getenv("NOCODB_API_TOKEN")
 
@@ -28,6 +24,7 @@ except ImportError:
 class FilterCondition:
     column: str
     value: Any
+
 
 class NocoDBService:
     def __init__(self, base_url: str, api_token: str | None = None):
@@ -104,6 +101,7 @@ class NocoDBService:
             offset += limit
         return records
 
+
 def remove_fields_prefix(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = df.columns.str.replace("fields.", "", regex=False)
     return df
@@ -113,10 +111,9 @@ def process_list_like_values(df: pd.DataFrame) -> pd.DataFrame:
     for col in df.columns:
         list_mask = df[col].apply(lambda value: isinstance(value, list))
         if bool(list_mask.any()):
-            df[col] = df[col].apply(
-                lambda value: ",".join(map(str, value)) if isinstance(value, list) else value
-            )
+            df[col] = df[col].apply(lambda value: ",".join(map(str, value)) if isinstance(value, list) else value)
     return df
+
 
 def fetch_themes_dataframe() -> pd.DataFrame:
     if not NOCODB_BASE_URL:
@@ -163,6 +160,7 @@ def fetch_themes_dataframe() -> pd.DataFrame:
         logger.error("Fallback also failed: %s", fallback_error)
         return pd.DataFrame({"Theme": [], "Definition": []})
 
+
 def filter_themes_by_list(themes_list: list[str]) -> str:
     """
     Returns a markdown table (string) of Theme|Definition
@@ -173,6 +171,7 @@ def filter_themes_by_list(themes_list: list[str]) -> str:
     # fast in‐memory filter
     filtered_df = THEMES_TABLE_DF.loc[THEMES_TABLE_DF["Theme"].isin(themes_list)]
     return format_themes_table(filtered_df)
+
 
 def fetch_themes_list() -> list[str]:
     # just return the cached list
@@ -190,9 +189,10 @@ def format_themes_table(df: pd.DataFrame) -> str:
         table_str += f"| {theme} | {definition} |\n"
     return table_str
 
+
 THEMES_TABLE_DF = fetch_themes_dataframe()
 CSV_PATH = os.path.join(os.path.dirname(__file__), "../data/themes.csv")
-#THEMES_TABLE_DF  = pd.read_csv(CSV_PATH)
+# THEMES_TABLE_DF  = pd.read_csv(CSV_PATH)
 THEMES_TABLE_STR = format_themes_table(THEMES_TABLE_DF)
 
 # Save to CSV (run once to recreate)

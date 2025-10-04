@@ -8,17 +8,13 @@ from langchain_openai import ChatOpenAI
 
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-# Create logger for debug messages
 logger = logging.getLogger(__name__)
 
 if not os.environ.get("OPENAI_API_KEY"):
     raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your .env file.")
+
 
 def get_llm(model: str | None = None):
     """
@@ -26,6 +22,7 @@ def get_llm(model: str | None = None):
     """
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
     return ChatOpenAI(model=selected)
+
 
 # default llm instance
 llm = get_llm()
@@ -43,4 +40,3 @@ SQL_CONN_STRING = os.getenv("SQL_CONN_STRING")
 USER_CREDENTIALS = json.loads(os.getenv("USER_CREDENTIALS", "{}"))
 
 thread_id = str(uuid.uuid4())
-#print(f"Thread ID: {thread_id}")
