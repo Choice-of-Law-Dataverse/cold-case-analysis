@@ -3,6 +3,7 @@ import logging
 import os
 import uuid
 
+import logfire
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
@@ -14,6 +15,20 @@ logger = logging.getLogger(__name__)
 
 if not os.environ.get("OPENAI_API_KEY"):
     raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your .env file.")
+
+# Initialize Logfire for monitoring and instrumentation
+# Token is optional - if not provided, Logfire will not send data but instrumentation will still work
+logfire_token = os.getenv("LOGFIRE_TOKEN")
+if logfire_token:
+    logfire.configure(token=logfire_token)
+    logger.info("Logfire monitoring initialized with token")
+else:
+    logfire.configure(send_to_logfire=False)
+    logger.info("Logfire instrumentation enabled (local only - no token provided)")
+
+# Instrument OpenAI/LangChain calls for automatic tracing
+logfire.instrument_openai()
+logger.info("OpenAI instrumentation enabled")
 
 
 def get_llm(model: str | None = None):
