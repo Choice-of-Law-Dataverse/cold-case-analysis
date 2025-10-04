@@ -83,49 +83,44 @@ def test_no_redundant_comments_in_case_analyzer():
             )
 
 
-def test_style_guide_exists():
-    """Test that the style guide documentation has been created."""
-    docs_dir = os.path.join(os.path.dirname(__file__), "..", "..", "docs")
-    style_guide_path = os.path.join(docs_dir, "STYLE_GUIDE.md")
+def test_conventions_in_agents_md():
+    """Test that AGENTS.md contains coding conventions."""
+    agents_path = os.path.join(os.path.dirname(__file__), "..", "..", "AGENTS.md")
     
-    assert os.path.exists(style_guide_path), "STYLE_GUIDE.md not found in docs/"
+    assert os.path.exists(agents_path), "AGENTS.md not found"
     
-    with open(style_guide_path, encoding="utf-8") as f:
+    with open(agents_path, encoding="utf-8") as f:
         content = f.read()
     
-    # Check for key sections
     required_sections = [
-        "Logging Guidelines",
-        "Comment Guidelines",
-        "Use Logging, Not Print Statements",
-        "Only Comment When Necessary"
+        "Coding Conventions",
+        "Logging",
+        "Comments",
     ]
     
     for section in required_sections:
-        assert section in content, f"Missing section '{section}' in STYLE_GUIDE.md"
+        assert section in content, f"Missing section '{section}' in AGENTS.md"
 
 
-def test_readme_references_style_guide():
-    """Test that README.md references the new style guide."""
+def test_readme_references_agents_md():
+    """Test that README.md references AGENTS.md for coding conventions."""
     readme_path = os.path.join(os.path.dirname(__file__), "..", "..", "README.md")
     
     with open(readme_path, encoding="utf-8") as f:
         content = f.read()
     
-    assert "STYLE_GUIDE.md" in content, "README.md doesn't reference STYLE_GUIDE.md"
-    assert "Coding Style Guide" in content, "README.md doesn't mention Coding Style Guide"
+    assert "AGENTS.md" in content, "README.md doesn't reference AGENTS.md"
 
 
 if __name__ == "__main__":
     import sys
     
-    # Run all tests
     test_functions = [
         test_no_print_statements_in_tools,
         test_logging_imports,
         test_no_redundant_comments_in_case_analyzer,
-        test_style_guide_exists,
-        test_readme_references_style_guide
+        test_conventions_in_agents_md,
+        test_readme_references_agents_md
     ]
     
     passed = 0

@@ -24,7 +24,6 @@ def _coerce_to_text(content: Any) -> str:
 
 
 def theme_classification_node(state):
-    logger.debug("--- THEME CLASSIFICATION ---")
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")

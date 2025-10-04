@@ -20,7 +20,6 @@ def parse_pil_provisions(raw_content):
     Returns:
         dict: Structured PIL data with categories
     """
-    # Handle different input formats and ensure we have a string
     if isinstance(raw_content, list):
         if len(raw_content) == 1:
             content = str(raw_content[0])
@@ -29,12 +28,10 @@ def parse_pil_provisions(raw_content):
     else:
         content = str(raw_content)
 
-    # Remove outer list brackets if present
     content = content.strip()
     if content.startswith("['") and content.endswith("']"):
-        content = content[2:-2]  # Remove [' and ']
+        content = content[2:-2]
 
-    # Initialize structure
     parsed = {
         "judicial_precedents": [],
         "textbooks_sources": [],
@@ -43,7 +40,6 @@ def parse_pil_provisions(raw_content):
         "summary": ""
     }
 
-    # Parse different sections with more flexible patterns
     sections = {
         "judicial_precedents": r"\*\*Judicial Precedents:\*\*(.*?)(?=\n\*\*|$)",
         "textbooks_sources": r"\*\*Textbooks/Academic Sources:\*\*(.*?)(?=\n\*\*|$)",
@@ -59,7 +55,6 @@ def parse_pil_provisions(raw_content):
             if key == "summary":
                 parsed[key] = section_content
             else:
-                # Split by lines and clean up
                 lines = section_content.split("\n")
                 items = []
                 current_item = ""
@@ -69,19 +64,16 @@ def parse_pil_provisions(raw_content):
                     if not line:
                         continue
 
-                    # Check if it's a new item (starts with - or bullet)
                     if line.startswith("-") or line.startswith("•"):
                         if current_item:
                             items.append(current_item.strip())
                         current_item = line.lstrip("-•").strip()
                     else:
-                        # Continuation of previous item
                         if current_item:
                             current_item += " " + line
                         else:
                             current_item = line
 
-                # Add the last item
                 if current_item:
                     items.append(current_item.strip())
 

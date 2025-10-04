@@ -20,7 +20,6 @@ def _coerce_to_text(content: Any) -> str:
 
 
 def extract_col_section(state):
-    logger.debug("--- COL SECTION EXTRACTION ---")
     feedback = state.get("col_section_feedback", [])
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")

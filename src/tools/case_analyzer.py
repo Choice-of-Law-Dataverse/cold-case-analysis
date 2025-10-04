@@ -51,7 +51,6 @@ def _get_classification_content_str(messages: Sequence[Any] | None) -> str:
 
 
 def relevant_facts(state):
-    logger.debug("--- RELEVANT FACTS ---")
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
@@ -76,7 +75,6 @@ def relevant_facts(state):
 
 
 def pil_provisions(state):
-    logger.debug("--- PIL PROVISIONS ---")
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
@@ -107,7 +105,6 @@ def pil_provisions(state):
 
 
 def col_issue(state):
-    logger.debug("--- CHOICE OF LAW ISSUE ---")
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
@@ -145,7 +142,6 @@ def col_issue(state):
 
 
 def courts_position(state):
-    logger.debug("--- COURT'S POSITION ---")
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
@@ -183,7 +179,6 @@ def courts_position(state):
 
 
 def obiter_dicta(state):
-    logger.debug("--- OBITER DICTA ---")
     text = state.get("full_text", "")
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
@@ -205,7 +200,6 @@ def obiter_dicta(state):
 
 
 def dissenting_opinions(state):
-    logger.debug("--- DISSENTING OPINIONS ---")
     text = state.get("full_text", "")
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
@@ -227,7 +221,6 @@ def dissenting_opinions(state):
 
 
 def abstract(state):
-    logger.debug("--- ABSTRACT ---")
     text = state["full_text"]
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
