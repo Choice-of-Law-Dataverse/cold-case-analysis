@@ -3,11 +3,15 @@
 Analysis workflow components for the CoLD Case Analyzer.
 """
 
+import logging
+
 import streamlit as st
 
 from components.database import save_to_db
 from components.pil_provisions_handler import display_pil_provisions
 from utils.debug_print_state import print_state
+
+logger = logging.getLogger(__name__)
 
 
 def get_step_display_name(step_name, state):
@@ -67,7 +71,7 @@ def display_completion_message(state):
         state: The current analysis state
     """
     if state.get("analysis_done"):
-        print("\n\n\nAnalysis completed, saving state to database...\n\n")
+        logger.info("Analysis completed, saving state to database")
         save_to_db(state)
         st.markdown(
             "<div class='machine-message'>Thank you for using the CoLD Case Analyzer.<br>"
