@@ -102,7 +102,7 @@ def handle_col_feedback_phase(col_state):
     # Auto-approve first extraction, skip to editing
     if not col_state.get("col_ready_edit"):
         col_state["col_ready_edit"] = True
-    
+
     render_edit_section(col_state)
 
 

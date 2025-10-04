@@ -5,7 +5,7 @@ Analysis workflow components for the CoLD Case Analyzer.
 import streamlit as st
 
 from components.database import save_to_db
-from components.pil_provisions_handler import display_pil_provisions, handle_pil_provisions_editing, update_pil_provisions_state
+from components.pil_provisions_handler import display_pil_provisions
 from utils.debug_print_state import print_state
 
 
@@ -179,11 +179,11 @@ def handle_step_scoring(state, name):
         bool: True (always complete)
     """
     score_key = f"{name}_score_submitted"
-    
+
     # Automatically mark as submitted without user interaction
     if not state.get(score_key):
         state[score_key] = True
-    
+
     return True
 
 
@@ -215,6 +215,7 @@ def execute_all_analysis_steps_parallel(state):
         state: The current analysis state
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
+
     from tools.case_analyzer import (
         abstract,
         col_issue,
@@ -256,7 +257,7 @@ def execute_all_analysis_steps_parallel(state):
         futures = {executor.submit(func, state): name for name, func in parallel_steps}
         completed = 0
         total_steps = len(parallel_steps) + len(sequential_steps)
-        
+
         for future in as_completed(futures):
             name = futures[future]
             try:
@@ -283,7 +284,7 @@ def execute_all_analysis_steps_parallel(state):
 
     progress_bar.progress(1.0)
     status_text.text("✓ Analysis complete!")
-    
+
     # Mark all steps as printed and scored
     for name, _ in parallel_steps + sequential_steps:
         state[f"{name}_printed"] = True
@@ -307,14 +308,14 @@ def render_final_editing_phase(state):
     # Create editable text areas for all steps
     for name, _ in steps:
         display_name = get_step_display_name(name, state)
-        
+
         # Get current value
         content = state.get(name)
         if not content:
             continue
-            
+
         current_value = content[-1] if isinstance(content, list) else content
-        
+
         # Special handling for PIL provisions display
         if name == "pil_provisions":
             formatted_content = display_pil_provisions(state, name)
@@ -323,14 +324,14 @@ def render_final_editing_phase(state):
                 st.markdown(f"**{display_name}**")
                 # Show formatted display
                 st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
-                
+
                 # Provide text area with JSON for editing
                 import json
                 if isinstance(current_value, list):
                     edit_value = json.dumps(current_value, indent=2)
                 else:
                     edit_value = str(current_value)
-                    
+
                 edited = st.text_area(
                     f"Edit {display_name} (JSON format):",
                     value=edit_value,
