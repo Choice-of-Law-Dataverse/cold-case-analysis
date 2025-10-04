@@ -235,31 +235,32 @@ sequenceDiagram
     Tools->>LLM: Analyze court decision
     LLM->>Tools: Return jurisdiction
     Tools->>Components: Display results
-    User->>Components: Score/Edit jurisdiction (0-100)
-    
+    User->>Components: Confirm/Override jurisdiction
+
     User->>Components: Proceed to COL extraction
     Components->>Tools: Extract COL sections
     Tools->>LLM: Identify COL content
     LLM->>Tools: Return COL sections
     Tools->>Components: Display extractions
-    User->>Components: Score/Edit COL sections
-    
+    User->>Components: Edit COL sections if needed
+
     User->>Components: Proceed to theme classification
     Components->>Tools: Classify PIL themes
     Tools->>LLM: Categorize against taxonomy
     LLM->>Tools: Return themes
     Tools->>Components: Display themes
-    User->>Components: Score/Edit themes
-    
+    User->>Components: Edit themes if needed
+
     User->>Components: Proceed to detailed analysis
-    loop Analysis Steps
-        Components->>Tools: Execute step (Abstract/Facts/Provisions/Issue/Position)
-        Tools->>LLM: Generate analysis
-        LLM->>Tools: Return results
-        Tools->>Components: Display results
-        User->>Components: Score/Edit results
-    end
-    
+    Note over Components,Tools: Parallel execution where possible
+    Components->>Tools: Execute all analysis steps
+    Tools->>LLM: Generate analysis (Facts, PIL, Issue, Position, Abstract)
+    LLM->>Tools: Return results
+    Tools->>Components: Display all results for final editing
+
+    User->>Components: Review and edit all results
+    User->>Components: Submit final analysis
+
     Components->>DB: Save complete analysis
     DB->>Components: Confirm save
     Components->>User: Display completion message
@@ -395,43 +396,33 @@ flowchart TD
     end
     
     Input --> Jurisdiction[Jurisdiction Detection]
-    
+
     subgraph Jurisdiction[Jurisdiction Detection]
         Detect[Detect Legal System]
-        JurisScore[Score Result: 0-100]
-        JurisEdit[Edit if Needed]
+        JurisConfirm[Confirm/Override if Needed]
     end
-    
+
     Jurisdiction --> COLExtract[COL Extraction]
-    
+
     subgraph COLExtract[COL Section Extraction]
         ExtractCOL[Extract COL Sections]
-        COLScore[Score Result: 0-100]
         COLEdit[Edit if Needed]
     end
-    
+
     COLExtract --> ThemeClass[Theme Classification]
-    
+
     subgraph ThemeClass[Theme Classification]
         ClassifyTheme[Classify PIL Themes]
-        ThemeScore[Score Result: 0-100]
         ThemeEdit[Edit if Needed]
     end
-    
-    ThemeClass --> PILProv[PIL Provisions]
-    
-    subgraph PILProv[PIL Provisions Extraction]
-        ExtractProv[Extract Provisions]
-        ProvScore[Score Result: 0-100]
-        ProvEdit[Edit if Needed]
+
+    ThemeClass --> Analysis[Parallel Analysis]
+
+    subgraph Analysis[Parallel Analysis Execution]
+        ParallelSteps[Parallel: Facts, PIL, Issue]
+        SequentialSteps[Sequential: Position, Abstract]
+        FinalEdit[Final Edit All Results]
     end
-    
-    PILProv --> Analysis[Detailed Analysis]
-    
-    subgraph Analysis[Detailed Analysis Steps]
-        Abstract[1. Abstract]
-        Facts[2. Relevant Facts]
-        Provisions[3. PIL Provisions]
         Issue[4. COL Issue]
         Position[5. Court Position]
     end
@@ -442,8 +433,14 @@ flowchart TD
     classDef phase fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef step fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     
-    class Input,Jurisdiction,COLExtract,ThemeClass,PILProv,Analysis phase
-    class Abstract,Facts,Provisions,Issue,Position step
+    Analysis --> Save[Save to Database]
+    Save --> Complete([Analysis Complete])
+
+    classDef phase fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef step fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+
+    class Input,Jurisdiction,COLExtract,ThemeClass,Analysis phase
+    class ParallelSteps,SequentialSteps,FinalEdit step
 ```
 
 ### LLM Integration Data Flow
@@ -477,44 +474,42 @@ flowchart LR
     
     subgraph "User Review"
         Display[Display to User]
-        Score[User Score: 0-100]
-        Edit[User Edits]
+        Edit[User Edits if Needed]
         Approve[Approve/Continue]
     end
-    
+
     Text --> PromptSelector
     Citation --> PromptSelector
     Jurisdiction --> PromptSelector
-    
+
     PromptSelector --> CivilLaw
     PromptSelector --> CommonLaw
     PromptSelector --> India
-    
+
     CivilLaw --> Context
     CommonLaw --> Context
     India --> Context
-    
+
     Context --> OpenAI
     OpenAI --> Response
     Response --> Parse
     Parse --> Validate
     Validate --> Store
     Store --> Display
-    Display --> Score
-    Score --> Edit
+    Display --> Edit
     Edit --> Approve
-    
+
     classDef input fill:#e3f2fd,stroke:#1976d2
     classDef prompt fill:#f3e5f5,stroke:#7b1fa2
     classDef llm fill:#fff3e0,stroke:#f57c00
     classDef process fill:#e8f5e9,stroke:#388e3c
     classDef user fill:#fce4ec,stroke:#c2185b
-    
+
     class Text,Citation,Jurisdiction input
     class PromptSelector,CivilLaw,CommonLaw,India prompt
     class OpenAI,Context,Response llm
     class Parse,Validate,Store process
-    class Display,Score,Edit,Approve user
+    class Display,Edit,Approve user
 ```
 
 ### State Management Data Flow
@@ -535,21 +530,20 @@ flowchart TD
         COLData[col_sections]
         Themes[themes_data]
         AnalysisData[analysis_results]
-        Scores[user_scores]
     end
-    
+
     subgraph "State Operations"
         Update[Update State<br/>st.session_state.key = value]
         Retrieve[Retrieve State<br/>value = st.session_state.key]
         Check[Check Existence<br/>if key in st.session_state]
     end
-    
+
     subgraph "Component Access"
         InputComp[Input Components]
         ProcComp[Processing Components]
         DispComp[Display Components]
     end
-    
+
     InitState --> SessionDict
     SessionDict --> CaseCit
     SessionDict --> FullText
@@ -557,34 +551,32 @@ flowchart TD
     SessionDict --> COLData
     SessionDict --> Themes
     SessionDict --> AnalysisData
-    SessionDict --> Scores
-    
+
     CaseCit --> Update
     FullText --> Update
     Juris --> Update
     COLData --> Update
     Themes --> Update
     AnalysisData --> Update
-    Scores --> Update
-    
+
     Update --> Retrieve
     Retrieve --> Check
-    
+
     Check --> InputComp
     Check --> ProcComp
     Check --> DispComp
-    
+
     InputComp --> Update
     ProcComp --> Update
     DispComp --> Retrieve
-    
+
     classDef session fill:#e3f2fd,stroke:#1976d2
     classDef keys fill:#f3e5f5,stroke:#7b1fa2
     classDef ops fill:#fff3e0,stroke:#f57c00
     classDef comp fill:#e8f5e9,stroke:#388e3c
-    
+
     class InitState,SessionDict session
-    class CaseCit,FullText,Juris,COLData,Themes,AnalysisData,Scores keys
+    class CaseCit,FullText,Juris,COLData,Themes,AnalysisData keys
     class Update,Retrieve,Check ops
     class InputComp,ProcComp,DispComp comp
 ```
@@ -611,8 +603,7 @@ The system uses consistent data structures for case analysis:
     "user_email": Optional[str],         # Optional user contact
     "username": Optional[str],           # User identification
     "model": str,                        # LLM model used
-    "timestamp": datetime,               # Analysis timestamp
-    "scores": Dict[str, int]             # User scores for each step (0-100)
+    "timestamp": datetime                # Analysis timestamp
 }
 ```
 
@@ -635,28 +626,21 @@ The system uses consistent data structures for case analysis:
     "jurisdiction": str,
     "precise_jurisdiction": str,
     "jurisdiction_detected": bool,
-    "jurisdiction_score": int,
-    
+    "jurisdiction_confirmed": bool,
+
     # COL Processing
     "col_sections": List[str],
-    "col_first_score_submitted": bool,
     "col_section_feedback": List[str],
-    "col_approved": bool,
-    
+    "col_done": bool,
+
     # Theme Classification
     "themes_data": List[str],
-    "theme_first_score_submitted": bool,
-    "theme_feedback": str,
-    "theme_approved": bool,
-    
-    # PIL Provisions
-    "pil_provisions": List[str],
-    "pil_provisions_score": int,
-    
+    "theme_done": bool,
+
     # Analysis Results
     "analysis_results": Dict[str, str],
-    "analysis_complete": bool,
-    "current_analysis_step": int,
+    "analysis_done": bool,
+    "parallel_execution_started": bool,
     
     # Demo Case
     "demo_case_loaded": bool
@@ -681,7 +665,6 @@ The system uses consistent data structures for case analysis:
     "pil_provisions": JSONB,
     "col_issue": TEXT,
     "courts_position": TEXT,
-    "scores": JSONB,
     "created_at": TIMESTAMP,
     "updated_at": TIMESTAMP
 }
@@ -922,10 +905,11 @@ docker run -p 8501:8501 --env-file .env cold-case-analyzer
 
 The CoLD Case Analyzer is a comprehensive Streamlit-based application for analyzing court decisions related to private international law. It provides:
 
-- **Interactive Analysis**: Step-by-step workflow with user validation
+- **Interactive Analysis**: Step-by-step workflow with user validation at key checkpoints
 - **Multi-jurisdiction Support**: Specialized prompts for civil law, common law, and Indian legal systems
 - **Comprehensive Extraction**: Jurisdiction, COL sections, themes, provisions, and detailed analysis
-- **User Feedback Integration**: Score and edit results at each stage
+- **Parallel Processing**: Automated analysis with parallel execution for efficiency
+- **Streamlined Editing**: Final review phase where all results can be edited at once
 - **Optional Persistence**: PostgreSQL database integration
 - **LATAM Module**: Specialized tools for Latin American case processing
 
