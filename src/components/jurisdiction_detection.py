@@ -40,8 +40,8 @@ def render_jurisdiction_detection(full_text: str):
         if detect_clicked:
             if full_text.strip():
                 # Show progress banner while analyzing
-                from utils.progress_banner import show_progress_banner, hide_progress_banner
-                
+                from utils.progress_banner import hide_progress_banner, show_progress_banner
+
                 show_progress_banner("Identifying jurisdiction...")
 
                 # Detect precise jurisdiction (now returns just the jurisdiction name)

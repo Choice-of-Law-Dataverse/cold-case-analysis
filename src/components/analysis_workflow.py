@@ -241,7 +241,7 @@ def execute_all_analysis_steps_parallel(state):
     # Abstract runs last using all previous results
     sequential_steps.append(("abstract", abstract))
 
-    from utils.progress_banner import show_progress_banner, hide_progress_banner
+    from utils.progress_banner import hide_progress_banner, show_progress_banner
 
     total_steps = len(parallel_steps) + len(sequential_steps)
     completed = 0

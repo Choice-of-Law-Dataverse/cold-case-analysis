@@ -164,7 +164,7 @@ def render_edit_section(col_state):
                 col_state["theme_eval_iter"] = 0
 
                 from tools.themes_classifier import theme_classification_node
-                from utils.progress_banner import show_progress_banner, hide_progress_banner
+                from utils.progress_banner import hide_progress_banner, show_progress_banner
 
                 # Show progress banner while classifying
                 show_progress_banner("Identifying themes...")

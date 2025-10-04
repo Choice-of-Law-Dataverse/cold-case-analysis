@@ -18,14 +18,14 @@ def get_banner_placeholder():
 def show_progress_banner(message, progress=None):
     """
     Display a progress banner with squiggly line animation.
-    
+
     Args:
         message: The message to display
         progress: Optional progress value (0.0 to 1.0) for determinate progress,
                  None for indeterminate progress
     """
     placeholder = get_banner_placeholder()
-    
+
     if progress is not None:
         # Determinate progress with dot following path
         dot_distance = progress * 100
@@ -75,7 +75,7 @@ def show_progress_banner(message, progress=None):
             </div>
         </div>
         """
-    
+
     with placeholder:
         st.markdown(banner_html, unsafe_allow_html=True)
 
