@@ -14,7 +14,7 @@ def initialize_col_state():
     if "col_state" not in st.session_state:
         # Try to restore from storage first
         restored_state = restore_state_from_storage()
-        st.session_state.col_state = restored_state.get("col_state", {}) if restored_state else {}
+        st.session_state["col_state"] = restored_state.get("col_state", {}) if restored_state else {}
 
         # Also restore jurisdiction-related session state keys
         if restored_state:
@@ -67,10 +67,10 @@ def update_col_state(state_updates):
     Args:
         state_updates: Dictionary of updates to apply to col_state
     """
-    st.session_state.col_state.update(state_updates)
+    st.session_state["col_state"].update(state_updates)
 
     # Auto-save to storage for persistence
-    save_state_to_storage(st.session_state.col_state)
+    save_state_to_storage(st.session_state["col_state"])
 
 
 def get_col_state():
@@ -80,7 +80,7 @@ def get_col_state():
     Returns:
         dict: Current col_state dictionary
     """
-    return st.session_state.col_state
+    return st.session_state["col_state"]
 
 
 def load_demo_case():

@@ -4,8 +4,6 @@ Tests for state persistence functionality.
 import uuid
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 def test_get_or_create_session_id_new():
     """Test creating a new session ID when none exists."""
@@ -164,11 +162,11 @@ def test_initialize_col_state_new():
     from utils.state_manager import initialize_col_state
 
     mock_session_state = {}
-    test_session_id = str(uuid.uuid4())
+    str(uuid.uuid4())
 
     with patch("streamlit.session_state", mock_session_state), patch(
         "streamlit.query_params", {}
-    ) as mock_query_params, patch(
+    ), patch(
         "utils.state_manager.restore_state_from_storage", return_value={}
     ):
         initialize_col_state()
