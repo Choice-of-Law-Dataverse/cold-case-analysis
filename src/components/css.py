@@ -110,7 +110,7 @@ def load_css():
         font-size: 14px !important;
         font-weight: 400 !important;
         background-color: #6F4DFA !important;  /* cold-purple */
-        color: white !important;
+        color: #FFFFFF !important;  /* white text for contrast */
         border-radius: 0 !important;
         padding: 8px 16px !important;
         border: none !important;
@@ -119,6 +119,14 @@ def load_css():
 
     .stButton button:hover {
         background-color: #5a3fd9 !important;  /* slightly darker cold-purple */
+        color: #FFFFFF !important;  /* maintain white text on hover */
+    }
+
+    /* Ensure button text/label elements are also white */
+    .stButton button p,
+    .stButton button div,
+    .stButton button span {
+        color: #FFFFFF !important;
     }
 
     /* Sliders */
