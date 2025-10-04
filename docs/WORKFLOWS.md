@@ -83,21 +83,18 @@ flowchart TD
     subgraph "Jurisdiction Detection"
         DetectJuris[Detect Legal System<br/>Civil Law/Common Law/India]
         DisplayJuris[Display Jurisdiction<br/>Results]
-        ScoreJuris[User Scores Result<br/>0-100]
-        EditJuris[Edit if Needed<br/>Manual Correction]
+        ConfirmJuris[User Confirms<br/>Manual Override if Needed]
     end
-    
+
     subgraph "COL Section Extraction"
         ExtractCOL[Extract COL Sections<br/>Identify Relevant Text]
         DisplayCOL[Display Extracted<br/>Sections]
-        ScoreCOL[User Scores Extraction<br/>0-100]
-        FeedbackCOL[Provide Feedback<br/>Edit/Refine]
+        EditCOL[User Edits Section<br/>if Needed]
     end
-    
+
     subgraph "Theme Classification"
         ClassifyTheme[Classify PIL Themes<br/>Against Taxonomy]
         DisplayThemes[Display Classified<br/>Themes]
-        ScoreThemes[User Scores Themes<br/>0-100]
         EditThemes[Edit Theme List<br/>Manual Adjustment]
     end
     
@@ -137,31 +134,29 @@ flowchart TD
     DemoLoad --> DetectJuris
     
     DetectJuris --> DisplayJuris
-    DisplayJuris --> ScoreJuris
-    ScoreJuris --> EditJuris
-    EditJuris --> ExtractCOL
-    
+    DisplayJuris --> ConfirmJuris
+    ConfirmJuris --> ExtractCOL
+
     ExtractCOL --> DisplayCOL
-    DisplayCOL --> ScoreCOL
-    ScoreCOL --> FeedbackCOL
-    FeedbackCOL --> ClassifyTheme
-    
+    DisplayCOL --> EditCOL
+    EditCOL --> ClassifyTheme
+
     ClassifyTheme --> DisplayThemes
-    DisplayThemes --> ScoreThemes
-    ScoreThemes --> EditThemes
-    EditThemes --> ExtractPIL
-    
-    ExtractPIL --> DisplayPIL
-    DisplayPIL --> ScorePIL
-    ScorePIL --> Abstract
-    
-    Abstract --> Facts
-    Facts --> Provisions
-    Provisions --> Issue
+    DisplayThemes --> EditThemes
+    EditThemes --> ParallelNote
+
+    ParallelNote --> Facts
+    ParallelNote --> Provisions
+    ParallelNote --> Issue
+    Facts --> Position
+    Provisions --> Position
     Issue --> Position
-    
-    Position --> ReviewAll
-    ReviewAll --> SaveDB
+    Position --> Abstract
+    Abstract --> ReviewAll
+
+    ReviewAll --> EditAny
+    EditAny --> Submit
+    Submit --> SaveDB
     SaveDB --> Complete
     Complete --> End
 
@@ -204,11 +199,10 @@ sequenceDiagram
     LLM-->>Tool: Jurisdiction data
     
     Tool-->>UI: Display results
-    UI->>User: Show jurisdiction with score field
-    User->>UI: Score result (0-100)
-    User->>UI: Edit if needed
-    
-    UI->>State: Save jurisdiction & score
+    UI->>User: Show jurisdiction with confirmation
+    User->>UI: Confirm or override if needed
+
+    UI->>State: Save jurisdiction
     State-->>UI: Confirmation
     UI-->>User: Ready for next step
 ```
@@ -251,22 +245,25 @@ sequenceDiagram
     Tools->>LLM: Identify COL sections
     LLM-->>Tools: COL section candidates
     Tools-->>Components: Display COL sections
-    User->>Components: Provide feedback on COL sections
+    User->>Components: Edit COL section if needed
     Components->>StateManager: Update COL state
     
     Components->>Tools: Classify PIL theme
     Tools->>LLM: Analyze legal themes
     LLM-->>Tools: Theme classifications
     Tools-->>Components: Display themes
-    User->>Components: Score and validate themes
+    User->>Components: Edit themes if needed
     Components->>StateManager: Update theme state
-    
-    Components->>Tools: Run complete analysis
+
+    Components->>Tools: Run complete analysis (parallel)
+    Note over Tools,LLM: Parallel execution:<br/>- Facts<br/>- PIL Provisions<br/>- COL Issue<br/>Then: Position, Abstract
     Tools->>LLM: Extract all analysis components
     LLM-->>Tools: Complete analysis results
-    Tools-->>Components: Display full analysis
-    User->>Components: Review and provide feedback
-    
+    Tools-->>Components: Display full analysis for editing
+
+    User->>Components: Review and edit all results
+    User->>Components: Submit final analysis
+
     Components->>DB: Save analysis results
     DB-->>Components: Confirm save
     Components-->>User: Analysis complete with save confirmation
@@ -297,10 +294,9 @@ sequenceDiagram
     
     Tool-->>UI: Display extracted sections
     UI->>User: Show COL sections
-    User->>UI: Score extraction (0-100)
-    User->>UI: Provide feedback/edit
-    
-    UI->>State: Save COL sections & feedback
+    User->>UI: Edit section if needed
+
+    UI->>State: Save COL sections
     State-->>UI: Confirmation
     UI-->>User: Ready for theme classification
 ```
@@ -329,11 +325,10 @@ sequenceDiagram
     LLM-->>Tool: Theme classifications
     
     Tool-->>UI: Display classified themes
-    UI->>User: Show themes with scores
-    User->>UI: Score themes (0-100)
-    User->>UI: Edit theme selections
-    
-    UI->>State: Save themes & scores
+    UI->>User: Show themes for editing
+    User->>UI: Edit theme selections if needed
+
+    UI->>State: Save themes
     State-->>UI: Confirmation
     UI-->>User: Ready for detailed analysis
 ```
@@ -403,49 +398,47 @@ flowchart TD
     end
     
     subgraph "User Validation"
-        ScoreJuris[Score Jurisdiction]
-        ScoreCOL[Score COL Sections]
-        ScoreThemes[Score Themes]
-        ScorePIL[Score PIL Provisions]
-        ScoreAnalysis[Score Each Analysis Step]
+        ConfirmJuris[Confirm Jurisdiction]
+        EditCOL[Edit COL Section]
+        EditThemes[Edit Themes]
+        FinalEdit[Final Edit All Results]
     end
-    
+
     subgraph "Result Processing"
         Aggregator[Result Aggregator<br/>Combine All Components]
         Formatter[Result Formatter<br/>Structure Output]
     end
-    
+
     subgraph "Storage Options"
         SessionOnly[Session State Only<br/>Temporary]
         DBSave[Database Save<br/>PostgreSQL]
     end
-    
-    Jurisdiction --> ScoreJuris
-    COLSection --> ScoreCOL
-    Themes --> ScoreThemes
-    PILProvisions --> ScorePIL
-    Abstract --> ScoreAnalysis
-    Facts --> ScoreAnalysis
-    Issue --> ScoreAnalysis
-    Position --> ScoreAnalysis
-    
-    ScoreJuris --> Aggregator
-    ScoreCOL --> Aggregator
-    ScoreThemes --> Aggregator
-    ScorePIL --> Aggregator
-    ScoreAnalysis --> Aggregator
-    
+
+    Jurisdiction --> ConfirmJuris
+    COLSection --> EditCOL
+    Themes --> EditThemes
+    PILProvisions --> FinalEdit
+    Abstract --> FinalEdit
+    Facts --> FinalEdit
+    Issue --> FinalEdit
+    Position --> FinalEdit
+
+    ConfirmJuris --> Aggregator
+    EditCOL --> Aggregator
+    EditThemes --> Aggregator
+    FinalEdit --> Aggregator
+
     Aggregator --> Formatter
     Formatter --> SessionOnly
     Formatter --> DBSave
-    
+
     classDef analysis fill:#e3f2fd,stroke:#1976d2
     classDef validation fill:#fff3e0,stroke:#f57c00
     classDef process fill:#f3e5f5,stroke:#7b1fa2
     classDef storage fill:#e8f5e9,stroke:#388e3c
-    
+
     class Jurisdiction,COLSection,Themes,PILProvisions,Abstract,Facts,Issue,Position analysis
-    class ScoreJuris,ScoreCOL,ScoreThemes,ScorePIL,ScoreAnalysis validation
+    class ConfirmJuris,EditCOL,EditThemes,FinalEdit validation
     class Aggregator,Formatter process
     class SessionOnly,DBSave storage
 ```
