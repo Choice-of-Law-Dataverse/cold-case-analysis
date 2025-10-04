@@ -164,11 +164,18 @@ def render_edit_section(col_state):
                 col_state["theme_eval_iter"] = 0
 
                 from tools.themes_classifier import theme_classification_node
+                from utils.progress_banner import hide_progress_banner, show_progress_banner
+
+                # Show progress banner while classifying
+                show_progress_banner("Identifying themes...")
 
                 init_result = theme_classification_node(col_state)
                 col_state.update(init_result)
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+
+                # Clear the progress banner
+                hide_progress_banner()
                 st.rerun()
             else:
                 st.warning("Please edit the extracted section before proceeding.")
@@ -187,6 +194,10 @@ def render_col_processing(col_state):
     # Display extraction history
     display_col_extractions(col_state)
 
+    # Always show the edit section (even after col_done) so user can see extracted text
     # Handle feedback and editing if COL not done
     if not col_state.get("col_done"):
         handle_col_feedback_phase(col_state)
+    else:
+        # Show the textarea in read-only mode after classification
+        render_edit_section(col_state)

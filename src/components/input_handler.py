@@ -55,8 +55,16 @@ def render_pdf_uploader():
 
     if pdf_file is not None:
         try:
+            # Show progress banner while extracting
+            from utils.progress_banner import hide_progress_banner, show_progress_banner
+
+            show_progress_banner("Extracting text from PDF...")
+
             extracted = extract_text_from_pdf(pdf_file)
             st.session_state.full_text_input = extracted
+
+            # Clear the progress banner
+            hide_progress_banner()
             st.success("Extracted text from PDF successfully.")
             return True
         except Exception as e:
