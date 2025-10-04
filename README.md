@@ -10,6 +10,7 @@ The CoLD Case Analyzer is a Streamlit-based web application that processes court
 - **Theme Classification**: Categorizes cases against a predefined PIL taxonomy
 - **Comprehensive Legal Analysis**: Extracts abstracts, facts, provisions, legal issues, and court reasoning
 - **User Feedback Integration**: Allows manual validation and editing at each analysis phase
+- **State Persistence**: Automatically saves progress and restores state across browser refreshes
 - **Database Persistence**: Stores analyses with user identification and timestamps
 - **Demo Case Support**: Includes BGE 132 III 285 Swiss court case for testing
 
@@ -201,9 +202,41 @@ The application uses environment variables for configuration. Copy `.env.example
 
 ### Optional
 - `SQL_CONN_STRING`: PostgreSQL connection for storing analysis results
+- `POSTGRESQL_HOST`, `POSTGRESQL_PORT`, `POSTGRESQL_DATABASE`, `POSTGRESQL_USERNAME`, `POSTGRESQL_PASSWORD`: PostgreSQL configuration for state persistence
 - `USER_CREDENTIALS`: JSON object for user authentication (e.g., `{"admin":"password"}`)
 - `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`: For Airtable integration (LATAM module)
 - `NOCODB_BASE_URL`, `NOCODB_API_TOKEN`: For NoCode database interface
+
+## State Persistence
+
+The application automatically saves your progress and can restore your work if you refresh the browser.
+
+### How It Works
+
+- **Session ID Tracking**: A unique session ID is generated and stored in the URL (as a query parameter)
+- **Automatic Saving**: Progress is automatically saved to the database after each workflow step
+- **Browser Refresh**: If you refresh the browser, your work is automatically restored from the database
+- **Database Requirement**: State persistence requires PostgreSQL configuration (see Optional configuration above)
+- **Graceful Degradation**: If no database is configured, the app works normally but state will be lost on refresh
+
+### What Gets Saved
+
+The following state is preserved across browser refreshes:
+- Case citation and full text
+- Jurisdiction detection results (legal system, specific jurisdiction)
+- Choice of Law sections and feedback
+- Theme classifications
+- All analysis phases (abstract, facts, provisions, legal issues, court's position)
+- User scores and edits
+
+### Session Recovery
+
+To continue a previous session:
+1. Keep the URL with the `session_id` parameter
+2. Refresh the browser or return to the URL later
+3. Your progress will be automatically restored
+
+**Note**: Each new analysis creates a new session ID, so bookmark the URL if you want to return to a specific analysis later.
 
 ## Usage Examples
 

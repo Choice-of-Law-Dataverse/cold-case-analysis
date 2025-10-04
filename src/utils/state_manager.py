@@ -102,16 +102,16 @@ def get_or_create_session_id():
     if "session_id" in st.query_params:
         session_id = st.query_params["session_id"]
         if "session_id" not in st.session_state:
-            st.session_state.session_id = session_id
+            st.session_state["session_id"] = session_id
         return session_id
 
     # Check if already in session state
     if "session_id" in st.session_state:
-        return st.session_state.session_id
+        return st.session_state["session_id"]
 
     # Create new session ID
     session_id = str(uuid.uuid4())
-    st.session_state.session_id = session_id
+    st.session_state["session_id"] = session_id
     st.query_params["session_id"] = session_id
 
     return session_id
@@ -218,7 +218,7 @@ def restore_state_from_storage():
         if "session_id" in st.query_params:
             session_id = st.query_params["session_id"]
         elif "session_id" in st.session_state:
-            session_id = st.session_state.session_id
+            session_id = st.session_state["session_id"]
 
         if not session_id:
             return {}
