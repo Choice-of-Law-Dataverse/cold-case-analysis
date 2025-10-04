@@ -8,10 +8,12 @@ dependencies = [
     "langchain-core>=0.3.77",
     "langchain-openai>=0.3.34",
     "logfire>=4.11.0",
+    "openai-agents>=0.3.3",
     "pandas>=2.3.3",
     "psycopg2-binary>=2.9.10",
     "pymupdf4llm>=0.0.27",
     "python-dotenv>=1.1.1",
+    "pydantic>=2.10.0",
     "requests>=2.32.5",
     "streamlit>=1.50.0",
 ]
