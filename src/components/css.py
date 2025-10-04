@@ -286,9 +286,13 @@ def load_css():
         position: absolute;
         box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
         z-index: 2;
-        offset-path: path('M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20');
+        /* Scale path to 100% width using percentage coordinates */
+        offset-path: path('M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20');
         offset-distance: 0%;
         transition: offset-distance 0.5s ease-out;
+        /* Anchor the dot at its center */
+        offset-anchor: center;
+        offset-rotate: 0deg;
     }
 
     /* Indeterminate Spinner - Squiggly Animation following path */
@@ -300,8 +304,11 @@ def load_css():
         position: absolute;
         box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
         z-index: 2;
-        offset-path: path('M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20');
+        /* Scale path to 100% width using percentage coordinates */
+        offset-path: path('M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20');
         animation: squigglyMove 3s ease-in-out infinite;
+        offset-anchor: center;
+        offset-rotate: 0deg;
     }
 
     @keyframes squigglyMove {

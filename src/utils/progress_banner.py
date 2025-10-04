@@ -34,17 +34,19 @@ def show_progress_banner(message, progress=None):
             <div class="progress-banner-content">
                 <div class="progress-banner-message">{message}</div>
                 <div class="progress-banner-bar-container">
-                    <svg viewBox="0 0 400 40" preserveAspectRatio="none">
+                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
                         <!-- Background squiggly path (light) -->
-                        <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
+                        <path d="M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20"
                               stroke="rgba(255, 255, 255, 0.3)"
                               stroke-width="3"
-                              fill="none"/>
+                              fill="none"
+                              vector-effect="non-scaling-stroke"/>
                         <!-- Progress squiggly path (white) -->
-                        <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
+                        <path d="M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20"
                               stroke="white"
                               stroke-width="3"
                               fill="none"
+                              vector-effect="non-scaling-stroke"
                               stroke-dasharray="1000"
                               stroke-dashoffset="{1000 - (progress * 1000)}"
                               style="transition: stroke-dashoffset 0.5s ease-out;"/>
@@ -61,11 +63,12 @@ def show_progress_banner(message, progress=None):
             <div class="progress-banner-content">
                 <div class="progress-banner-message">""" + message + """</div>
                 <div class="progress-banner-bar-container">
-                    <svg viewBox="0 0 400 40" preserveAspectRatio="none">
-                        <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
+                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+                        <path d="M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20"
                               stroke="rgba(255, 255, 255, 0.3)"
                               stroke-width="3"
-                              fill="none"/>
+                              fill="none"
+                              vector-effect="non-scaling-stroke"/>
                     </svg>
                     <div class='progress-banner-spinner'></div>
                 </div>
