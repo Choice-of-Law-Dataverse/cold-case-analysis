@@ -7,7 +7,7 @@ import config
 
 def render_sidebar():
     """
-    Render the sidebar with login controls, instructions, and documentation.
+    Render the sidebar with login controls, analysis management, instructions, and documentation.
     """
     credentials = config.USER_CREDENTIALS
     with st.sidebar:
@@ -31,6 +31,13 @@ def render_sidebar():
                 st.success("Logged out")
                 st.rerun()
 
+        # Analysis Manager
+        st.divider()
+        from components.analysis_manager import render_analysis_manager
+
+        render_analysis_manager()
+
+        st.divider()
         st.header("How to Use")
         st.markdown("""
         1. (Optional) Log in to access more advanced models
