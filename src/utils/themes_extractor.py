@@ -41,17 +41,15 @@ class NocoDBService:
         """
         Fetch full record data and metadata for a specific row from NocoDB.
         """
-        print(f"Fetching row {record_id} from table {table} in NocoDB")
-        logger = logging.getLogger(__name__)
+        logger.debug("Fetching row %s from table %s in NocoDB", record_id, table)
         url = f"{self.base_url}/{table}/{record_id}"
         logger.debug("NocoDBService.get_row: GET %s", url)
         logger.debug("NocoDBService headers: %s", self.headers)
         resp = requests.get(url, headers=self.headers)
-        print("Response from nocoDB:", resp.status_code, resp.text)
+        logger.debug("Response from nocoDB: %d %s", resp.status_code, resp.text)
         resp.raise_for_status()
         payload = resp.json()
         logger.debug("NocoDBService.get_row response payload: %s", payload)
-        # return full payload directly
         return payload
 
     def list_rows(
@@ -66,20 +64,17 @@ class NocoDBService:
         logger = logging.getLogger(__name__)
         records: list[dict[str, Any]] = []
         offset = 0
-        # build where parameter if filters provided
         where_clauses = []
         if filters:
             for filter_condition in filters:
                 col = filter_condition.column
                 val = filter_condition.value
-                # choose operator based on column name and value type
                 if "Relevant for Case Analysis" in col and val in ["true", "false", True, False]:
-                    op = "eq"  # Use equals for boolean fields
+                    op = "eq"
                 elif isinstance(val, str) and val not in ["true", "false"]:
-                    op = "ct"  # Use contains for text strings
+                    op = "ct"
                 else:
-                    op = "eq"  # Use equals for everything else
-                # escape comma or parentheses in val?
+                    op = "eq"
                 where_clauses.append(f"({col},{op},{val})")
         where_param = "~and".join(where_clauses) if where_clauses else None
         while True:
@@ -91,10 +86,8 @@ class NocoDBService:
             resp = requests.get(url, headers=self.headers, params=params)
             resp.raise_for_status()
             payload = resp.json()
-            # extract batch results
             if isinstance(payload, dict):
                 batch = payload.get("list") or payload.get("data") or []
-                # check pageInfo for last page
                 page_info = payload.get("pageInfo", {})
                 is_last = page_info.get("isLastPage", False)
             elif isinstance(payload, list):
@@ -159,14 +152,14 @@ def fetch_themes_dataframe() -> pd.DataFrame:
         if not processed.empty:
             return processed
     except Exception as error:
-        print(f"Error fetching themes from NocoDB: {error}")
+        logger.error("Error fetching themes from NocoDB: %s", error)
 
     try:
-        print("Trying without API filters...")
+        logger.debug("Trying without API filters...")
         fallback_records = nocodb_service.list_rows("Glossary", filters=None)
         return _records_to_dataframe(fallback_records)
     except Exception as fallback_error:
-        print(f"Fallback also failed: {fallback_error}")
+        logger.error("Fallback also failed: %s", fallback_error)
         return pd.DataFrame({"Theme": [], "Definition": []})
 
 def filter_themes_by_list(themes_list: list[str]) -> str:
