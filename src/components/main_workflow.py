@@ -43,7 +43,7 @@ def render_initial_input_phase():
         if not st.session_state.get("col_extraction_started", False):
             st.markdown("## Choice of Law Analysis")
             st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
-            
+
             with st.spinner("Extracting Choice of Law section..."):
                 # Get final jurisdiction data
                 final_jurisdiction_data = get_final_jurisdiction_data()

@@ -2,6 +2,7 @@
 """
 Choice of Law section processing components.
 """
+
 import streamlit as st
 
 from tools.col_extractor import extract_col_section
@@ -99,7 +100,7 @@ def render_feedback_input(col_state):
         "Enter feedback to improve the Choice of Law Section:",
         height=150,
         key="col_feedback",
-        help="Provide feedback to refine the extracted Choice of Law Section."
+        help="Provide feedback to refine the extracted Choice of Law Section.",
     )
 
     col1, col2 = st.columns(2)
@@ -129,14 +130,17 @@ def render_edit_section(col_state):
     last_extraction = col_state.get("col_section", [""])[-1]
 
     # Use custom CSS to set height with min and max
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     div[data-testid="stTextArea"] textarea[aria-label="Edit extracted Choice of Law section:"] {
-        min-height: 600px !important;
-        max-height: 80vh !important;
+        min-height: 400px !important;
+        max-height: 66vh !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     edited_extraction = st.text_area(
         "Edit extracted Choice of Law section:",
@@ -144,7 +148,7 @@ def render_edit_section(col_state):
         height=600,
         key="col_edit_section",
         help="Modify the extracted section before proceeding to theme classification",
-        disabled=col_state.get("col_done", False)
+        disabled=col_state.get("col_done", False),
     )
 
     print_state("\n\n\nCurrent CoLD State\n\n", col_state)
@@ -160,6 +164,7 @@ def render_edit_section(col_state):
                 col_state["theme_eval_iter"] = 0
 
                 from tools.themes_classifier import theme_classification_node
+
                 init_result = theme_classification_node(col_state)
                 col_state.update(init_result)
 

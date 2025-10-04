@@ -2,6 +2,7 @@
 """
 Analysis workflow components for the CoLD Case Analyzer.
 """
+
 import streamlit as st
 
 from components.database import save_to_db
@@ -30,7 +31,7 @@ def get_step_display_name(step_name, state):
         "courts_position": "Court's Position (Ratio Decidendi)" if is_common_law_or_indian else "Court's Position",
         "obiter_dicta": "Court's Position (Obiter Dicta)",
         "dissenting_opinions": "Dissenting Opinions",
-        "abstract": "Abstract"
+        "abstract": "Abstract",
     }
 
     return step_names.get(step_name, step_name.replace("_", " ").title())
@@ -72,7 +73,7 @@ def display_completion_message(state):
             "<div class='machine-message'>Thank you for using the CoLD Case Analyzer.<br>"
             "If you would like to find out more about the project, please visit "
             '<a href="https://cold.global" target="_blank">cold.global</a></div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
         return True
     return False
@@ -103,15 +104,12 @@ def get_analysis_steps(state):
         ("relevant_facts", relevant_facts),
         ("pil_provisions", pil_provisions),
         ("col_issue", col_issue),
-        ("courts_position", courts_position)
+        ("courts_position", courts_position),
     ]
 
     # Add extra steps for common-law decisions
     if state.get("jurisdiction") == "Common-law jurisdiction":
-        steps.extend([
-            ("obiter_dicta", obiter_dicta),
-            ("dissenting_opinions", dissenting_opinions)
-        ])
+        steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
 
     # Add abstract as final step for all jurisdictions
     steps.append(("abstract", abstract))
@@ -234,16 +232,11 @@ def execute_all_analysis_steps_parallel(state):
     ]
 
     # Steps that depend on parallel steps
-    sequential_steps = [
-        ("courts_position", courts_position)
-    ]
+    sequential_steps = [("courts_position", courts_position)]
 
     # Add jurisdiction-specific steps
     if state.get("jurisdiction") == "Common-law jurisdiction":
-        sequential_steps.extend([
-            ("obiter_dicta", obiter_dicta),
-            ("dissenting_opinions", dissenting_opinions)
-        ])
+        sequential_steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
 
     # Abstract runs last using all previous results
     sequential_steps.append(("abstract", abstract))
@@ -305,19 +298,40 @@ def render_final_editing_phase(state):
     steps = get_analysis_steps(state)
     edited_values = {}
 
-    # Add custom CSS for textarea heights
-    st.markdown("""
+    # Add custom CSS for textarea heights using key-based targeting
+    st.markdown(
+        """
     <style>
-    /* Taller textareas for most fields */
+    /* Default height for all textareas */
     div[data-testid="stTextArea"] textarea {
-        min-height: 600px !important;
-        max-height: 80vh !important;
+        min-height: 400px !important;
+        max-height: 66vh !important;
+        resize: vertical !important;
     }
-    /* Shorter textarea for COL Issue */
-    div[data-testid="stTextArea"] textarea[aria-label*="Choice of Law Issue"] {
+
+    /* Shorter textarea for COL Issue step */
+    div[data-testid="stTextArea"]:has(textarea[aria-label*="final_edit_col_issue"]) textarea {
         min-height: 200px !important;
         max-height: 30vh !important;
     }
+
+    /* Medium height for PIL provisions JSON editing */
+    div[data-testid="stTextArea"]:has(textarea[aria-label*="final_edit_pil_provisions"]) textarea {
+        min-height: 300px !important;
+        max-height: 50vh !important;
+    }
+
+    /* Fallback selectors for broader browser support */
+    textarea[aria-label*="Choice of Law Issue"] {
+        min-height: 200px !important;
+        max-height: 30vh !important;
+    }
+
+    textarea[aria-label*="JSON format"] {
+        min-height: 300px !important;
+        max-height: 50vh !important;
+    }
+
     /* Chip styling for PIL provisions */
     .pil-chip {
         display: inline-block;
@@ -333,7 +347,9 @@ def render_final_editing_phase(state):
         margin: 10px 0;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Create editable text areas for all steps
     for name, _ in steps:
@@ -356,36 +372,21 @@ def render_final_editing_phase(state):
                 for provision in current_value:
                     provision_str = str(provision).strip('"')
                     chips_html += f'<span class="pil-chip">{provision_str}</span>'
-                chips_html += '</div>'
+                chips_html += "</div>"
                 st.markdown(chips_html, unsafe_allow_html=True)
 
                 # Provide text area with JSON for editing
                 import json
+
                 edit_value = json.dumps(current_value, indent=2)
             else:
                 edit_value = str(current_value)
 
-            edited = st.text_area(
-                f"Edit {display_name} (JSON format):",
-                value=edit_value,
-                height=600,
-                key=f"final_edit_{name}"
-            )
+            edited = st.text_area(f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}")
             edited_values[name] = edited
         else:
-            # Standard text area for other steps
-            # Determine height based on step name
-            if name == "col_issue":
-                height = 200
-            else:
-                height = 600
-
-            edited = st.text_area(
-                f"**{display_name}**",
-                value=str(current_value),
-                height=height,
-                key=f"final_edit_{name}"
-            )
+            # Standard text area for other steps - height controlled by CSS
+            edited = st.text_area(f"**{display_name}**", value=str(current_value), key=f"final_edit_{name}")
             edited_values[name] = edited
 
     # Submit button
@@ -396,6 +397,7 @@ def render_final_editing_phase(state):
                 # Try to parse JSON for PIL provisions
                 try:
                     import json
+
                     parsed = json.loads(edited_value)
                     state[name][-1] = parsed
                     state[f"{name}_edited"] = parsed
@@ -455,4 +457,3 @@ def render_analysis_workflow(state):
     else:
         # Display completion message
         display_completion_message(state)
-
