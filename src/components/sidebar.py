@@ -97,10 +97,8 @@ def render_sidebar():
 
         # clear history button
         if st.button("Clear History", key="clear_history"):
-            from utils.persistent_state import delete_persistent_state
-            session_id = st.session_state.get("session_id")
-            if session_id:
-                delete_persistent_state(session_id)
+            from utils.browser_storage import clear_all_storage
+            clear_all_storage()
             st.session_state.clear()
             st.rerun()
 
