@@ -2,6 +2,7 @@
 """
 Theme classification components for the CoLD Case Analyzer.
 """
+
 import streamlit as st
 
 from utils.data_loaders import load_valid_themes
@@ -63,11 +64,11 @@ def handle_theme_editing(state, last_theme, valid_themes):
             filtered_defaults.append(theme_mapping[theme.lower()])
 
     selected = st.multiselect(
-        "Adjust themes:",
+        "Themes:",
         options=valid_themes,
         default=filtered_defaults,
         key="theme_select",
-        disabled=state.get("theme_done", False)
+        disabled=state.get("theme_done", False),
     )
 
     if not state.get("theme_done"):

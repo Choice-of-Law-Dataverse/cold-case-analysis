@@ -21,7 +21,7 @@ def display_jurisdiction_info(col_state):
     jurisdiction_code = col_state.get("jurisdiction_code")
 
     if precise_jurisdiction or jurisdiction:
-        st.markdown("### Identified Jurisdiction")
+        st.markdown("### Jurisdiction")
         col1, col2 = st.columns([2, 1])
 
         with col1:
