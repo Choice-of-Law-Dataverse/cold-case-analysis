@@ -125,7 +125,7 @@ def render_jurisdiction_detection(full_text: str):
                         st.session_state["jurisdiction_manual_override"] = {
                             "jurisdiction_name": selected_data["name"]
                         }
-                
+
                 # Update legal system if changed
                 if selected_legal_system != legal_system:
                     st.session_state["legal_system_type"] = selected_legal_system

@@ -2,6 +2,7 @@
 """
 Main workflow orchestrator for the CoLD Case Analyzer.
 """
+
 import streamlit as st
 
 from components.analysis_workflow import render_analysis_workflow
@@ -33,7 +34,9 @@ def render_initial_input_phase():
 
     # Enhanced Jurisdiction Detection
     st.markdown("## Jurisdiction Identification")
-    st.markdown("The first step consists of identifying the precise jurisdiction and legal system type from the court decision.")
+    st.markdown(
+        "The first step consists of identifying the precise jurisdiction and legal system type from the court decision."
+    )
 
     jurisdiction_confirmed = render_jurisdiction_detection(full_text)
 
@@ -42,8 +45,10 @@ def render_initial_input_phase():
         # Check if we haven't already started extraction
         if not st.session_state.get("col_extraction_started", False):
             st.markdown("## Choice of Law Analysis")
-            st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
-            
+            st.markdown(
+                "The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review."
+            )
+
             with st.spinner("Extracting Choice of Law section..."):
                 # Get final jurisdiction data
                 final_jurisdiction_data = get_final_jurisdiction_data()
@@ -55,7 +60,7 @@ def render_initial_input_phase():
                     model=st.session_state.get("llm_model_select"),
                     full_text=full_text,
                     final_jurisdiction_data=final_jurisdiction_data,
-                    user_email=st.session_state.get("user_email")
+                    user_email=st.session_state.get("user_email"),
                 )
 
                 # Extract COL section

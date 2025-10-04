@@ -2,6 +2,7 @@
 """
 Choice of Law section processing components.
 """
+
 import streamlit as st
 
 from tools.col_extractor import extract_col_section
@@ -20,7 +21,7 @@ def display_jurisdiction_info(col_state):
     jurisdiction_code = col_state.get("jurisdiction_code")
 
     if precise_jurisdiction or jurisdiction:
-        st.markdown("### Identified Jurisdiction")
+        st.markdown("### Jurisdiction")
         col1, col2 = st.columns([2, 1])
 
         with col1:
@@ -38,7 +39,7 @@ def display_jurisdiction_info(col_state):
 
 def display_case_info(col_state):
     """
-    Display case citation and full text.
+    Display case citation without the full text.
 
     Args:
         col_state: The current analysis state
@@ -50,10 +51,6 @@ def display_case_info(col_state):
 
     display_jurisdiction_info(col_state)
 
-    # Display the full court decision text at the top as a user message
-    st.markdown("**Your Input (Court Decision Text):**")
-    st.markdown(f"<div class='user-message'>{col_state['full_text']}</div>", unsafe_allow_html=True)
-
 
 def display_col_extractions(col_state):
     """
@@ -62,54 +59,20 @@ def display_col_extractions(col_state):
     Args:
         col_state: The current analysis state
     """
-    extractions = col_state.get("col_section", [])
-    feedbacks = col_state.get("col_section_feedback", [])
-
-    for i, col in enumerate(extractions):
-        # Show all extractions as machine messages, but if final edited extraction has been submitted, show it as a user message
-        if i == len(extractions) - 1 and col_state.get("col_done"):
-            st.markdown("**Your Edited Choice of Law Section:**")
-            st.markdown(f"<div class='user-message'>{col}</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"**Choice of Law Section Extraction {i+1}:**")
-            st.markdown(f"<div class='machine-message'>{col}</div>", unsafe_allow_html=True)
-
-        # Handle scoring for first extraction
-        if i == 0:
-            handle_first_extraction_scoring(col_state)
-
-        # Display feedback if available
-        if i < len(feedbacks):
-            st.markdown("**User:**")
-            st.markdown(f"<div class='user-message'>{feedbacks[i]}</div>", unsafe_allow_html=True)
+    # Handle scoring for first extraction
+    handle_first_extraction_scoring(col_state)
 
 
 def handle_first_extraction_scoring(col_state):
     """
-    Handle scoring for the first COL extraction.
+    Auto-approve the first COL extraction without scoring UI.
 
     Args:
         col_state: The current analysis state
     """
+    # Automatically mark as submitted without user interaction
     if not col_state.get("col_first_score_submitted"):
-        # Score input restricted to 0–100
-        score_input = st.slider(
-            "Evaluate this first extraction (0-100):",
-            min_value=0,
-            max_value=100,
-            value=100,
-            step=1,
-            help="Provide a score for the quality of the first extraction",
-            key="col_first_score_input"
-        )
-        if st.button("Submit Score", key="submit_col_score"):
-            col_state["col_first_score"] = score_input
-            col_state["col_first_score_submitted"] = True
-            st.rerun()
-    else:
-        score = col_state.get("col_first_score", 0)
-        st.markdown("**Your score for extraction 1:**")
-        st.markdown(f"<div class='user-message'>Score: {score}</div>", unsafe_allow_html=True)
+        col_state["col_first_score_submitted"] = True
 
 
 def handle_col_feedback_phase(col_state):
@@ -119,14 +82,11 @@ def handle_col_feedback_phase(col_state):
     Args:
         col_state: The current analysis state
     """
+    # Auto-approve first extraction, skip to editing
     if not col_state.get("col_ready_edit"):
-        # Only allow feedback after initial score
-        if not col_state.get("col_first_score_submitted"):
-            st.info("Please submit the extraction score before providing feedback.")
-        else:
-            render_feedback_input(col_state)
-    else:
-        render_edit_section(col_state)
+        col_state["col_ready_edit"] = True
+
+    render_edit_section(col_state)
 
 
 def render_feedback_input(col_state):
@@ -140,7 +100,7 @@ def render_feedback_input(col_state):
         "Enter feedback to improve the Choice of Law Section:",
         height=150,
         key="col_feedback",
-        help="Provide feedback to refine the extracted Choice of Law Section."
+        help="Provide feedback to refine the extracted Choice of Law Section.",
     )
 
     col1, col2 = st.columns(2)
@@ -168,33 +128,50 @@ def render_edit_section(col_state):
         col_state: The current analysis state
     """
     last_extraction = col_state.get("col_section", [""])[-1]
+
+    # Use custom CSS to set height with min and max
+    st.markdown(
+        """
+    <style>
+    div[data-testid="stTextArea"] textarea[aria-label="Edit extracted Choice of Law section:"] {
+        min-height: 400px !important;
+        max-height: 66vh !important;
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
     edited_extraction = st.text_area(
         "Edit extracted Choice of Law section:",
         value=last_extraction,
-        height=200,
+        height=600,
         key="col_edit_section",
-        help="Modify the extracted section before proceeding to theme classification"
+        help="Modify the extracted section before proceeding to theme classification",
+        disabled=col_state.get("col_done", False),
     )
 
     print_state("\n\n\nCurrent CoLD State\n\n", col_state)
 
-    if st.button("Submit and Classify"):
-        if edited_extraction:
-            # Save edited extraction and run classification
-            col_state["col_section"].append(edited_extraction)
-            col_state["col_done"] = True
-            col_state["classification"] = []
-            col_state["theme_feedback"] = []
-            col_state["theme_eval_iter"] = 0
+    if not col_state.get("col_done"):
+        if st.button("Submit and Classify"):
+            if edited_extraction:
+                # Save edited extraction and run classification
+                col_state["col_section"].append(edited_extraction)
+                col_state["col_done"] = True
+                col_state["classification"] = []
+                col_state["theme_feedback"] = []
+                col_state["theme_eval_iter"] = 0
 
-            from tools.themes_classifier import theme_classification_node
-            init_result = theme_classification_node(col_state)
-            col_state.update(init_result)
+                from tools.themes_classifier import theme_classification_node
 
-            print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
-            st.rerun()
-        else:
-            st.warning("Please edit the extracted section before proceeding.")
+                init_result = theme_classification_node(col_state)
+                col_state.update(init_result)
+
+                print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+                st.rerun()
+            else:
+                st.warning("Please edit the extracted section before proceeding.")
 
 
 def render_col_processing(col_state):
