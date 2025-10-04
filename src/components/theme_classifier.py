@@ -5,6 +5,7 @@ Theme classification components for the CoLD Case Analyzer.
 import streamlit as st
 
 from utils.data_loaders import load_valid_themes
+from utils.state_manager import save_state_to_storage
 
 
 def display_theme_classification(state):
@@ -45,6 +46,7 @@ def handle_theme_scoring(state):
         if st.button("Submit Theme Score", key="submit_theme_score"):
             state["theme_first_score"] = score
             state["theme_first_score_submitted"] = True
+            save_state_to_storage(state)
             st.rerun()
         return False
     else:
@@ -93,6 +95,7 @@ def handle_theme_editing(state, last_theme, valid_themes):
                 state["theme_done"] = True
                 state["analysis_ready"] = True
                 state["analysis_step"] = 0
+                save_state_to_storage(state)
                 st.rerun()
             else:
                 st.warning("Select at least one theme before proceeding.")

@@ -7,6 +7,7 @@ import streamlit as st
 from components.database import save_to_db
 from components.pil_provisions_handler import display_pil_provisions, handle_pil_provisions_editing, update_pil_provisions_state
 from utils.debug_print_state import print_state
+from utils.state_manager import save_state_to_storage
 
 
 def get_step_display_name(step_name, state):
@@ -196,6 +197,7 @@ def handle_step_scoring(state, name):
             state[f"{name}_score"] = score
             state[score_key] = True
             state.setdefault("chat_history", []).append(("user", f"Score for {display_name}: {score}"))
+            save_state_to_storage(state)
             st.rerun()
         return False
     return True
@@ -259,6 +261,7 @@ def handle_step_editing(state, name, steps):
             state["analysis_done"] = True
 
         print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
+        save_state_to_storage(state)
         st.rerun()
 
 

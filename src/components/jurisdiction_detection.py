@@ -6,6 +6,7 @@ import streamlit as st
 
 from tools.jurisdiction_detector import detect_legal_system_type
 from tools.precise_jurisdiction_detector import detect_precise_jurisdiction
+from utils.state_manager import save_state_to_storage
 
 
 def render_jurisdiction_detection(full_text: str):
@@ -57,6 +58,9 @@ def render_jurisdiction_detection(full_text: str):
 
                     st.session_state["legal_system_type"] = legal_system
 
+                    # Save state for persistence
+                    save_state_to_storage()
+
                     st.rerun()
             else:
                 st.warning("Please enter the court decision text before detecting jurisdiction.")
@@ -96,6 +100,7 @@ def render_jurisdiction_detection(full_text: str):
             if st.button("Submit Evaluation", key="submit_precise_jurisdiction_eval"):
                 st.session_state["precise_jurisdiction_eval_score"] = score
                 st.session_state["precise_jurisdiction_eval_submitted"] = True
+                save_state_to_storage()
                 st.rerun()
         else:
             # Show evaluation score
@@ -149,6 +154,7 @@ def render_jurisdiction_detection(full_text: str):
                     st.session_state["legal_system_type"] = selected_legal_system
 
                 st.session_state["precise_jurisdiction_confirmed"] = True
+                save_state_to_storage()
                 st.success("Jurisdiction detection completed and confirmed!")
                 st.rerun()
 

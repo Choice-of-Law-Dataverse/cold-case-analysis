@@ -63,6 +63,11 @@ def render_initial_input_phase():
 
                     # Update session state
                     st.session_state.col_state = state
+
+                    # Save state for persistence
+                    from utils.state_manager import save_state_to_storage
+                    save_state_to_storage(state)
+
                     st.rerun()
             else:
                 if not full_text:

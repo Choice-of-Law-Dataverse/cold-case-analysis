@@ -6,6 +6,7 @@ import streamlit as st
 
 from tools.col_extractor import extract_col_section
 from utils.debug_print_state import print_state
+from utils.state_manager import save_state_to_storage
 
 
 def display_jurisdiction_info(col_state):
@@ -105,6 +106,7 @@ def handle_first_extraction_scoring(col_state):
         if st.button("Submit Score", key="submit_col_score"):
             col_state["col_first_score"] = score_input
             col_state["col_first_score_submitted"] = True
+            save_state_to_storage(col_state)
             st.rerun()
     else:
         score = col_state.get("col_first_score", 0)
@@ -150,6 +152,7 @@ def render_feedback_input(col_state):
                 col_state["col_section_feedback"].append(feedback)
                 result = extract_col_section(col_state)
                 col_state.update(result)
+                save_state_to_storage(col_state)
                 st.rerun()
             else:
                 st.warning("Please enter feedback to improve the extraction.")
@@ -157,6 +160,7 @@ def render_feedback_input(col_state):
     with col2:
         if st.button("Proceed to Edit Section", key="proceed_col_edit"):
             col_state["col_ready_edit"] = True
+            save_state_to_storage(col_state)
             st.rerun()
 
 
@@ -192,6 +196,7 @@ def render_edit_section(col_state):
             col_state.update(init_result)
 
             print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+            save_state_to_storage(col_state)
             st.rerun()
         else:
             st.warning("Please edit the extracted section before proceeding.")
