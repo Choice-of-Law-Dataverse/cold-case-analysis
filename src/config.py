@@ -28,6 +28,7 @@ else:
 
 # Instrument OpenAI/LangChain calls for automatic tracing
 logfire.instrument_openai()
+logfire.instrument_openai_agents()
 logger.info("OpenAI instrumentation enabled")
 
 

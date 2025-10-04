@@ -202,7 +202,6 @@ class TestOrchestrator:
     @pytest.mark.asyncio
     async def test_orchestrator_requires_api_key(self):
         """Test that orchestrator requires API key for actual analysis."""
-        import os
 
         orchestrator = CaseAnalysisOrchestrator(model="gpt-4o-mini")
 
@@ -217,7 +216,7 @@ class TestModelValidation:
 
     def test_jurisdiction_detection_requires_all_fields(self):
         """Test that JurisdictionDetection requires all fields."""
-        with pytest.raises(Exception):  # Pydantic ValidationError
+        with pytest.raises(Exception):  # Pydantic ValidationError  # noqa: B017
             JurisdictionDetection(legal_system_type="Civil-law jurisdiction")
 
     def test_col_extraction_validates_list(self):
