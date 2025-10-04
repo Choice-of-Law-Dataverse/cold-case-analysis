@@ -56,30 +56,15 @@ def render_pdf_uploader():
     if pdf_file is not None:
         try:
             # Show progress banner while extracting
-            banner_placeholder = st.empty()
-            with banner_placeholder:
-                st.markdown("""
-                <div class="progress-banner">
-                    <div class="progress-banner-content">
-                        <div class="progress-banner-message">Extracting text from PDF...</div>
-                        <div class="progress-banner-bar-container">
-                            <svg viewBox="0 0 400 40" preserveAspectRatio="none">
-                                <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
-                                      stroke="rgba(255, 255, 255, 0.3)"
-                                      stroke-width="3"
-                                      fill="none"/>
-                            </svg>
-                            <div class='progress-banner-spinner'></div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            from utils.progress_banner import show_progress_banner, hide_progress_banner
+            
+            show_progress_banner("Extracting text from PDF...")
 
             extracted = extract_text_from_pdf(pdf_file)
             st.session_state.full_text_input = extracted
 
             # Clear the progress banner
-            banner_placeholder.empty()
+            hide_progress_banner()
             st.success("Extracted text from PDF successfully.")
             return True
         except Exception as e:

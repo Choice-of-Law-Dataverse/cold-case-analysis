@@ -241,43 +241,15 @@ def execute_all_analysis_steps_parallel(state):
     # Abstract runs last using all previous results
     sequential_steps.append(("abstract", abstract))
 
-    # Create a persistent placeholder for the progress banner
-    banner_placeholder = st.empty()
+    from utils.progress_banner import show_progress_banner, hide_progress_banner
 
     total_steps = len(parallel_steps) + len(sequential_steps)
     completed = 0
 
+    # Create a function to update the progress banner
     def update_banner(message, progress):
         """Update the progress banner with current status."""
-        # Calculate dot position along the squiggly path
-        dot_position = progress * 100
-
-        with banner_placeholder:
-            st.markdown(f"""
-            <div class="progress-banner">
-                <div class="progress-banner-content">
-                    <div class="progress-banner-message">{message}</div>
-                    <div class="progress-banner-bar-container">
-                        <svg viewBox="0 0 400 40" preserveAspectRatio="none">
-                            <!-- Background squiggly path (light) -->
-                            <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
-                                  stroke="rgba(255, 255, 255, 0.3)"
-                                  stroke-width="3"
-                                  fill="none"/>
-                            <!-- Progress squiggly path (white) -->
-                            <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
-                                  stroke="white"
-                                  stroke-width="3"
-                                  fill="none"
-                                  stroke-dasharray="1000"
-                                  stroke-dashoffset="{1000 - (progress * 1000)}"
-                                  style="transition: stroke-dashoffset 0.5s ease-out;"/>
-                        </svg>
-                        <div class='progress-dot' style='left: {dot_position}%;'></div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        show_progress_banner(message, progress)
 
     # Execute parallel steps
     with ThreadPoolExecutor(max_workers=3) as executor:
@@ -313,7 +285,7 @@ def execute_all_analysis_steps_parallel(state):
     time.sleep(1)
 
     # Clear the banner
-    banner_placeholder.empty()
+    hide_progress_banner()
 
     # Mark all steps as printed and scored
     for name, _ in parallel_steps + sequential_steps:

@@ -277,70 +277,39 @@ def load_css():
         left: 0;
     }
 
-    /* Progress Dot */
+    /* Progress Dot - follows SVG path using offset-path */
     .progress-dot {
         width: 16px;
         height: 16px;
         background-color: #4CAF50;
         border-radius: 50%;
         position: absolute;
-        top: 50%;
-        transform: translate(-50%, -50%);
         box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
         z-index: 2;
-        transition: left 0.5s ease-out;
+        offset-path: path('M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20');
+        offset-distance: 0%;
+        transition: offset-distance 0.5s ease-out;
     }
 
-    /* Indeterminate Spinner - Squiggly Animation */
+    /* Indeterminate Spinner - Squiggly Animation following path */
     .progress-banner-spinner {
         width: 16px;
         height: 16px;
         background-color: #4CAF50;
         border-radius: 50%;
         position: absolute;
-        top: 50%;
-        transform: translate(-50%, -50%);
         box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
         z-index: 2;
+        offset-path: path('M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20');
         animation: squigglyMove 3s ease-in-out infinite;
     }
 
     @keyframes squigglyMove {
         0% {
-            left: 0%;
-            top: 50%;
-        }
-        12.5% {
-            left: 12.5%;
-            top: 30%;
-        }
-        25% {
-            left: 25%;
-            top: 50%;
-        }
-        37.5% {
-            left: 37.5%;
-            top: 70%;
-        }
-        50% {
-            left: 50%;
-            top: 50%;
-        }
-        62.5% {
-            left: 62.5%;
-            top: 30%;
-        }
-        75% {
-            left: 75%;
-            top: 50%;
-        }
-        87.5% {
-            left: 87.5%;
-            top: 70%;
+            offset-distance: 0%;
         }
         100% {
-            left: 100%;
-            top: 50%;
+            offset-distance: 100%;
         }
     }
 

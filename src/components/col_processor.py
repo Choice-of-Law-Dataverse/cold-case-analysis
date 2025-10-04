@@ -164,26 +164,10 @@ def render_edit_section(col_state):
                 col_state["theme_eval_iter"] = 0
 
                 from tools.themes_classifier import theme_classification_node
+                from utils.progress_banner import show_progress_banner, hide_progress_banner
 
                 # Show progress banner while classifying
-                banner_placeholder = st.empty()
-                with banner_placeholder:
-                    st.markdown("""
-                    <div class="progress-banner">
-                        <div class="progress-banner-content">
-                            <div class="progress-banner-message">Identifying themes...</div>
-                            <div class="progress-banner-bar-container">
-                                <svg viewBox="0 0 400 40" preserveAspectRatio="none">
-                                    <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
-                                          stroke="rgba(255, 255, 255, 0.3)"
-                                          stroke-width="3"
-                                          fill="none"/>
-                                </svg>
-                                <div class='progress-banner-spinner'></div>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                show_progress_banner("Identifying themes...")
 
                 init_result = theme_classification_node(col_state)
                 col_state.update(init_result)
@@ -191,7 +175,7 @@ def render_edit_section(col_state):
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
 
                 # Clear the progress banner
-                banner_placeholder.empty()
+                hide_progress_banner()
                 st.rerun()
             else:
                 st.warning("Please edit the extracted section before proceeding.")
@@ -210,6 +194,10 @@ def render_col_processing(col_state):
     # Display extraction history
     display_col_extractions(col_state)
 
+    # Always show the edit section (even after col_done) so user can see extracted text
     # Handle feedback and editing if COL not done
     if not col_state.get("col_done"):
         handle_col_feedback_phase(col_state)
+    else:
+        # Show the textarea in read-only mode after classification
+        render_edit_section(col_state)
