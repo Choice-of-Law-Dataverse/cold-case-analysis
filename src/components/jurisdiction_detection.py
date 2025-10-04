@@ -28,8 +28,6 @@ def render_jurisdiction_detection(full_text: str):
         st.session_state["legal_system_type"] = None
     if "precise_jurisdiction_eval_score" not in st.session_state:
         st.session_state["precise_jurisdiction_eval_score"] = None
-    if "precise_jurisdiction_eval_submitted" not in st.session_state:
-        st.session_state["precise_jurisdiction_eval_submitted"] = False
     if "precise_jurisdiction_confirmed" not in st.session_state:
         st.session_state["precise_jurisdiction_confirmed"] = False
     if "jurisdiction_manual_override" not in st.session_state:
@@ -63,94 +61,81 @@ def render_jurisdiction_detection(full_text: str):
 
         return False
 
-    # Phase 2: Display Results and Evaluation
+    # Phase 2: Display Results and Override Options
     if st.session_state["precise_jurisdiction_detected"]:
         jurisdiction_name = st.session_state["precise_jurisdiction"]  # Now this is just a string
+        legal_system = st.session_state["legal_system_type"]
 
         # Display results in an attractive format
         st.markdown("### Jurisdiction Detection Results")
 
-        # Create columns for better layout
-        col1, col2 = st.columns([2, 1])
+        # Load all jurisdictions for selection
+        from tools.precise_jurisdiction_detector import load_jurisdictions
+        jurisdictions = load_jurisdictions()
+        jurisdiction_names = [j["name"] for j in jurisdictions if j["name"]]
 
-        with col1:
-            if jurisdiction_name != "Unknown":
-                st.markdown(f"**Jurisdiction:** {jurisdiction_name}")
-            else:
-                st.markdown("**Jurisdiction:** Could not identify specific jurisdiction")
+        # Find the index of the detected jurisdiction, default to first if not found
+        try:
+            default_jurisdiction_index = jurisdiction_names.index(jurisdiction_name) if jurisdiction_name in jurisdiction_names else 0
+        except (ValueError, AttributeError):
+            default_jurisdiction_index = 0
 
-        with col2:
-            legal_system = st.session_state["legal_system_type"]
-            st.markdown(f"**Legal System:** {legal_system}")
+        # Legal system override
+        legal_system_options = [
+            "Civil-law jurisdiction",
+            "Common-law jurisdiction",
+            "Unknown legal system"
+        ]
 
-        # Phase 3: Evaluation
-        if not st.session_state["precise_jurisdiction_eval_submitted"]:
-            st.markdown("### Evaluate Detection Accuracy")
-            score = st.slider(
-                "How accurate is this jurisdiction identification? (0-100)",
-                min_value=0, max_value=100, value=100, step=1,
-                key="precise_jurisdiction_eval_slider",
-                help="Rate the accuracy of both the specific jurisdiction and legal system identification"
-            )
+        # Find the index of the detected legal system, default to last (Unknown) if not found
+        try:
+            default_legal_system_index = legal_system_options.index(legal_system) if legal_system in legal_system_options else len(legal_system_options) - 1
+        except (ValueError, AttributeError):
+            default_legal_system_index = len(legal_system_options) - 1
 
-            if st.button("Submit Evaluation", key="submit_precise_jurisdiction_eval"):
-                st.session_state["precise_jurisdiction_eval_score"] = score
-                st.session_state["precise_jurisdiction_eval_submitted"] = True
-                st.rerun()
-        else:
-            # Show evaluation score
-            score = st.session_state["precise_jurisdiction_eval_score"]
-            st.markdown(f"**Your Evaluation:** {score}/100")
+        # Check if already confirmed - if so, disable the controls
+        is_confirmed = st.session_state.get("precise_jurisdiction_confirmed", False)
 
-        # Phase 4: Manual Override Option
-        if st.session_state["precise_jurisdiction_eval_submitted"]:
-            st.markdown("### Manual Override")
+        selected_jurisdiction = st.selectbox(
+            "Override with specific jurisdiction:",
+            options=jurisdiction_names,
+            index=default_jurisdiction_index,
+            key="jurisdiction_manual_select",
+            help="Select a different jurisdiction if the detection was incorrect",
+            disabled=is_confirmed
+        )
 
-            # Load all jurisdictions for selection
-            from tools.precise_jurisdiction_detector import load_jurisdictions
-            jurisdictions = load_jurisdictions()
-            jurisdiction_names = ["Keep Current Detection"] + [j["name"] for j in jurisdictions if j["name"]]
+        selected_legal_system = st.selectbox(
+            "Override legal system classification:",
+            options=legal_system_options,
+            index=default_legal_system_index,
+            key="legal_system_manual_select",
+            help="Override the legal system classification if needed",
+            disabled=is_confirmed
+        )
 
-            selected_jurisdiction = st.selectbox(
-                "Override with specific jurisdiction:",
-                options=jurisdiction_names,
-                index=0,
-                key="jurisdiction_manual_select",
-                help="Select a different jurisdiction if the detection was incorrect"
-            )
-
-            # Legal system override
-            legal_system_options = [
-                "Keep Current Detection",
-                "Civil-law jurisdiction",
-                "Common-law jurisdiction",
-                "Unknown legal system"
-            ]
-
-            selected_legal_system = st.selectbox(
-                "Override legal system classification:",
-                options=legal_system_options,
-                index=0,
-                key="legal_system_manual_select",
-                help="Override the legal system classification if needed"
-            )
-
-            if st.button("Confirm Final Jurisdiction", key="confirm_final_jurisdiction", type="primary"):
-                # Apply overrides if selected
-                if selected_jurisdiction != "Keep Current Detection":
+        # Only show the Confirm button if not yet confirmed
+        if not is_confirmed:
+            if st.button("Confirm", key="confirm_final_jurisdiction", type="primary"):
+                # Update jurisdiction if changed
+                if selected_jurisdiction != jurisdiction_name:
                     # Find the selected jurisdiction data
                     selected_data = next((j for j in jurisdictions if j["name"] == selected_jurisdiction), None)
                     if selected_data:
                         st.session_state["jurisdiction_manual_override"] = {
                             "jurisdiction_name": selected_data["name"]
                         }
-
-                if selected_legal_system != "Keep Current Detection":
+                
+                # Update legal system if changed
+                if selected_legal_system != legal_system:
                     st.session_state["legal_system_type"] = selected_legal_system
 
                 st.session_state["precise_jurisdiction_confirmed"] = True
                 st.success("Jurisdiction detection completed and confirmed!")
                 st.rerun()
+        else:
+            # Show confirmation message when already confirmed
+            st.success("✓ Jurisdiction confirmed")
 
     return st.session_state.get("precise_jurisdiction_confirmed", False)
 

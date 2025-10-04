@@ -37,38 +37,35 @@ def render_initial_input_phase():
 
     jurisdiction_confirmed = render_jurisdiction_detection(full_text)
 
-    # Only allow COL extraction after jurisdiction confirmed
+    # Automatically start COL extraction after jurisdiction confirmed
     if jurisdiction_confirmed:
-        st.markdown("## Choice of Law Analysis")
-        st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
+        # Check if we haven't already started extraction
+        if not st.session_state.get("col_extraction_started", False):
+            st.markdown("## Choice of Law Analysis")
+            st.markdown("The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review.")
+            
+            with st.spinner("Extracting Choice of Law section..."):
+                # Get final jurisdiction data
+                final_jurisdiction_data = get_final_jurisdiction_data()
 
-        if st.button("Extract Choice of Law Section", type="primary", key="extract_col_btn"):
-            if full_text and case_citation.strip():
-                    # Get final jurisdiction data
-                    final_jurisdiction_data = get_final_jurisdiction_data()
+                # Create initial analysis state
+                state = create_initial_analysis_state(
+                    case_citation=st.session_state.get("case_citation"),
+                    username=st.session_state.get("user"),
+                    model=st.session_state.get("llm_model_select"),
+                    full_text=full_text,
+                    final_jurisdiction_data=final_jurisdiction_data,
+                    user_email=st.session_state.get("user_email")
+                )
 
-                    # Create initial analysis state
-                    state = create_initial_analysis_state(
-                case_citation=st.session_state.get("case_citation"),
-                        username=st.session_state.get("user"),
-                        model=st.session_state.get("llm_model_select"),
-                        full_text=full_text,
-                        final_jurisdiction_data=final_jurisdiction_data,
-                        user_email=st.session_state.get("user_email")
-                    )
+                # Extract COL section
+                result = extract_col_section(state)
+                state.update(result)
 
-                    # Extract COL section
-                    result = extract_col_section(state)
-                    state.update(result)
-
-                    # Update session state
-                    st.session_state.col_state = state
-                    st.rerun()
-            else:
-                if not full_text:
-                    st.warning("Please enter a court decision to analyze.")
-                if not case_citation.strip():
-                    st.warning("Please enter a Case Citation before extracting.")
+                # Update session state
+                st.session_state.col_state = state
+                st.session_state["col_extraction_started"] = True
+                st.rerun()
 
     return False
 

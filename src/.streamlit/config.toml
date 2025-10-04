@@ -1,3 +1,8 @@
 [theme]
-base="light"
-primaryColor="#6f4dfa"
+    base="light"
+    primaryColor="#6f4dfa"
+[browser]
+    gatherUsageStats = false
+[server]
+    fileWatcherType = "auto"
+    runOnSave = true
