@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Any
 
+import logfire
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
@@ -20,44 +21,46 @@ def _coerce_to_text(content: Any) -> str:
 
 
 def extract_col_section(state):
-    feedback = state.get("col_section_feedback", [])
-    text = state["full_text"]
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
-    COL_SECTION_PROMPT = get_prompt_module(jurisdiction, "col_section", specific_jurisdiction).COL_SECTION_PROMPT
+    with logfire.span("extract_col_section"):
+        feedback = state.get("col_section_feedback", [])
+        text = state["full_text"]
+        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+        specific_jurisdiction = state.get("precise_jurisdiction")
+        COL_SECTION_PROMPT = get_prompt_module(jurisdiction, "col_section", specific_jurisdiction).COL_SECTION_PROMPT
 
-    if feedback:
-        logger.debug("Feedback for col section: %s", feedback)
-    prompt = COL_SECTION_PROMPT.format(text=text)
+        if feedback:
+            logger.debug("Feedback for col section: %s", feedback)
+        prompt = COL_SECTION_PROMPT.format(text=text)
 
-    iter_count = state.get("col_section_eval_iter", 0) + 1
-    state["col_section_eval_iter"] = iter_count
+        iter_count = state.get("col_section_eval_iter", 0) + 1
+        state["col_section_eval_iter"] = iter_count
 
-    existing_sections = state.get("col_section", [])
-    if existing_sections:
-        prev = existing_sections[-1]
-        if prev:
-            prompt += f"\n\nPrevious extraction: {prev}\n"
+        existing_sections = state.get("col_section", [])
+        if existing_sections:
+            prev = existing_sections[-1]
+            if prev:
+                prompt += f"\n\nPrevious extraction: {prev}\n"
 
-    if feedback:
-        last_fb = feedback[-1]
-        prompt += f"\n\nFeedback: {last_fb}\n"
-    logger.debug("Prompting LLM with: %s", prompt)
-    start_time = time.time()
+        if feedback:
+            last_fb = feedback[-1]
+            prompt += f"\n\nFeedback: {last_fb}\n"
+        logger.debug("Prompting LLM with: %s", prompt)
+        start_time = time.time()
 
-    system_prompt = get_system_prompt_for_analysis(state)
+        system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=prompt)
-    ])
-    col_time = time.time() - start_time
-    col_section = _coerce_to_text(getattr(response, "content", "")).strip()
-    state.setdefault("col_section", []).append(col_section)
-    logger.debug("Extracted Choice of Law section: %s", col_section)
+        response = config.llm.invoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ])
+        col_time = time.time() - start_time
+        col_section = _coerce_to_text(getattr(response, "content", "")).strip()
+        state.setdefault("col_section", []).append(col_section)
+        logger.debug("Extracted Choice of Law section: %s", col_section)
 
-    return {
-        "col_section": state["col_section"],
-        "col_section_feedback": state.get("col_section_feedback", []),
-        "col_section_time": col_time
-    }
+        logfire.info("Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time)
+        return {
+            "col_section": state["col_section"],
+            "col_section_feedback": state.get("col_section_feedback", []),
+            "col_section_time": col_time
+        }
