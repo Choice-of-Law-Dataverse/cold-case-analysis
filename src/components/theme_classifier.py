@@ -25,33 +25,18 @@ def display_theme_classification(state):
 
 def handle_theme_scoring(state):
     """
-    Handle the theme scoring interface.
+    Auto-approve theme classification without scoring UI.
 
     Args:
         state: The current analysis state
 
     Returns:
-        bool: True if scoring is complete
+        bool: True (always complete)
     """
+    # Automatically mark as submitted without user interaction
     if not state.get("theme_first_score_submitted"):
-        score = st.slider(
-            "Evaluate these themes (0-100):",
-            min_value=0,
-            max_value=100,
-            value=100,
-            step=1,
-            key="theme_first_score_input"
-        )
-        if st.button("Submit Theme Score", key="submit_theme_score"):
-            state["theme_first_score"] = score
-            state["theme_first_score_submitted"] = True
-            st.rerun()
-        return False
-    else:
-        score = state.get("theme_first_score", 0)
-        st.markdown("**Your score for themes:**")
-        st.markdown(f"<div class='user-message'>Score: {score}</div>", unsafe_allow_html=True)
-        return True
+        state["theme_first_score_submitted"] = True
+    return True
 
 
 def handle_theme_editing(state, last_theme, valid_themes):

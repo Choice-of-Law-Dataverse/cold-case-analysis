@@ -38,7 +38,7 @@ def display_jurisdiction_info(col_state):
 
 def display_case_info(col_state):
     """
-    Display case citation and full text.
+    Display case citation without the full text.
 
     Args:
         col_state: The current analysis state
@@ -49,10 +49,6 @@ def display_case_info(col_state):
         st.markdown(f"<div class='user-message'>{citation}</div>", unsafe_allow_html=True)
 
     display_jurisdiction_info(col_state)
-
-    # Display the full court decision text at the top as a user message
-    st.markdown("**Your Input (Court Decision Text):**")
-    st.markdown(f"<div class='user-message'>{col_state['full_text']}</div>", unsafe_allow_html=True)
 
 
 def display_col_extractions(col_state):
@@ -86,30 +82,14 @@ def display_col_extractions(col_state):
 
 def handle_first_extraction_scoring(col_state):
     """
-    Handle scoring for the first COL extraction.
+    Auto-approve the first COL extraction without scoring UI.
 
     Args:
         col_state: The current analysis state
     """
+    # Automatically mark as submitted without user interaction
     if not col_state.get("col_first_score_submitted"):
-        # Score input restricted to 0–100
-        score_input = st.slider(
-            "Evaluate this first extraction (0-100):",
-            min_value=0,
-            max_value=100,
-            value=100,
-            step=1,
-            help="Provide a score for the quality of the first extraction",
-            key="col_first_score_input"
-        )
-        if st.button("Submit Score", key="submit_col_score"):
-            col_state["col_first_score"] = score_input
-            col_state["col_first_score_submitted"] = True
-            st.rerun()
-    else:
-        score = col_state.get("col_first_score", 0)
-        st.markdown("**Your score for extraction 1:**")
-        st.markdown(f"<div class='user-message'>Score: {score}</div>", unsafe_allow_html=True)
+        col_state["col_first_score_submitted"] = True
 
 
 def handle_col_feedback_phase(col_state):
@@ -119,14 +99,11 @@ def handle_col_feedback_phase(col_state):
     Args:
         col_state: The current analysis state
     """
+    # Auto-approve first extraction, skip to editing
     if not col_state.get("col_ready_edit"):
-        # Only allow feedback after initial score
-        if not col_state.get("col_first_score_submitted"):
-            st.info("Please submit the extraction score before providing feedback.")
-        else:
-            render_feedback_input(col_state)
-    else:
-        render_edit_section(col_state)
+        col_state["col_ready_edit"] = True
+    
+    render_edit_section(col_state)
 
 
 def render_feedback_input(col_state):

@@ -169,96 +169,215 @@ def execute_analysis_step(state, name, func):
 
 def handle_step_scoring(state, name):
     """
-    Handle scoring for an analysis step.
+    Auto-approve analysis steps without scoring UI.
 
     Args:
         state: The current analysis state
         name: Name of the analysis step
 
     Returns:
-        bool: True if scoring is complete
+        bool: True (always complete)
     """
     score_key = f"{name}_score_submitted"
-    display_name = get_step_display_name(name, state)
-
+    
+    # Automatically mark as submitted without user interaction
     if not state.get(score_key):
-        # Score input restricted to 0–100
-        score = st.slider(
-            f"Evaluate this {display_name} (0-100):",
-            min_value=0,
-            max_value=100,
-            value=100,
-            step=1,
-            key=f"{name}_score_input"
-        )
-        if st.button(f"Submit {display_name} Score", key=f"submit_{name}_score"):
-            # Record user score and add to history
-            state[f"{name}_score"] = score
-            state[score_key] = True
-            state.setdefault("chat_history", []).append(("user", f"Score for {display_name}: {score}"))
-            st.rerun()
-        return False
+        state[score_key] = True
+    
     return True
 
 
 def handle_step_editing(state, name, steps):
     """
-    Handle editing for an analysis step.
+    Store edited content without showing editing UI during processing.
 
     Args:
         state: The current analysis state
         name: Name of the analysis step
         steps: List of all analysis steps
     """
-    display_name = get_step_display_name(name, state)
-
-    # Special handling for PIL provisions
-    if name == "pil_provisions":
-        formatted_content = display_pil_provisions(state, name)
-        if formatted_content:
-            edited = handle_pil_provisions_editing(state, name, display_name, formatted_content)
-        else:
-            # Fallback to standard editing
-            content = state.get(name)
-            last = content[-1] if isinstance(content, list) else content
-            edit_key = f"{name}_edited"
-            edited = st.text_area(
-                f"Edit {display_name}:",
-                value=state.get(edit_key, last),
-                height=200,
-                key=f"{name}_edit_area"
-            )
+    # Automatically advance to next step without editing during processing
+    if state["analysis_step"] < len(steps) - 1:
+        state["analysis_step"] += 1
     else:
-        # Standard editing for other steps
+        state["analysis_done"] = True
+
+    print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
+    st.rerun()
+
+
+def execute_all_analysis_steps_parallel(state):
+    """
+    Execute all analysis steps in parallel where possible.
+    This runs all steps without user interaction and stores results.
+
+    Args:
+        state: The current analysis state
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from tools.case_analyzer import (
+        abstract,
+        col_issue,
+        courts_position,
+        dissenting_opinions,
+        obiter_dicta,
+        pil_provisions,
+        relevant_facts,
+    )
+
+    # Steps that can run in parallel (don't depend on each other)
+    parallel_steps = [
+        ("relevant_facts", relevant_facts),
+        ("pil_provisions", pil_provisions),
+        ("col_issue", col_issue),
+    ]
+
+    # Steps that depend on parallel steps
+    sequential_steps = [
+        ("courts_position", courts_position)
+    ]
+
+    # Add jurisdiction-specific steps
+    if state.get("jurisdiction") == "Common-law jurisdiction":
+        sequential_steps.extend([
+            ("obiter_dicta", obiter_dicta),
+            ("dissenting_opinions", dissenting_opinions)
+        ])
+
+    # Abstract runs last using all previous results
+    sequential_steps.append(("abstract", abstract))
+
+    st.markdown("**Analyzing case...**")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    # Execute parallel steps
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(func, state): name for name, func in parallel_steps}
+        completed = 0
+        total_steps = len(parallel_steps) + len(sequential_steps)
+        
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                result = future.result()
+                state.update(result)
+                completed += 1
+                progress = completed / total_steps
+                progress_bar.progress(progress)
+                status_text.text(f"Completed: {get_step_display_name(name, state)}")
+            except Exception as e:
+                st.error(f"Error processing {name}: {str(e)}")
+
+    # Execute sequential steps
+    for name, func in sequential_steps:
+        try:
+            result = func(state)
+            state.update(result)
+            completed += 1
+            progress = completed / total_steps
+            progress_bar.progress(progress)
+            status_text.text(f"Completed: {get_step_display_name(name, state)}")
+        except Exception as e:
+            st.error(f"Error processing {name}: {str(e)}")
+
+    progress_bar.progress(1.0)
+    status_text.text("✓ Analysis complete!")
+    
+    # Mark all steps as printed and scored
+    for name, _ in parallel_steps + sequential_steps:
+        state[f"{name}_printed"] = True
+        state[f"{name}_score_submitted"] = True
+
+
+def render_final_editing_phase(state):
+    """
+    Render the final editing phase where all results are shown as editable text areas.
+
+    Args:
+        state: The current analysis state
+    """
+    st.markdown("---")
+    st.markdown("## Review and Edit Analysis Results")
+    st.markdown("Review all analysis results below. You can edit any section before final submission.")
+
+    steps = get_analysis_steps(state)
+    edited_values = {}
+
+    # Create editable text areas for all steps
+    for name, _ in steps:
+        display_name = get_step_display_name(name, state)
+        
+        # Get current value
         content = state.get(name)
-        last = content[-1] if isinstance(content, list) else content
-        edit_key = f"{name}_edited"
-        edited = st.text_area(
-            f"Edit {display_name}:",
-            value=state.get(edit_key, last),
-            height=200,
-            key=f"{name}_edit_area"
-        )
-
-    if st.button(f"Submit Edited {display_name}", key=f"submit_edited_{name}"):
-        # Special handling for PIL provisions storage
+        if not content:
+            continue
+            
+        current_value = content[-1] if isinstance(content, list) else content
+        
+        # Special handling for PIL provisions display
         if name == "pil_provisions":
-            update_pil_provisions_state(state, name, edited)
+            formatted_content = display_pil_provisions(state, name)
+            if formatted_content:
+                # For PIL provisions, we need special handling
+                st.markdown(f"**{display_name}**")
+                # Show formatted display
+                st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
+                
+                # Provide text area with JSON for editing
+                import json
+                if isinstance(current_value, list):
+                    edit_value = json.dumps(current_value, indent=2)
+                else:
+                    edit_value = str(current_value)
+                    
+                edited = st.text_area(
+                    f"Edit {display_name} (JSON format):",
+                    value=edit_value,
+                    height=200,
+                    key=f"final_edit_{name}"
+                )
+                edited_values[name] = edited
+            else:
+                # Fallback to standard display
+                edited = st.text_area(
+                    f"**{display_name}**",
+                    value=str(current_value),
+                    height=200,
+                    key=f"final_edit_{name}"
+                )
+                edited_values[name] = edited
         else:
-            # Standard handling for other steps
-            state[name][-1] = edited
-            state[f"{name}_edited"] = edited
+            # Standard text area for other steps
+            edited = st.text_area(
+                f"**{display_name}**",
+                value=str(current_value),
+                height=200,
+                key=f"final_edit_{name}"
+            )
+            edited_values[name] = edited
 
-        # Add to chat history
-        state.setdefault("chat_history", []).append(("user", edited))
+    # Submit button
+    if st.button("Submit Final Analysis", type="primary", key="submit_final_analysis"):
+        # Update state with edited values
+        for name, edited_value in edited_values.items():
+            if name == "pil_provisions":
+                # Try to parse JSON for PIL provisions
+                try:
+                    import json
+                    parsed = json.loads(edited_value)
+                    state[name][-1] = parsed
+                    state[f"{name}_edited"] = parsed
+                except json.JSONDecodeError:
+                    # If not valid JSON, store as string
+                    state[name][-1] = edited_value
+                    state[f"{name}_edited"] = edited_value
+            else:
+                state[name][-1] = edited_value
+                state[f"{name}_edited"] = edited_value
 
-        # Advance to next step or complete analysis
-        if state["analysis_step"] < len(steps) - 1:
-            state["analysis_step"] += 1
-        else:
-            state["analysis_done"] = True
-
-        print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
+        state["analysis_done"] = True
+        print_state("\n\n\nFinal CoLD State after editing\n\n", state)
         st.rerun()
 
 
@@ -285,7 +404,7 @@ def process_current_analysis_step(state):
 
 def render_analysis_workflow(state):
     """
-    Render the complete analysis workflow.
+    Render the complete analysis workflow with parallel execution and final editing.
 
     Args:
         state: The current analysis state
@@ -293,12 +412,16 @@ def render_analysis_workflow(state):
     if not state.get("analysis_ready"):
         return
 
-    # Display analysis history
-    display_analysis_history(state)
+    # Check if we should use new parallel workflow
+    if not state.get("parallel_execution_started"):
+        # Execute all steps in parallel
+        execute_all_analysis_steps_parallel(state)
+        state["parallel_execution_started"] = True
+        st.rerun()
+    elif not state.get("analysis_done"):
+        # Show final editing phase
+        render_final_editing_phase(state)
+    else:
+        # Display completion message
+        display_completion_message(state)
 
-    # Check if analysis is complete
-    if display_completion_message(state):
-        return
-
-    # Process current analysis step
-    process_current_analysis_step(state)
