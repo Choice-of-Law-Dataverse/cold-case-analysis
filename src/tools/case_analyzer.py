@@ -56,7 +56,7 @@ def relevant_facts(state):
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
     FACTS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).FACTS_PROMPT
-    
+
     col_section = ""
     sections = state.get("col_section", [])
     if sections:
@@ -81,7 +81,7 @@ def pil_provisions(state):
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
     PIL_PROVISIONS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).PIL_PROVISIONS_PROMPT
-    
+
     col_section = ""
     sections = state.get("col_section", [])
     if sections:
@@ -112,7 +112,7 @@ def col_issue(state):
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
     COL_ISSUE_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COL_ISSUE_PROMPT
-    
+
     col_section = ""
     sections = state.get("col_section", [])
     if sections:
@@ -150,17 +150,17 @@ def courts_position(state):
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
     COURTS_POSITION_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COURTS_POSITION_PROMPT
-    
+
     col_section = ""
     sections = state.get("col_section", [])
     if sections:
         col_section = sections[-1]
-    
+
     classification = ""
     all_classifications = state.get("classification", [])
     if all_classifications:
         classification = all_classifications[-1]
-    
+
     col_issue = ""
     all_col_issues = state.get("col_issue", [])
     if all_col_issues:

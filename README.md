@@ -303,11 +303,14 @@ python latam_case_analysis/txt_converter.py
 - **[Workflows](docs/WORKFLOWS.md)**: Detailed workflow diagrams
 - **[Agent Documentation](docs/agent.md)**: Agent implementation details
 - **[Prompts README](src/prompts/README.md)**: Comprehensive prompt documentation
+- **[Coding Style Guide](docs/STYLE_GUIDE.md)**: Best practices for code contributions
 
 ## Contributing
 
 Contributions are welcome! Please ensure:
-1. Code follows existing patterns and conventions
+1. Code follows the [Coding Style Guide](docs/STYLE_GUIDE.md)
+2. Use logging instead of print statements in application code
+3. Remove redundant comments that repeat function names
 2. Components are properly modularized
 3. Tests are added for new functionality
 4. Documentation is updated accordingly

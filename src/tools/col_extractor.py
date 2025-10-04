@@ -26,14 +26,14 @@ def extract_col_section(state):
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
     COL_SECTION_PROMPT = get_prompt_module(jurisdiction, "col_section", specific_jurisdiction).COL_SECTION_PROMPT
-    
+
     if feedback:
         logger.debug("Feedback for col section: %s", feedback)
     prompt = COL_SECTION_PROMPT.format(text=text)
 
     iter_count = state.get("col_section_eval_iter", 0) + 1
     state["col_section_eval_iter"] = iter_count
-    
+
     existing_sections = state.get("col_section", [])
     if existing_sections:
         prev = existing_sections[-1]

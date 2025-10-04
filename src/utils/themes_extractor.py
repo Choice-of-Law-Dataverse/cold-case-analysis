@@ -11,6 +11,8 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+logger = logging.getLogger(__name__)
+
 # Add these to your config.py file:
 # NOCODB_BASE_URL = os.getenv("NOCODB_BASE_URL")
 # NOCODB_API_TOKEN = os.getenv("NOCODB_API_TOKEN")
@@ -61,7 +63,6 @@ class NocoDBService:
         """
         Fetch records for a given table via NocoDB API, applying optional filters and paging through all pages.
         """
-        logger = logging.getLogger(__name__)
         records: list[dict[str, Any]] = []
         offset = 0
         where_clauses = []
