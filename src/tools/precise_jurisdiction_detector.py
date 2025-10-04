@@ -4,6 +4,7 @@ Identifies the precise jurisdiction from court decision text using the jurisdict
 """
 
 import csv
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ from .jurisdiction_detector import (
     detect_legal_system_by_jurisdiction,
     detect_legal_system_type,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _coerce_to_text(content: Any) -> str:
@@ -78,9 +81,9 @@ def detect_precise_jurisdiction(text: str) -> str:
 
     prompt = PRECISE_JURISDICTION_DETECTION_PROMPT.format(
         jurisdiction_list=jurisdiction_list,
-        text=text[:5000],  # Limit text length to avoid token limits
+        text=text[:5000],
     )
-    print(f"\nPrompting LLM with:\n{prompt}\n")
+    logger.debug("Prompting LLM with: %s", prompt)
 
     try:
         response = config.llm.invoke(
@@ -93,35 +96,28 @@ def detect_precise_jurisdiction(text: str) -> str:
         )
 
         result_text = _coerce_to_text(getattr(response, "content", "")).strip()
-        print(f"\nLLM Response: {result_text}\n")
+        logger.debug("LLM Response: %s", result_text)
 
-        # Extract jurisdiction from the /"Jurisdiction"/ format
-        # Look for text between /" and "/
         jurisdiction_match = re.search(r"/\"([^\"]+)\"/", result_text)
         if jurisdiction_match:
             jurisdiction_name = jurisdiction_match.group(1)
         else:
-            # Fallback: try to extract any quoted jurisdiction name
             quote_match = re.search(r"\"([^\"]+)\"", result_text)
             if quote_match:
                 jurisdiction_name = quote_match.group(1)
             else:
-                # Final fallback: use the entire response if it's reasonable
                 if len(result_text) < 100 and result_text not in ["Unknown", "unknown"]:
                     jurisdiction_name = result_text.strip()
                 else:
                     jurisdiction_name = "Unknown"
 
-        # Validate jurisdiction against our list
         jurisdictions = load_jurisdictions()
 
         if jurisdiction_name and jurisdiction_name != "Unknown":
-            # First try exact match
             for jurisdiction in jurisdictions:
                 if jurisdiction["name"].lower() == jurisdiction_name.lower():
                     return jurisdiction["name"]
 
-            # Then try partial match (contains)
             for jurisdiction in jurisdictions:
                 if (
                     jurisdiction_name.lower() in jurisdiction["name"].lower()
@@ -129,12 +125,11 @@ def detect_precise_jurisdiction(text: str) -> str:
                 ):
                     return jurisdiction["name"]
 
-            # If no match found but we have a reasonable response, return it
             if len(jurisdiction_name) > 2 and jurisdiction_name not in ["Unknown", "unknown", "N/A", "None"]:
                 return jurisdiction_name
 
         return "Unknown"
 
     except Exception as e:
-        print(f"Error in jurisdiction detection: {e}")
+        logger.error("Error in jurisdiction detection: %s", e)
         return "Unknown"

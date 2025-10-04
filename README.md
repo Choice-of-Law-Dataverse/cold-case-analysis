@@ -307,9 +307,11 @@ python latam_case_analysis/txt_converter.py
 ## Contributing
 
 Contributions are welcome! Please ensure:
-1. Code follows existing patterns and conventions
-2. Components are properly modularized
-3. Tests are added for new functionality
+1. Code follows the coding conventions in `AGENTS.md`
+2. Use logging instead of print statements in application code
+3. Minimize comments - only explain "why", not "what"
+4. Components are properly modularized
+5. Tests are added for new functionality
 4. Documentation is updated accordingly
 
 ## License

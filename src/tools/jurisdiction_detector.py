@@ -2,12 +2,15 @@
 """
 Detects the jurisdiction type of a court decision: Civil-law, Common-law, or No court decision using an LLM.
 """
+import logging
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
 from prompts.legal_system_type_detection import LEGAL_SYSTEM_TYPE_DETECTION_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 def get_jurisdiction_legal_system_mapping():
@@ -92,16 +95,14 @@ def detect_legal_system_type(jurisdiction_name: str, text: str) -> str:
     if not text or len(text.strip()) < 50:
         return "No court decision"
 
-    # First, try to determine based on jurisdiction name
     jurisdiction_based_result = detect_legal_system_by_jurisdiction(jurisdiction_name)
     if jurisdiction_based_result:
-        print(f"\nJurisdiction-based classification: {jurisdiction_name} -> {jurisdiction_based_result}")
+        logger.debug("Jurisdiction-based classification: %s -> %s", jurisdiction_name, jurisdiction_based_result)
         return jurisdiction_based_result
 
-    # Fall back to LLM analysis with enhanced prompt
     prompt = LEGAL_SYSTEM_TYPE_DETECTION_PROMPT.format(jurisdiction_name=jurisdiction_name, text=text)
-    print(f"\nUsing LLM analysis for jurisdiction: {jurisdiction_name}")
-    print(f"Prompting LLM with:\n{prompt}\n")
+    logger.debug("Using LLM analysis for jurisdiction: %s", jurisdiction_name)
+    logger.debug("Prompting LLM with: %s", prompt)
 
     response = config.llm.invoke([
         SystemMessage(content="You are an expert in legal systems and court decisions."),
@@ -109,7 +110,6 @@ def detect_legal_system_type(jurisdiction_name: str, text: str) -> str:
     ])
     result = _coerce_to_text(getattr(response, "content", "")).strip()
 
-    # Enforce output to be one of the three categories
     allowed = ["Civil-law jurisdiction", "Common-law jurisdiction", "No court decision"]
     for option in allowed:
         if option.lower() in result.lower():

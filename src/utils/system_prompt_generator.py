@@ -4,7 +4,10 @@ Dynamic system prompt generator that creates jurisdiction-specific system prompt
 with optional jurisdiction summaries from jurisdictions.csv
 """
 import csv
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def load_jurisdiction_summaries():
@@ -20,26 +23,24 @@ def load_jurisdiction_summaries():
         csv_path = current_dir / "data" / "jurisdictions.csv"
 
         if not csv_path.exists():
-            print(f"Warning: jurisdictions.csv not found at {csv_path}")
+            logger.warning("jurisdictions.csv not found at %s", csv_path)
             return {}
 
         jurisdiction_summaries = {}
 
-        # Read CSV file using csv module instead of pandas for better compatibility
         with open(csv_path, encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 name = str(row.get("Name", "")).strip()
                 summary = str(row.get("Jurisdiction Summary", "")).strip()
 
-                # Only include entries with both name and non-empty summary
                 if name and name.lower() != "nan" and summary and summary.lower() != "nan":
                     jurisdiction_summaries[name] = summary
 
         return jurisdiction_summaries
 
     except Exception as e:
-        print(f"Error loading jurisdiction summaries: {e}")
+        logger.error("Error loading jurisdiction summaries: %s", e)
         return {}
 
 
