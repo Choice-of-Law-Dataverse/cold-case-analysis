@@ -49,28 +49,35 @@ def render_initial_input_phase():
                 "The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review."
             )
 
-            with st.spinner("Extracting Choice of Law section..."):
-                # Get final jurisdiction data
-                final_jurisdiction_data = get_final_jurisdiction_data()
+            # Show progress banner while extracting
+            from utils.progress_banner import hide_progress_banner, show_progress_banner
 
-                # Create initial analysis state
-                state = create_initial_analysis_state(
-                    case_citation=st.session_state.get("case_citation"),
-                    username=st.session_state.get("user"),
-                    model=st.session_state.get("llm_model_select"),
-                    full_text=full_text,
-                    final_jurisdiction_data=final_jurisdiction_data,
-                    user_email=st.session_state.get("user_email"),
-                )
+            show_progress_banner("Extracting Choice of Law section...")
 
-                # Extract COL section
-                result = extract_col_section(state)
-                state.update(result)
+            # Get final jurisdiction data
+            final_jurisdiction_data = get_final_jurisdiction_data()
 
-                # Update session state
-                st.session_state.col_state = state
-                st.session_state["col_extraction_started"] = True
-                st.rerun()
+            # Create initial analysis state
+            state = create_initial_analysis_state(
+                case_citation=st.session_state.get("case_citation"),
+                username=st.session_state.get("user"),
+                model=st.session_state.get("llm_model_select"),
+                full_text=full_text,
+                final_jurisdiction_data=final_jurisdiction_data,
+                user_email=st.session_state.get("user_email"),
+            )
+
+            # Extract COL section
+            result = extract_col_section(state)
+            state.update(result)
+
+            # Update session state
+            st.session_state.col_state = state
+            st.session_state["col_extraction_started"] = True
+
+            # Clear the progress banner
+            hide_progress_banner()
+            st.rerun()
 
     return False
 

@@ -39,23 +39,29 @@ def render_jurisdiction_detection(full_text: str):
 
         if detect_clicked:
             if full_text.strip():
-                with st.spinner("Analyzing jurisdiction..."):
-                    # Detect precise jurisdiction (now returns just the jurisdiction name)
-                    jurisdiction_name = detect_precise_jurisdiction(full_text)
+                # Show progress banner while analyzing
+                from utils.progress_banner import hide_progress_banner, show_progress_banner
 
-                    st.session_state["precise_jurisdiction"] = jurisdiction_name
-                    st.session_state["precise_jurisdiction_detected"] = True
+                show_progress_banner("Identifying jurisdiction...")
 
-                    # Determine legal system type using the existing jurisdiction detection logic
-                    legal_system = detect_legal_system_type(jurisdiction_name, full_text)
+                # Detect precise jurisdiction (now returns just the jurisdiction name)
+                jurisdiction_name = detect_precise_jurisdiction(full_text)
 
-                    # Handle the case where the existing detector says "No court decision"
-                    if legal_system == "No court decision":
-                        legal_system = "Unknown legal system"
+                st.session_state["precise_jurisdiction"] = jurisdiction_name
+                st.session_state["precise_jurisdiction_detected"] = True
 
-                    st.session_state["legal_system_type"] = legal_system
+                # Determine legal system type using the existing jurisdiction detection logic
+                legal_system = detect_legal_system_type(jurisdiction_name, full_text)
 
-                    st.rerun()
+                # Handle the case where the existing detector says "No court decision"
+                if legal_system == "No court decision":
+                    legal_system = "Unknown legal system"
+
+                st.session_state["legal_system_type"] = legal_system
+
+                # Clear the progress banner
+                hide_progress_banner()
+                st.rerun()
             else:
                 st.warning("Please enter the court decision text before detecting jurisdiction.")
 

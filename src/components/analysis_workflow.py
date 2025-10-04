@@ -241,15 +241,19 @@ def execute_all_analysis_steps_parallel(state):
     # Abstract runs last using all previous results
     sequential_steps.append(("abstract", abstract))
 
-    st.markdown("**Analyzing case...**")
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    from utils.progress_banner import hide_progress_banner, show_progress_banner
+
+    total_steps = len(parallel_steps) + len(sequential_steps)
+    completed = 0
+
+    # Create a function to update the progress banner
+    def update_banner(message, progress):
+        """Update the progress banner with current status."""
+        show_progress_banner(message, progress)
 
     # Execute parallel steps
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(func, state): name for name, func in parallel_steps}
-        completed = 0
-        total_steps = len(parallel_steps) + len(sequential_steps)
 
         for future in as_completed(futures):
             name = futures[future]
@@ -258,8 +262,7 @@ def execute_all_analysis_steps_parallel(state):
                 state.update(result)
                 completed += 1
                 progress = completed / total_steps
-                progress_bar.progress(progress)
-                status_text.text(f"Completed: {get_step_display_name(name, state)}")
+                update_banner(f"Analyzing case... Completed: {get_step_display_name(name, state)}", progress)
             except Exception as e:
                 st.error(f"Error processing {name}: {str(e)}")
 
@@ -270,13 +273,19 @@ def execute_all_analysis_steps_parallel(state):
             state.update(result)
             completed += 1
             progress = completed / total_steps
-            progress_bar.progress(progress)
-            status_text.text(f"Completed: {get_step_display_name(name, state)}")
+            update_banner(f"Analyzing case... Completed: {get_step_display_name(name, state)}", progress)
         except Exception as e:
             st.error(f"Error processing {name}: {str(e)}")
 
-    progress_bar.progress(1.0)
-    status_text.text("✓ Analysis complete!")
+    # Show completion message
+    update_banner("✓ Analysis complete!", 1.0)
+
+    # Give a moment to see the completion message
+    import time
+    time.sleep(1)
+
+    # Clear the banner
+    hide_progress_banner()
 
     # Mark all steps as printed and scored
     for name, _ in parallel_steps + sequential_steps:
