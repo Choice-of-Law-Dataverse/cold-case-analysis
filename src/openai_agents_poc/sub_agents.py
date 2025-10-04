@@ -4,6 +4,8 @@ import logging
 
 from agents import Agent
 
+from prompts.prompt_selector import get_prompt_module
+
 from .models import (
     CaseAbstract,
     ChoiceOfLawExtraction,
@@ -44,122 +46,167 @@ Be thorough and provide clear reasoning for your determination.""",
     )
 
 
-def create_col_extraction_agent() -> Agent:
-    """Create an agent for extracting Choice of Law sections."""
+def create_col_extraction_agent(jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None) -> Agent:
+    """Create an agent for extracting Choice of Law sections using battle-tested prompts.
+
+    Args:
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "col_section", precise_jurisdiction)
+    col_prompt = prompt_module.COL_SECTION_PROMPT
+
+    # Extract the instructions part of the prompt (everything before the text placeholder)
+    # The prompt template uses {text} and {col_section} placeholders which we'll handle in the orchestrator
+    instructions = col_prompt.split("\\nHere is the text of the Court Decision:")[0].strip()
+
     return Agent(
         name="ChoiceOfLawExtractor",
-        instructions="""You are an expert in Private International Law and Choice of Law analysis.
+        instructions=f"""{instructions}
 
-Your task is to identify and extract all sections of the court decision that deal with Choice of Law issues.
+When extracting sections, provide:
+1. A list of extracted sections as separate text blocks
+2. Your confidence level (high/medium/low) based on the clarity of choice of law discussions
+3. Your reasoning for selecting these sections
 
-Choice of Law sections typically include:
-- Discussion of which jurisdiction's law applies
-- Conflict of laws analysis
-- Forum selection considerations
-- Recognition and enforcement of foreign judgments
-- Applicable law determination
-- Connecting factors analysis
-
-Extract complete sections or paragraphs, not just snippets. Include enough context to understand the court's reasoning.
-Provide your confidence level and explain why you selected these particular sections.""",
+Focus on extracting the exact court language that addresses choice of law issues.""",
         output_type=ChoiceOfLawExtraction,
     )
 
 
-def create_theme_classification_agent(available_themes: list[str]) -> Agent:
-    """Create an agent for classifying PIL themes."""
+def create_theme_classification_agent(
+    available_themes: list[str], jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None
+) -> Agent:
+    """Create an agent for classifying PIL themes using battle-tested prompts.
+
+    Args:
+        available_themes: List of available theme options
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "theme", precise_jurisdiction)
+    theme_prompt = prompt_module.PIL_THEME_PROMPT
+
+    # Extract the instructions part (everything before the themes table placeholder)
+    instructions = theme_prompt.split("Here is the table with all keywords")[0].strip()
+
+    # Create a formatted list of themes for the instructions
     theme_list = "\n".join(f"- {theme}" for theme in available_themes)
+
     return Agent(
         name="ThemeClassifier",
-        instructions=f"""You are an expert in Private International Law (PIL) theme classification.
-
-Your task is to analyze the case and classify it according to the relevant PIL themes.
+        instructions=f"""{instructions}
 
 Available themes:
 {theme_list}
 
-Analyze the case and select all themes that are relevant. A case may have multiple themes.
-Provide your confidence level and explain how you arrived at these theme classifications.
+Provide:
+1. A list of themes that apply to this case
+2. Your confidence level (high/medium/low)
+3. Your reasoning for selecting these themes
 
-Focus on the substantive PIL issues, not procedural matters unless they are central to the case.""",
+Be as precise as possible in matching the case to the most specific applicable themes.""",
         output_type=ThemeClassification,
     )
 
 
-def create_relevant_facts_agent() -> Agent:
-    """Create an agent for extracting relevant facts."""
+def create_relevant_facts_agent(jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None) -> Agent:
+    """Create an agent for extracting relevant facts using battle-tested prompts.
+
+    Args:
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "analysis", precise_jurisdiction)
+    facts_prompt = prompt_module.FACTS_PROMPT
+
+    # Extract the instructions part (before the Court Decision Text)
+    instructions = facts_prompt.split("\\nCourt Decision Text:")[0].strip()
+
     return Agent(
         name="RelevantFactsExtractor",
-        instructions="""You are a legal analyst specializing in case analysis.
+        instructions=f"""{instructions}
 
-Your task is to extract and summarize the relevant factual background of the case that is pertinent to the Choice of Law analysis.
-
-Include:
-- Key parties and their relationships
-- Relevant locations and cross-border elements
-- Timeline of important events
-- Facts that influenced the Choice of Law determination
-
-Be concise but comprehensive. Focus on facts that matter for the PIL analysis.""",
+Provide a single paragraph narrative (maximum 300 words) containing all essential facts relevant to the choice of law analysis.""",
         output_type=RelevantFacts,
     )
 
 
-def create_pil_provisions_agent() -> Agent:
-    """Create an agent for extracting PIL provisions."""
+def create_pil_provisions_agent(jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None) -> Agent:
+    """Create an agent for extracting PIL provisions using battle-tested prompts.
+
+    Args:
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "analysis", precise_jurisdiction)
+    pil_prompt = prompt_module.PIL_PROVISIONS_PROMPT
+
+    # Extract the instructions part (before the Court Decision Text)
+    instructions = pil_prompt.split("\\nCourt Decision Text:")[0].strip()
+
     return Agent(
         name="PILProvisionsExtractor",
-        instructions="""You are an expert in Private International Law.
+        instructions=f"""{instructions}
 
-Your task is to identify and extract all Private International Law provisions, statutes, conventions, and legal instruments cited or applied in the case.
-
-Include:
-- International conventions (e.g., Hague Conventions, Rome I/II)
-- National PIL statutes and codes
-- Bilateral treaties
-- Customary international law principles
-- Relevant case law precedents on PIL issues
-
-Provide the full citation for each provision when available.""",
+Provide a list of Private International Law provisions cited in the case, formatted as strings with provision number and instrument name.""",
         output_type=PILProvisions,
     )
 
 
-def create_col_issue_agent() -> Agent:
-    """Create an agent for identifying the Choice of Law issue."""
+def create_col_issue_agent(jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None) -> Agent:
+    """Create an agent for identifying the Choice of Law issue using battle-tested prompts.
+
+    Args:
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "analysis", precise_jurisdiction)
+    issue_prompt = prompt_module.COL_ISSUE_PROMPT
+
+    # Extract the instructions part (before the classification definitions)
+    instructions = issue_prompt.split("The issue in this case is related")[0].strip()
+
     return Agent(
         name="ChoiceOfLawIssueIdentifier",
-        instructions="""You are an expert in Choice of Law analysis.
+        instructions=f"""{instructions}
 
-Your task is to clearly identify and articulate the Choice of Law issue(s) that the court addressed in this case.
-
-The issue should be stated as a question or problem that the court needed to resolve, such as:
-- Which law applies to X?
-- How should connecting factors be interpreted?
-- Whether a particular exception applies?
-
-Be precise and comprehensive. If there are multiple issues, address all of them.""",
+State the issue as a general question that captures the choice of law problem addressed by the court.""",
         output_type=ChoiceOfLawIssue,
     )
 
 
-def create_courts_position_agent() -> Agent:
-    """Create an agent for analyzing the court's position."""
+def create_courts_position_agent(
+    jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None
+) -> Agent:
+    """Create an agent for analyzing the court's position using battle-tested prompts.
+
+    Args:
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "analysis", precise_jurisdiction)
+    position_prompt = prompt_module.COURTS_POSITION_PROMPT
+
+    # Extract the instructions part (before the CONSTRAINTS)
+    instructions = position_prompt.split("CONSTRAINTS:")[0].strip()
+
     return Agent(
         name="CourtsPositionAnalyzer",
-        instructions="""You are a legal analyst specializing in judicial reasoning.
+        instructions=f"""{instructions}
 
-Your task is to analyze and summarize the court's reasoning and position on the Choice of Law issue.
+CONSTRAINTS:
+- Base the response on the provided judgment text and extracted sections only.
+- Maintain a neutral and objective tone.
+- Use a maximum of 300 words.
 
-Include:
-- The court's legal reasoning and methodology
-- How the court applied relevant provisions
-- The court's interpretation of connecting factors
-- The outcome and its rationale
-- Any important distinctions or qualifications made
-
-This should capture the ratio decidendi (binding reasoning) of the case.
-Be comprehensive but well-organized.""",
+Provide a summary that generalizes the court's position so it can be applied to other PIL cases.""",
         output_type=CourtsPosition,
     )
 
@@ -203,21 +250,24 @@ Dissenting opinions can provide valuable insight into alternative approaches to 
     )
 
 
-def create_abstract_agent() -> Agent:
-    """Create an agent for generating the case abstract."""
+def create_abstract_agent(jurisdiction: str = "Civil-law jurisdiction", precise_jurisdiction: str | None = None) -> Agent:
+    """Create an agent for generating the case abstract using battle-tested prompts.
+
+    Args:
+        jurisdiction: Legal system type (e.g., 'Civil-law jurisdiction')
+        precise_jurisdiction: Specific jurisdiction (e.g., 'India')
+    """
+    # Get the appropriate prompt module based on jurisdiction
+    prompt_module = get_prompt_module(jurisdiction, "analysis", precise_jurisdiction)
+    abstract_prompt = prompt_module.ABSTRACT_PROMPT
+
+    # Extract the instructions part (before Court Decision Text)
+    instructions = abstract_prompt.split("\\nCourt Decision Text:")[0].strip()
+
     return Agent(
         name="AbstractGenerator",
-        instructions="""You are a legal analyst specializing in case summaries.
+        instructions=f"""{instructions}
 
-Your task is to create a concise abstract of the case focusing on its Choice of Law aspects.
-
-The abstract should include:
-- Brief case background
-- The Choice of Law issue(s)
-- The court's holding
-- The significance of the decision
-
-This should be 3-5 sentences that give a reader a quick understanding of the case and its PIL importance.
-Be clear and accessible while maintaining legal precision.""",
+Create a single paragraph (maximum 300 words, maximum 4 sentences) that synthesizes the facts, PIL issues, court's reasoning, and precedential outcome.""",
         output_type=CaseAbstract,
     )

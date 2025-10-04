@@ -88,23 +88,43 @@ class CaseAnalysisOrchestrator:
         # Step 2: Run initial parallel analysis (CoL extraction, themes, relevant facts)
         logger.info("Step 2: Running initial parallel analysis (CoL extraction, themes, facts)...")
         col_extraction, themes, relevant_facts = await asyncio.gather(
-            self._extract_col_sections(case_text),
-            self._classify_themes(case_text),
-            self._extract_relevant_facts(case_text),
+            self._extract_col_sections(
+                case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction
+            ),
+            self._classify_themes(case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction),
+            self._extract_relevant_facts(
+                case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction
+            ),
         )
         logger.info("Initial parallel analysis complete")
 
         # Step 3: Run PIL provisions and CoL issue in parallel
         logger.info("Step 3: Extracting PIL provisions and identifying CoL issue...")
         pil_provisions, col_issue = await asyncio.gather(
-            self._extract_pil_provisions(case_text, col_extraction.col_sections),
-            self._identify_col_issue(case_text, col_extraction.col_sections),
+            self._extract_pil_provisions(
+                case_text,
+                col_extraction.col_sections,
+                jurisdiction_result.legal_system_type,
+                jurisdiction_result.precise_jurisdiction,
+            ),
+            self._identify_col_issue(
+                case_text,
+                col_extraction.col_sections,
+                jurisdiction_result.legal_system_type,
+                jurisdiction_result.precise_jurisdiction,
+            ),
         )
         logger.info("PIL provisions and CoL issue identified")
 
         # Step 4: Analyze court's position
         logger.info("Step 4: Analyzing court's position...")
-        courts_position = await self._analyze_courts_position(case_text, col_extraction.col_sections, col_issue.issue)
+        courts_position = await self._analyze_courts_position(
+            case_text,
+            col_extraction.col_sections,
+            col_issue.issue,
+            jurisdiction_result.legal_system_type,
+            jurisdiction_result.precise_jurisdiction,
+        )
         logger.info("Court's position analyzed")
 
         # Step 5: Extract jurisdiction-specific elements (if Common Law)
@@ -113,8 +133,12 @@ class CaseAnalysisOrchestrator:
         if "Common-law" in jurisdiction_result.legal_system_type or "Indian" in jurisdiction_result.legal_system_type:
             logger.info("Step 5: Extracting Common Law specific elements (obiter dicta, dissenting opinions)...")
             obiter_dicta, dissenting_opinions = await asyncio.gather(
-                self._extract_obiter_dicta(case_text),
-                self._extract_dissenting_opinions(case_text),
+                self._extract_obiter_dicta(
+                    case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction
+                ),
+                self._extract_dissenting_opinions(
+                    case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction
+                ),
             )
             logger.info("Common Law specific elements extracted")
 
@@ -160,17 +184,21 @@ class CaseAnalysisOrchestrator:
         result = await Runner.run(agent, f"Analyze this court decision and determine its jurisdiction:\n\n{case_text}")
         return result.final_output_as(JurisdictionDetection)
 
-    async def _extract_col_sections(self, case_text: str) -> ChoiceOfLawExtraction:
+    async def _extract_col_sections(
+        self, case_text: str, jurisdiction: str, precise_jurisdiction: str | None
+    ) -> ChoiceOfLawExtraction:
         """Extract Choice of Law sections from the case."""
-        agent = create_col_extraction_agent()
+        agent = create_col_extraction_agent(jurisdiction, precise_jurisdiction)
         agent.model = self.model
 
         result = await Runner.run(agent, f"Extract all Choice of Law sections from this court decision:\n\n{case_text}")
         return result.final_output_as(ChoiceOfLawExtraction)
 
-    async def _classify_themes(self, case_text: str) -> ThemeClassification:
+    async def _classify_themes(
+        self, case_text: str, jurisdiction: str, precise_jurisdiction: str | None
+    ) -> ThemeClassification:
         """Classify PIL themes in the case."""
-        agent = create_theme_classification_agent(self.available_themes)
+        agent = create_theme_classification_agent(self.available_themes, jurisdiction, precise_jurisdiction)
         agent.model = self.model
 
         result = await Runner.run(
@@ -178,17 +206,21 @@ class CaseAnalysisOrchestrator:
         )
         return result.final_output_as(ThemeClassification)
 
-    async def _extract_relevant_facts(self, case_text: str) -> RelevantFacts:
+    async def _extract_relevant_facts(
+        self, case_text: str, jurisdiction: str, precise_jurisdiction: str | None
+    ) -> RelevantFacts:
         """Extract relevant facts from the case."""
-        agent = create_relevant_facts_agent()
+        agent = create_relevant_facts_agent(jurisdiction, precise_jurisdiction)
         agent.model = self.model
 
         result = await Runner.run(agent, f"Extract the relevant facts from this court decision:\n\n{case_text}")
         return result.final_output_as(RelevantFacts)
 
-    async def _extract_pil_provisions(self, case_text: str, col_sections: list[str]) -> PILProvisions:
+    async def _extract_pil_provisions(
+        self, case_text: str, col_sections: list[str], jurisdiction: str, precise_jurisdiction: str | None
+    ) -> PILProvisions:
         """Extract PIL provisions cited in the case."""
-        agent = create_pil_provisions_agent()
+        agent = create_pil_provisions_agent(jurisdiction, precise_jurisdiction)
         agent.model = self.model
 
         col_context = "\n\n".join(col_sections) if col_sections else "Not extracted separately"
@@ -198,9 +230,11 @@ class CaseAnalysisOrchestrator:
         )
         return result.final_output_as(PILProvisions)
 
-    async def _identify_col_issue(self, case_text: str, col_sections: list[str]) -> ChoiceOfLawIssue:
+    async def _identify_col_issue(
+        self, case_text: str, col_sections: list[str], jurisdiction: str, precise_jurisdiction: str | None
+    ) -> ChoiceOfLawIssue:
         """Identify the Choice of Law issue."""
-        agent = create_col_issue_agent()
+        agent = create_col_issue_agent(jurisdiction, precise_jurisdiction)
         agent.model = self.model
 
         col_context = "\n\n".join(col_sections) if col_sections else "Not extracted separately"
@@ -210,9 +244,11 @@ class CaseAnalysisOrchestrator:
         )
         return result.final_output_as(ChoiceOfLawIssue)
 
-    async def _analyze_courts_position(self, case_text: str, col_sections: list[str], col_issue: str) -> CourtsPosition:
+    async def _analyze_courts_position(
+        self, case_text: str, col_sections: list[str], col_issue: str, jurisdiction: str, precise_jurisdiction: str | None
+    ) -> CourtsPosition:
         """Analyze the court's position."""
-        agent = create_courts_position_agent()
+        agent = create_courts_position_agent(jurisdiction, precise_jurisdiction)
         agent.model = self.model
 
         col_context = "\n\n".join(col_sections) if col_sections else "Not extracted separately"
@@ -222,7 +258,7 @@ class CaseAnalysisOrchestrator:
         )
         return result.final_output_as(CourtsPosition)
 
-    async def _extract_obiter_dicta(self, case_text: str) -> ObiterDicta:
+    async def _extract_obiter_dicta(self, case_text: str, jurisdiction: str, precise_jurisdiction: str | None) -> ObiterDicta:
         """Extract obiter dicta (Common Law)."""
         agent = create_obiter_dicta_agent()
         agent.model = self.model
@@ -230,7 +266,9 @@ class CaseAnalysisOrchestrator:
         result = await Runner.run(agent, f"Extract obiter dicta from this court decision:\n\n{case_text}")
         return result.final_output_as(ObiterDicta)
 
-    async def _extract_dissenting_opinions(self, case_text: str) -> DissentingOpinions:
+    async def _extract_dissenting_opinions(
+        self, case_text: str, jurisdiction: str, precise_jurisdiction: str | None
+    ) -> DissentingOpinions:
         """Extract dissenting opinions (Common Law)."""
         agent = create_dissenting_opinions_agent()
         agent.model = self.model
@@ -247,7 +285,7 @@ class CaseAnalysisOrchestrator:
         themes: ThemeClassification,
     ) -> CaseAbstract:
         """Generate case abstract."""
-        agent = create_abstract_agent()
+        agent = create_abstract_agent(jurisdiction.legal_system_type, jurisdiction.precise_jurisdiction)
         agent.model = self.model
 
         context = f"""Jurisdiction: {jurisdiction.legal_system_type} ({jurisdiction.precise_jurisdiction})
