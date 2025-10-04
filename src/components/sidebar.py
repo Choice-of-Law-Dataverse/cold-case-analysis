@@ -97,7 +97,17 @@ def render_sidebar():
 
         # clear history button
         if st.button("Clear History", key="clear_history"):
+            from utils.persistent_state import delete_persistent_state
+            session_id = st.session_state.get("session_id")
+            if session_id:
+                delete_persistent_state(session_id)
             st.session_state.clear()
+            st.rerun()
+
+        # restart analysis button (keeps user logged in)
+        if st.button("Restart Analysis", key="restart_analysis"):
+            from utils.state_manager import clear_analysis_state_only
+            clear_analysis_state_only()
             st.rerun()
 
         # Footer endorsement and logo at the bottom of the sidebar

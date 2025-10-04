@@ -4,10 +4,27 @@ from components.auth import initialize_auth, render_model_selector
 from components.css import load_css
 from components.main_workflow import render_main_workflow
 from components.sidebar import render_sidebar
-from utils.state_manager import initialize_col_state
+from utils.persistent_state import generate_session_id
+from utils.state_manager import initialize_col_state, load_state_from_persistence, save_state_to_persistence
 
 # Initialize authentication
 initialize_auth()
+
+# Handle session persistence
+query_params = st.query_params
+if "session_id" not in st.session_state:
+    session_id = query_params.get("session_id")
+    if session_id:
+        load_state_from_persistence(session_id)
+        st.session_state["session_id"] = session_id
+    else:
+        session_id = generate_session_id()
+        st.session_state["session_id"] = session_id
+        st.query_params["session_id"] = session_id
+else:
+    session_id = st.session_state["session_id"]
+    if not query_params.get("session_id"):
+        st.query_params["session_id"] = session_id
 
 # Set page config
 st.set_page_config(
@@ -48,3 +65,6 @@ initialize_col_state()
 
 # Render main workflow
 render_main_workflow()
+
+# Save state to persistence after rendering (at the end of each run)
+save_state_to_persistence()
