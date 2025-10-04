@@ -1,68 +1,66 @@
-# Cold Case Analysis - System Workflow Documentation
+# CoLD Case Analyzer - Workflow Documentation
 
-This document provides detailed workflow diagrams and data flow patterns for the Cold Case Analysis system.
+This document provides detailed workflow diagrams and data flow patterns for the CoLD Case Analyzer Streamlit application.
 
-## High-Level System Interaction
+## High-Level System Overview
 
 ```mermaid
 graph TB
-    subgraph "User Interfaces"
-        CLI[Command Line Interface<br/>Batch Processing]
-        WebUI[Web Interface<br/>Interactive Analysis]
-        GraphAPI[LangGraph API<br/>Advanced Workflows]
+    User[Legal Analyst/<br/>Researcher]
+    
+    subgraph "CoLD Case Analyzer"
+        WebUI[Streamlit<br/>Web Application]
     end
     
-    subgraph "Core Analysis Engine"
-        LLMRouter[LLM Router<br/>Model Selection]
+    subgraph "Core Components"
+        PromptEngine[Prompt Engine<br/>Jurisdiction-Specific]
         AnalysisCore[Analysis Core<br/>Case Processing]
-        PromptEngine[Prompt Engine<br/>Template Management]
+        StateManager[State Manager<br/>Session State]
     end
     
     subgraph "Data Layer"
-        LocalData[(Local Files<br/>Excel/CSV)]
-        RemoteData[(Airtable<br/>Cloud Data)]
-        ResultsDB[(PostgreSQL<br/>Results Storage)]
-        GroundTruth[(Ground Truth<br/>Evaluation Data)]
+        LocalData[Local CSV Files<br/>themes.csv<br/>jurisdictions.csv]
+        DemoCase[Demo Case<br/>BGE 132 III 285]
+        ResultsDB[(Optional PostgreSQL<br/>Results Storage)]
     end
     
     subgraph "External Services"
         OpenAI[OpenAI API<br/>GPT Models]
-        LlamaAPI[Llama API<br/>Open Source Models]
+    end
+    
+    subgraph "LATAM Module"
+        Airtable[(Airtable<br/>PDF Source)]
     end
     
     %% User Interface Connections
-    CLI --> LLMRouter
-    WebUI --> LLMRouter
-    GraphAPI --> LLMRouter
+    User --> WebUI
+    WebUI --> PromptEngine
+    WebUI --> AnalysisCore
+    WebUI --> StateManager
     
-    %% Core Engine Connections
-    LLMRouter --> AnalysisCore
-    AnalysisCore --> PromptEngine
+    %% Core Connections
+    PromptEngine --> AnalysisCore
+    AnalysisCore --> OpenAI
     
     %% Data Connections
-    CLI --> LocalData
-    CLI --> RemoteData
     WebUI --> LocalData
+    WebUI --> DemoCase
     WebUI --> ResultsDB
-    CLI --> GroundTruth
-    
-    %% External Service Connections
-    LLMRouter --> OpenAI
-    LLMRouter --> LlamaAPI
+    Airtable --> LocalData
     
     %% Results Flow
-    AnalysisCore --> ResultsDB
-    AnalysisCore --> LocalData
+    AnalysisCore --> StateManager
+    StateManager --> ResultsDB
 
     classDef ui fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef core fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef data fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef data fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
     classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
 
-    class CLI,WebUI,GraphAPI ui
-    class LLMRouter,AnalysisCore,PromptEngine core
-    class LocalData,RemoteData,ResultsDB,GroundTruth data
-    class OpenAI,LlamaAPI external
+    class User,WebUI ui
+    class PromptEngine,AnalysisCore,StateManager core
+    class LocalData,DemoCase,ResultsDB,Airtable data
+    class OpenAI external
 ```
 
 ## Complete Analysis Workflow
@@ -71,172 +69,151 @@ This diagram shows the end-to-end analysis process from input to final results:
 
 ```mermaid
 flowchart TD
-    Start([User Initiates Analysis])
+    Start([User Opens Application])
     
     subgraph "Input Phase"
-        DataSource{Select Data Source}
-        LocalInput[Load Local Cases<br/>cases.xlsx]
-        AirtableInput[Fetch Airtable Data<br/>Remote Cases]
-        ManualInput[Manual Text Input<br/>Single Case]
-        ModelSelect[Select LLM Model<br/>GPT-4o/Mini/Llama]
+        Citation[Enter Case Citation<br/>Required]
+        InputSource{Choose Input Method}
+        TextInput[Paste Court Decision Text<br/>Direct Input]
+        PDFUpload[Upload PDF<br/>Automatic Extraction]
+        DemoLoad[Use Demo Case<br/>BGE 132 III 285]
+        EmailOpt[Optional Email<br/>Contact Info]
     end
     
-    subgraph "Pre-Processing"
-        ValidateInput[Validate Input Data<br/>Required Fields Check]
-        JurisdictionDetect[Detect Jurisdiction<br/>Legal System Identification]
-        PrepareContext[Prepare Analysis Context<br/>Load Concepts & Prompts]
+    subgraph "Jurisdiction Detection"
+        DetectJuris[Detect Legal System<br/>Civil Law/Common Law/India]
+        DisplayJuris[Display Jurisdiction<br/>Results]
+        ScoreJuris[User Scores Result<br/>0-100]
+        EditJuris[Edit if Needed<br/>Manual Correction]
     end
     
-    subgraph "Core Analysis Loop"
-        ExtractCOL[Extract Choice of Law Section<br/>Key Legal Text Identification]
-        ValidateCOL{User Validates COL Section}
-        ClassifyTheme[Classify PIL Theme<br/>Legal Topic Classification]
-        ValidateTheme{User Validates Theme}
-        
-        subgraph "Detailed Analysis"
-            ExtractAbstract[Extract Abstract<br/>Case Summary]
-            ExtractFacts[Extract Relevant Facts<br/>Factual Background]
-            ExtractProvisions[Extract PIL Provisions<br/>Legal Rules]
-            IdentifyIssue[Identify COL Issue<br/>Legal Question]
-            ExtractPosition[Extract Court Position<br/>Legal Ruling]
-        end
+    subgraph "COL Section Extraction"
+        ExtractCOL[Extract COL Sections<br/>Identify Relevant Text]
+        DisplayCOL[Display Extracted<br/>Sections]
+        ScoreCOL[User Scores Extraction<br/>0-100]
+        FeedbackCOL[Provide Feedback<br/>Edit/Refine]
     end
     
-    subgraph "Post-Processing"
-        CompileResults[Compile Analysis Results<br/>Structured Output]
-        FormatOutput[Format Final Output<br/>User-Friendly Display]
-        ValidateResults{User Validates Results}
-        SaveResults[Save Results<br/>Database/File Storage]
-        GenerateReport[Generate Analysis Report<br/>Summary & Insights]
+    subgraph "Theme Classification"
+        ClassifyTheme[Classify PIL Themes<br/>Against Taxonomy]
+        DisplayThemes[Display Classified<br/>Themes]
+        ScoreThemes[User Scores Themes<br/>0-100]
+        EditThemes[Edit Theme List<br/>Manual Adjustment]
     end
     
-    subgraph "Evaluation & Feedback"
-        CompareGroundTruth[Compare with Ground Truth<br/>Quality Assessment]
-        CollectFeedback[Collect User Feedback<br/>Improvement Data]
-        UpdateModel[Update Model Performance<br/>Learning Integration]
+    subgraph "PIL Provisions"
+        ExtractPIL[Extract PIL Provisions<br/>Legal Rules]
+        DisplayPIL[Display Provisions]
+        ScorePIL[User Scores<br/>0-100]
     end
     
-    End([Analysis Complete])
+    subgraph "Detailed Analysis Steps"
+        Abstract[1. Extract Abstract<br/>Case Summary]
+        Facts[2. Extract Relevant Facts<br/>Factual Background]
+        Provisions[3. Identify PIL Provisions<br/>Applicable Rules]
+        Issue[4. Identify COL Issue<br/>Legal Question]
+        Position[5. Extract Court Position<br/>Court's Reasoning]
+    end
+    
+    subgraph "Review & Save"
+        ReviewAll[Review Complete Analysis<br/>All Components]
+        SaveDB[Save to Database<br/>Optional PostgreSQL]
+        Complete[Analysis Complete<br/>Display Summary]
+    end
+    
+    End([User Completes Session])
     
     %% Flow connections
-    Start --> DataSource
-    DataSource --> LocalInput
-    DataSource --> AirtableInput
-    DataSource --> ManualInput
+    Start --> Citation
+    Citation --> EmailOpt
+    EmailOpt --> InputSource
     
-    LocalInput --> ModelSelect
-    AirtableInput --> ModelSelect
-    ManualInput --> ModelSelect
+    InputSource --> TextInput
+    InputSource --> PDFUpload
+    InputSource --> DemoLoad
     
-    ModelSelect --> ValidateInput
-    ValidateInput --> JurisdictionDetect
-    JurisdictionDetect --> PrepareContext
-    PrepareContext --> ExtractCOL
+    TextInput --> DetectJuris
+    PDFUpload --> DetectJuris
+    DemoLoad --> DetectJuris
     
-    ExtractCOL --> ValidateCOL
-    ValidateCOL -->|Approved| ClassifyTheme
-    ValidateCOL -->|Rejected| ExtractCOL
+    DetectJuris --> DisplayJuris
+    DisplayJuris --> ScoreJuris
+    ScoreJuris --> EditJuris
+    EditJuris --> ExtractCOL
     
-    ClassifyTheme --> ValidateTheme
-    ValidateTheme -->|Approved| ExtractAbstract
-    ValidateTheme -->|Rejected| ClassifyTheme
+    ExtractCOL --> DisplayCOL
+    DisplayCOL --> ScoreCOL
+    ScoreCOL --> FeedbackCOL
+    FeedbackCOL --> ClassifyTheme
     
-    ExtractAbstract --> ExtractFacts
-    ExtractFacts --> ExtractProvisions
-    ExtractProvisions --> IdentifyIssue
-    IdentifyIssue --> ExtractPosition
+    ClassifyTheme --> DisplayThemes
+    DisplayThemes --> ScoreThemes
+    ScoreThemes --> EditThemes
+    EditThemes --> ExtractPIL
     
-    ExtractPosition --> CompileResults
-    CompileResults --> FormatOutput
-    FormatOutput --> ValidateResults
+    ExtractPIL --> DisplayPIL
+    DisplayPIL --> ScorePIL
+    ScorePIL --> Abstract
     
-    ValidateResults -->|Approved| SaveResults
-    ValidateResults -->|Refinement Needed| ExtractAbstract
+    Abstract --> Facts
+    Facts --> Provisions
+    Provisions --> Issue
+    Issue --> Position
     
-    SaveResults --> GenerateReport
-    GenerateReport --> CompareGroundTruth
-    CompareGroundTruth --> CollectFeedback
-    CollectFeedback --> UpdateModel
-    UpdateModel --> End
+    Position --> ReviewAll
+    ReviewAll --> SaveDB
+    SaveDB --> Complete
+    Complete --> End
 
-    classDef start fill:#e8f5e8,stroke:#388e3c,stroke-width:3px
+    classDef start fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
     classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef output fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef end fill:#e8f5e8,stroke:#388e3c,stroke-width:3px
+    classDef output fill:#fce4ec,stroke:#c2185b,stroke-width:2px
 
     class Start,End start
-    class DataSource,LocalInput,AirtableInput,ManualInput,ModelSelect input
-    class ValidateInput,JurisdictionDetect,PrepareContext,ExtractCOL,ClassifyTheme,ExtractAbstract,ExtractFacts,ExtractProvisions,IdentifyIssue,ExtractPosition,CompileResults,FormatOutput process
-    class ValidateCOL,ValidateTheme,ValidateResults decision
-    class SaveResults,GenerateReport,CompareGroundTruth,CollectFeedback,UpdateModel output
+    class Citation,EmailOpt,InputSource,TextInput,PDFUpload,DemoLoad input
+    class DetectJuris,DisplayJuris,ExtractCOL,DisplayCOL,ClassifyTheme,DisplayThemes,ExtractPIL,DisplayPIL,Abstract,Facts,Provisions,Issue,Position process
+    class ScoreJuris,EditJuris,ScoreCOL,FeedbackCOL,ScoreThemes,EditThemes,ScorePIL decision
+    class ReviewAll,SaveDB,Complete output
 ```
 
-## Application-Specific Workflows
+## Detailed Component Workflows
 
-### CLI Application Workflow
+### Jurisdiction Detection Workflow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as CLI Main
-    participant DataHandler as Data Handler
-    participant CaseAnalyzer as Case Analyzer
-    participant LLM as LLM Service
-    participant Evaluator as Result Evaluator
-    participant Storage as File Storage
+    participant UI as UI Component
+    participant Tool as Jurisdiction Detector
+    participant Prompt as Prompt Selector
+    participant LLM as OpenAI API
+    participant State as Session State
 
-    User->>CLI: python main.py
-    CLI->>User: Select data source
-    User->>CLI: Choose "Own data" or "Airtable"
-    CLI->>User: Select model
-    User->>CLI: Choose "gpt-4o", "gpt-4o-mini", or "llama3.1"
+    User->>UI: Click "Detect Jurisdiction"
+    UI->>State: Get case citation & text
+    State-->>UI: Return input data
     
-    CLI->>DataHandler: Load cases and concepts
-    DataHandler->>Storage: Read cases.xlsx, concepts.xlsx
-    Storage-->>DataHandler: Return case data
-    DataHandler-->>CLI: Provide structured data
+    UI->>Tool: detect_jurisdiction(text, citation)
+    Tool->>Prompt: Select detection prompt
+    Prompt-->>Tool: System detection prompt
     
-    loop For each case in dataset
-        CLI->>CaseAnalyzer: Create analyzer instance
-        CaseAnalyzer->>LLM: Extract COL section
-        LLM-->>CaseAnalyzer: COL section text
-        
-        CaseAnalyzer->>LLM: Extract abstract
-        LLM-->>CaseAnalyzer: Abstract text
-        
-        CaseAnalyzer->>LLM: Extract relevant facts
-        LLM-->>CaseAnalyzer: Facts summary
-        
-        CaseAnalyzer->>LLM: Extract PIL provisions
-        LLM-->>CaseAnalyzer: Legal provisions list
-        
-        CaseAnalyzer->>LLM: Classify theme and identify issue
-        LLM-->>CaseAnalyzer: Theme classification and issue
-        
-        CaseAnalyzer->>LLM: Extract court position
-        LLM-->>CaseAnalyzer: Court's position
-        
-        CaseAnalyzer-->>CLI: Complete analysis results
-    end
+    Tool->>LLM: Analyze legal system
+    Note over LLM: Identifies:<br/>- Legal system type<br/>- Specific jurisdiction<br/>- Confidence level
+    LLM-->>Tool: Jurisdiction data
     
-    CLI->>Storage: Save results to CSV with timestamp
-    CLI->>User: Offer evaluation option
+    Tool-->>UI: Display results
+    UI->>User: Show jurisdiction with score field
+    User->>UI: Score result (0-100)
+    User->>UI: Edit if needed
     
-    alt User chooses evaluation
-        User->>CLI: Yes, evaluate
-        CLI->>Evaluator: Compare with ground truth
-        Evaluator->>Storage: Load ground truth data
-        Storage-->>Evaluator: Ground truth results
-        Evaluator-->>User: Display evaluation metrics
-    else User skips evaluation
-        User->>CLI: No evaluation
-        CLI-->>User: Analysis complete
-    end
+    UI->>State: Save jurisdiction & score
+    State-->>UI: Confirmation
+    UI-->>User: Ready for next step
 ```
 
-### Streamlit Application Workflow
+### Streamlit Application Detailed Workflow
 
 ```mermaid
 sequenceDiagram
@@ -295,50 +272,70 @@ sequenceDiagram
     Components-->>User: Analysis complete with save confirmation
 ```
 
-### LangGraph Engine Workflow
+### COL Extraction Workflow
 
 ```mermaid
-stateDiagram-v2
-    [*] --> TextInput : Court decision text
+sequenceDiagram
+    participant User
+    participant UI as COL Processor
+    participant Tool as COL Extractor
+    participant Prompt as Prompt Library
+    participant LLM as OpenAI API
+    participant State as Session State
+
+    User->>UI: Proceed to COL extraction
+    UI->>State: Get jurisdiction & text
+    State-->>UI: Return context
     
-    TextInput --> COLExtraction : Initialize analysis
-    COLExtraction --> COLValidation : Present COL sections
+    UI->>Tool: extract_col_sections(text, jurisdiction)
+    Tool->>Prompt: Get jurisdiction-specific prompt
+    Prompt-->>Tool: COL extraction prompt
     
-    COLValidation --> ThemeClassification : User approves
-    COLValidation --> COLExtraction : User requests changes
+    Tool->>LLM: Extract COL sections
+    Note over LLM: Identifies relevant<br/>Choice of Law sections<br/>from court decision
+    LLM-->>Tool: COL section list
     
-    ThemeClassification --> ThemeValidation : Present themes
-    ThemeValidation --> SequentialAnalysis : User approves
-    ThemeValidation --> ThemeClassification : User requests changes
+    Tool-->>UI: Display extracted sections
+    UI->>User: Show COL sections
+    User->>UI: Score extraction (0-100)
+    User->>UI: Provide feedback/edit
     
-    SequentialAnalysis --> AbstractExtraction : Begin detailed analysis
-    AbstractExtraction --> FactsExtraction
-    FactsExtraction --> ProvisionsExtraction
-    ProvisionsExtraction --> IssueIdentification
-    IssueIdentification --> PositionExtraction
-    PositionExtraction --> ResultFormatting
+    UI->>State: Save COL sections & feedback
+    State-->>UI: Confirmation
+    UI-->>User: Ready for theme classification
+```
+
+### Theme Classification Workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Theme Classifier
+    participant Data as Data Loader
+    participant Tool as Themes Classifier
+    participant LLM as OpenAI API
+    participant State as Session State
+
+    User->>UI: Proceed to theme classification
+    UI->>Data: Load valid themes
+    Data-->>UI: Theme taxonomy (themes.csv)
     
-    ResultFormatting --> FinalReview : Present complete analysis
-    FinalReview --> [*] : User approves
-    FinalReview --> ResultFormatting : User requests refinement
+    UI->>State: Get COL sections
+    State-->>UI: Return COL data
     
-    note right of COLValidation
-        Human-in-the-loop validation
-        User can provide specific feedback
-        System refines extraction based on input
-    end note
+    UI->>Tool: classify_themes(col_sections, themes)
+    Tool->>LLM: Classify against PIL taxonomy
+    Note over LLM: Categorizes case<br/>against predefined<br/>PIL themes
+    LLM-->>Tool: Theme classifications
     
-    note right of ThemeValidation
-        Theme classification validation
-        User selects appropriate themes
-        System adjusts based on selection
-    end note
+    Tool-->>UI: Display classified themes
+    UI->>User: Show themes with scores
+    User->>UI: Score themes (0-100)
+    User->>UI: Edit theme selections
     
-    note right of FinalReview
-        Complete analysis review
-        User can request improvements
-        System refines specific sections
-    end note
+    UI->>State: Save themes & scores
+    State-->>UI: Confirmation
+    UI-->>User: Ready for detailed analysis
 ```
 
 ## Data Processing Patterns
@@ -348,116 +345,114 @@ stateDiagram-v2
 ```mermaid
 flowchart LR
     subgraph "Raw Input"
-        RawText[Court Decision Text<br/>Unstructured]
-        ExcelData[Excel Files<br/>cases.xlsx, concepts.xlsx]
-        PDFInput[PDF Documents<br/>Uploaded Files]
-        AirtableData[Airtable Records<br/>Structured Data]
+        ManualText[Manual Text Input]
+        PDFInput[PDF Upload]
+        DemoCase[Demo Case Data]
+        CSVData[Local CSV Files<br/>themes.csv]
     end
     
     subgraph "Processing Layer"
-        TextCleaner[Text Cleaner<br/>Remove Artifacts]
-        PDFExtractor[PDF Extractor<br/>Text Extraction]
-        DataValidator[Data Validator<br/>Schema Check]
-        Normalizer[Data Normalizer<br/>Format Standardization]
+        PDFExtractor[PDF Text Extractor<br/>pymupdf4llm]
+        TextCleaner[Text Cleaner<br/>Normalize Format]
+        DataLoader[Data Loader<br/>CSV Parser]
+        StateInit[State Initializer<br/>Session Setup]
     end
     
     subgraph "Structured Data"
-        CleanText[Clean Text<br/>Analysis Ready]
-        CaseData[Case Data<br/>Structured Format]
-        ConceptData[Concept Data<br/>Classification Schema]
+        CleanText[Cleaned Text<br/>Analysis Ready]
+        ThemeData[Theme Taxonomy<br/>Structured]
+        CaseContext[Case Context<br/>With Metadata]
         SessionState[Session State<br/>Application Context]
     end
     
-    RawText --> TextCleaner
+    ManualText --> TextCleaner
     PDFInput --> PDFExtractor
-    ExcelData --> DataValidator
-    AirtableData --> DataValidator
+    DemoCase --> TextCleaner
+    CSVData --> DataLoader
+    PDFExtractor --> CleanText
+    DataLoader --> ThemeData
     
     TextCleaner --> CleanText
-    PDFExtractor --> CleanText
-    DataValidator --> Normalizer
-    
-    Normalizer --> CaseData
-    Normalizer --> ConceptData
-    CleanText --> SessionState
-    CaseData --> SessionState
-    ConceptData --> SessionState
+    CleanText --> CaseContext
+    ThemeData --> CaseContext
+    CaseContext --> StateInit
+    StateInit --> SessionState
 
     classDef input fill:#e3f2fd,stroke:#1976d2
     classDef process fill:#f3e5f5,stroke:#7b1fa2
-    classDef output fill:#e8f5e8,stroke:#388e3c
+    classDef output fill:#e8f5e9,stroke:#388e3c
 
-    class RawText,ExcelData,PDFInput,AirtableData input
-    class TextCleaner,PDFExtractor,DataValidator,Normalizer process
-    class CleanText,CaseData,ConceptData,SessionState output
+    class ManualText,PDFInput,DemoCase,CSVData input
+    class PDFExtractor,TextCleaner,DataLoader,StateInit process
+    class CleanText,ThemeData,CaseContext,SessionState output
 ```
 
-### Result Generation Pipeline
+### Result Generation and Storage Pipeline
 
 ```mermaid
 flowchart TD
     subgraph "Analysis Results"
+        Jurisdiction[Jurisdiction Detection<br/>Legal System]
         COLSection[COL Section<br/>Legal Text Extract]
+        Themes[PIL Themes<br/>Classification]
+        PILProvisions[PIL Provisions<br/>Legal Rules]
         Abstract[Abstract<br/>Case Summary]
         Facts[Relevant Facts<br/>Factual Background]
-        Provisions[PIL Provisions<br/>Legal Rules]
-        Theme[PIL Theme<br/>Classification]
         Issue[COL Issue<br/>Legal Question]
         Position[Court Position<br/>Legal Ruling]
     end
     
+    subgraph "User Validation"
+        ScoreJuris[Score Jurisdiction]
+        ScoreCOL[Score COL Sections]
+        ScoreThemes[Score Themes]
+        ScorePIL[Score PIL Provisions]
+        ScoreAnalysis[Score Each Analysis Step]
+    end
+    
     subgraph "Result Processing"
-        Validator[Result Validator<br/>Quality Check]
-        Formatter[Result Formatter<br/>Output Structuring]
-        Aggregator[Result Aggregator<br/>Combine Components]
+        Aggregator[Result Aggregator<br/>Combine All Components]
+        Formatter[Result Formatter<br/>Structure Output]
     end
     
-    subgraph "Output Formats"
-        JSONOutput[JSON Format<br/>Structured Data]
-        CSVOutput[CSV Format<br/>Tabular Data]
-        ReportOutput[Report Format<br/>Human Readable]
-        DBRecord[Database Record<br/>Persistent Storage]
+    subgraph "Storage Options"
+        SessionOnly[Session State Only<br/>Temporary]
+        DBSave[Database Save<br/>PostgreSQL]
     end
     
-    subgraph "Quality Assurance"
-        GroundTruthCheck[Ground Truth Comparison<br/>Accuracy Assessment]
-        UserFeedback[User Feedback<br/>Quality Evaluation]
-        MetricsCalculation[Performance Metrics<br/>System Evaluation]
-    end
+    Jurisdiction --> ScoreJuris
+    COLSection --> ScoreCOL
+    Themes --> ScoreThemes
+    PILProvisions --> ScorePIL
+    Abstract --> ScoreAnalysis
+    Facts --> ScoreAnalysis
+    Issue --> ScoreAnalysis
+    Position --> ScoreAnalysis
     
-    COLSection --> Validator
-    Abstract --> Validator
-    Facts --> Validator
-    Provisions --> Validator
-    Theme --> Validator
-    Issue --> Validator
-    Position --> Validator
+    ScoreJuris --> Aggregator
+    ScoreCOL --> Aggregator
+    ScoreThemes --> Aggregator
+    ScorePIL --> Aggregator
+    ScoreAnalysis --> Aggregator
     
-    Validator --> Formatter
-    Formatter --> Aggregator
+    Aggregator --> Formatter
+    Formatter --> SessionOnly
+    Formatter --> DBSave
     
-    Aggregator --> JSONOutput
-    Aggregator --> CSVOutput
-    Aggregator --> ReportOutput
-    Aggregator --> DBRecord
-    
-    JSONOutput --> GroundTruthCheck
-    CSVOutput --> GroundTruthCheck
-    DBRecord --> UserFeedback
-    ReportOutput --> UserFeedback
-    
-    GroundTruthCheck --> MetricsCalculation
-    UserFeedback --> MetricsCalculation
-
     classDef analysis fill:#e3f2fd,stroke:#1976d2
+    classDef validation fill:#fff3e0,stroke:#f57c00
     classDef process fill:#f3e5f5,stroke:#7b1fa2
-    classDef output fill:#e8f5e8,stroke:#388e3c
-    classDef quality fill:#fff3e0,stroke:#f57c00
-
-    class COLSection,Abstract,Facts,Provisions,Theme,Issue,Position analysis
-    class Validator,Formatter,Aggregator process
-    class JSONOutput,CSVOutput,ReportOutput,DBRecord output
-    class GroundTruthCheck,UserFeedback,MetricsCalculation quality
+    classDef storage fill:#e8f5e9,stroke:#388e3c
+    
+    class Jurisdiction,COLSection,Themes,PILProvisions,Abstract,Facts,Issue,Position analysis
+    class ScoreJuris,ScoreCOL,ScoreThemes,ScorePIL,ScoreAnalysis validation
+    class Aggregator,Formatter process
+    class SessionOnly,DBSave storage
 ```
 
-This workflow documentation provides detailed insights into how the Cold Case Analysis system processes data and manages user interactions across all three application interfaces.
+## Summary
+
+This workflow documentation provides a comprehensive overview of the CoLD Case Analyzer's operational processes:
+
+- **Main Workflow**: Step-by-step user-guided analysis from input to completion
+- **Component Workflows**: Detailed flows for jurisdiction detection, COL extraction, and theme classification
