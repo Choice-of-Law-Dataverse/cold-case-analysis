@@ -10,7 +10,7 @@ from utils.data_loaders import load_valid_themes
 def display_theme_classification(state):
     """
     Display the theme classification results.
-    
+
     Args:
         state: The current analysis state
     """
@@ -26,10 +26,10 @@ def display_theme_classification(state):
 def handle_theme_scoring(state):
     """
     Handle the theme scoring interface.
-    
+
     Args:
         state: The current analysis state
-        
+
     Returns:
         bool: True if scoring is complete
     """
@@ -57,7 +57,7 @@ def handle_theme_scoring(state):
 def handle_theme_editing(state, last_theme, valid_themes):
     """
     Handle the theme editing interface.
-    
+
     Args:
         state: The current analysis state
         last_theme: The last classified theme
@@ -101,7 +101,7 @@ def handle_theme_editing(state, last_theme, valid_themes):
 def display_final_themes(state):
     """
     Display the final edited themes.
-    
+
     Args:
         state: The current analysis state
     """
@@ -114,7 +114,7 @@ def display_final_themes(state):
 def render_theme_classification(state):
     """
     Render the complete theme classification interface.
-    
+
     Args:
         state: The current analysis state
     """

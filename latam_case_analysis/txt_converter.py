@@ -4,12 +4,14 @@ Converts all PDFs in the 'pdfs' folder to text files in the 'txts' folder using 
 """
 
 import os
+from typing import Any, cast
 
 try:
-    import fitz  # for fallback extraction
+    import fitz  # type: ignore[import-untyped]  # fallback extraction
+    import pymupdf  # type: ignore[import-untyped]
     import pymupdf4llm
 except ImportError as e:
-    raise ImportError("Missing required packages: pymupdf4llm and fitz") from e
+    raise ImportError("Missing required packages: pymupdf4llm and pymupdf") from e
 
 # Directories relative to this script
 def get_dirs():
@@ -24,14 +26,20 @@ def convert_pdf_to_txt(pdf_path: str, txt_path: str):
     # Read file bytes
     with open(pdf_path, "rb") as f:
         file_bytes = f.read()
+
     try:
-        # Use pymupdf4llm extraction
-        text = pymupdf4llm.extract_text_from_pdf(file_bytes)
+        # Prefer markdown extraction provided by pymupdf4llm
+        with pymupdf.open(stream=file_bytes, filetype="pdf") as doc:  # type: ignore[attr-defined]
+            text = pymupdf4llm.to_markdown(doc)
     except Exception:
-        # Fallback to PyMuPDF via fitz
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        texts = [page.get_text() for page in doc]
-        text = "\n".join(texts)
+        # Fallback to the classic PyMuPDF text extraction
+        with fitz.open(stream=file_bytes, filetype="pdf") as doc:  # type: ignore[attr-defined]
+            texts = []
+            for page_index in range(doc.page_count):
+                page = doc.load_page(page_index)
+                page_obj = cast(Any, page)
+                texts.append(str(page_obj.get_text()))
+            text = "\n".join(texts)
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(text)
 

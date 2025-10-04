@@ -18,7 +18,7 @@ def initialize_auth():
 def render_model_selector():
     """
     Render the LLM model selection interface.
-    
+
     Returns:
         str: The selected model name
     """

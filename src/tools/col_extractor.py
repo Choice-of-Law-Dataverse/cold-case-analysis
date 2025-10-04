@@ -1,10 +1,19 @@
 import time
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
+
+
+def _coerce_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content if item is not None)
+    return str(content) if content is not None else ""
 
 
 def extract_col_section(state):
@@ -45,7 +54,7 @@ def extract_col_section(state):
         HumanMessage(content=prompt)
     ])
     col_time = time.time() - start_time
-    col_section = response.content.strip()
+    col_section = _coerce_to_text(getattr(response, "content", "")).strip()
     # append new extraction
     state.setdefault("col_section", []).append(col_section)
     print(f"\nExtracted Choice of Law section:\n{col_section}\n")

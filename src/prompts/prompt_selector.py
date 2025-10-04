@@ -27,12 +27,12 @@ JURISDICTION_MAP = {
 def get_prompt_module(jurisdiction, prompt_type, specific_jurisdiction=None):
     """
     Get the appropriate prompt module based on jurisdiction and specific jurisdiction.
-    
+
     Args:
         jurisdiction: The legal system type (e.g., 'Civil-law jurisdiction', 'Common-law jurisdiction')
         prompt_type: The type of prompt needed ('col_section', 'theme', 'analysis')
         specific_jurisdiction: The specific jurisdiction name (e.g., 'India')
-    
+
     Returns:
         The imported prompt module
     """

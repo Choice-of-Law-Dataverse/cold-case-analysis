@@ -2,6 +2,7 @@ import csv
 import json
 import time
 from pathlib import Path
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -9,6 +10,14 @@ import config
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
 from utils.themes_extractor import THEMES_TABLE_STR
+
+
+def _coerce_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content if item is not None)
+    return str(content) if content is not None else ""
 
 
 def theme_classification_node(state):
@@ -43,6 +52,8 @@ def theme_classification_node(state):
             valid_themes.add(row["Theme"])
     # attempt classification up to 5 times ensuring valid themes
     max_attempts = 5
+    cls_list: list[Any] = []
+    theme_time = 0.0
     for attempt in range(1, max_attempts + 1):
         print(f"\nPrompting LLM (attempt {attempt}/{max_attempts}) with:\n{prompt}\n")
         start_time = time.time()
@@ -56,10 +67,14 @@ def theme_classification_node(state):
         ])
         theme_time = time.time() - start_time
         # parse classification list
+        raw_content = getattr(response, "content", "")
+        content_str = _coerce_to_text(raw_content)
         try:
-            cls_list = json.loads(response.content)
+            parsed = json.loads(content_str)
+            cls_list = parsed if isinstance(parsed, list) else [parsed]
         except Exception:
-            cls_list = [response.content.strip()]
+            cls_list = [content_str.strip()]
+        cls_list = [str(item) for item in cls_list if str(item).strip()]
         # validate returned themes
         invalid = [item for item in cls_list if item not in valid_themes]
         if not invalid:

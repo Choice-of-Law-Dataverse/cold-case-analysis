@@ -10,7 +10,7 @@ from pathlib import Path
 def load_jurisdiction_summaries():
     """
     Load jurisdiction summaries from jurisdictions.csv
-    
+
     Returns:
         dict: Dictionary mapping jurisdiction names to their summaries
     """
@@ -46,7 +46,7 @@ def load_jurisdiction_summaries():
 def generate_base_system_prompt():
     """
     Generate the base system prompt with general instructions for legal analysis.
-    
+
     Returns:
         str: Base system prompt
     """
@@ -74,11 +74,11 @@ ANALYSIS STANDARDS:
 def generate_jurisdiction_specific_prompt(jurisdiction_name=None, legal_system_type=None):
     """
     Generate a dynamic system prompt based on jurisdiction and legal system.
-    
+
     Args:
         jurisdiction_name (str, optional): Specific jurisdiction name (e.g., "Germany", "United States")
         legal_system_type (str, optional): Legal system type (e.g., "Civil-law jurisdiction", "Common-law jurisdiction")
-    
+
     Returns:
         str: Complete system prompt with jurisdiction-specific context
     """
@@ -120,10 +120,10 @@ This decision comes from a {legal_system_type.lower().replace('jurisdiction', 'l
 def get_system_prompt_for_analysis(state):
     """
     Generate system prompt based on the current analysis state.
-    
+
     Args:
         state (dict): Current analysis state containing jurisdiction information
-    
+
     Returns:
         str: Appropriate system prompt for the current analysis
     """
@@ -150,7 +150,7 @@ def get_system_prompt_for_analysis(state):
 def get_default_system_prompt():
     """
     Get the default system prompt (base prompt without jurisdiction specifics).
-    
+
     Returns:
         str: Default system prompt
     """

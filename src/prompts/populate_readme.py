@@ -10,6 +10,17 @@ from pathlib import Path
 from typing import Any
 
 
+def _clean_description_line(line: str) -> str:
+    """Normalize inline description markers without using multi-char strip."""
+    cleaned = line.lstrip("#").strip()
+    for quote in ('"""', "'''"):
+        if cleaned.startswith(quote):
+            cleaned = cleaned.removeprefix(quote).lstrip()
+        if cleaned.endswith(quote):
+            cleaned = cleaned.removesuffix(quote).rstrip()
+    return cleaned
+
+
 class PromptExtractor:
     """Extracts and organizes prompts from Python modules."""
 
@@ -125,7 +136,7 @@ class MarkdownGenerator:
         for line in lines:
             stripped = line.strip()
             if in_description and (stripped.startswith("#") or stripped.startswith('"""') or stripped.startswith("'''")):
-                description_lines.append(stripped.lstrip("#").strip().strip('"""').strip("'''"))
+                description_lines.append(_clean_description_line(stripped))
             else:
                 in_description = False
                 prompt_lines.append(line)

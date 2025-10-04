@@ -11,7 +11,7 @@ from utils.sample_cd import SAMPLE_COURT_DECISION
 def load_valid_themes():
     """
     Load valid themes from the themes CSV file.
-    
+
     Returns:
         list: List of valid theme strings
     """
@@ -33,7 +33,7 @@ def load_valid_themes():
 def get_demo_case_text():
     """
     Get the demo case text.
-    
+
     Returns:
         str: The sample court decision text
     """
