@@ -58,26 +58,8 @@ def display_col_extractions(col_state):
     Args:
         col_state: The current analysis state
     """
-    extractions = col_state.get("col_section", [])
-    feedbacks = col_state.get("col_section_feedback", [])
-
-    for i, col in enumerate(extractions):
-        # Show all extractions as machine messages, but if final edited extraction has been submitted, show it as a user message
-        if i == len(extractions) - 1 and col_state.get("col_done"):
-            st.markdown("**Your Edited Choice of Law Section:**")
-            st.markdown(f"<div class='user-message'>{col}</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"**Choice of Law Section Extraction {i+1}:**")
-            st.markdown(f"<div class='machine-message'>{col}</div>", unsafe_allow_html=True)
-
-        # Handle scoring for first extraction
-        if i == 0:
-            handle_first_extraction_scoring(col_state)
-
-        # Display feedback if available
-        if i < len(feedbacks):
-            st.markdown("**User:**")
-            st.markdown(f"<div class='user-message'>{feedbacks[i]}</div>", unsafe_allow_html=True)
+    # Handle scoring for first extraction
+    handle_first_extraction_scoring(col_state)
 
 
 def handle_first_extraction_scoring(col_state):
@@ -145,33 +127,46 @@ def render_edit_section(col_state):
         col_state: The current analysis state
     """
     last_extraction = col_state.get("col_section", [""])[-1]
+
+    # Use custom CSS to set height with min and max
+    st.markdown("""
+    <style>
+    div[data-testid="stTextArea"] textarea[aria-label="Edit extracted Choice of Law section:"] {
+        min-height: 600px !important;
+        max-height: 80vh !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     edited_extraction = st.text_area(
         "Edit extracted Choice of Law section:",
         value=last_extraction,
-        height=200,
+        height=600,
         key="col_edit_section",
-        help="Modify the extracted section before proceeding to theme classification"
+        help="Modify the extracted section before proceeding to theme classification",
+        disabled=col_state.get("col_done", False)
     )
 
     print_state("\n\n\nCurrent CoLD State\n\n", col_state)
 
-    if st.button("Submit and Classify"):
-        if edited_extraction:
-            # Save edited extraction and run classification
-            col_state["col_section"].append(edited_extraction)
-            col_state["col_done"] = True
-            col_state["classification"] = []
-            col_state["theme_feedback"] = []
-            col_state["theme_eval_iter"] = 0
+    if not col_state.get("col_done"):
+        if st.button("Submit and Classify"):
+            if edited_extraction:
+                # Save edited extraction and run classification
+                col_state["col_section"].append(edited_extraction)
+                col_state["col_done"] = True
+                col_state["classification"] = []
+                col_state["theme_feedback"] = []
+                col_state["theme_eval_iter"] = 0
 
-            from tools.themes_classifier import theme_classification_node
-            init_result = theme_classification_node(col_state)
-            col_state.update(init_result)
+                from tools.themes_classifier import theme_classification_node
+                init_result = theme_classification_node(col_state)
+                col_state.update(init_result)
 
-            print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
-            st.rerun()
-        else:
-            st.warning("Please edit the extracted section before proceeding.")
+                print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+                st.rerun()
+            else:
+                st.warning("Please edit the extracted section before proceeding.")
 
 
 def render_col_processing(col_state):

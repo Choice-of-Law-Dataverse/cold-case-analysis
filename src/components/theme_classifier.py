@@ -14,11 +14,10 @@ def display_theme_classification(state):
     Args:
         state: The current analysis state
     """
+    # Don't display redundant theme output - just let the multiselect handle it
     themes = state.get("classification", [])
     if themes:
         last_theme = themes[-1]
-        st.markdown("**Themes:**")
-        st.markdown(f"<div class='machine-message'>{last_theme}</div>", unsafe_allow_html=True)
         return last_theme
     return None
 
@@ -48,29 +47,30 @@ def handle_theme_editing(state, last_theme, valid_themes):
         last_theme: The last classified theme
         valid_themes: List of valid theme options
     """
+    # Parse default selection and filter to only include valid themes
+    default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]
+
+    # Create a case-insensitive mapping for matching
+    theme_mapping = {theme.lower(): theme for theme in valid_themes}
+
+    # Only include defaults that exist in valid_themes (case-insensitive matching)
+    filtered_defaults = []
+    for theme in default_sel:
+        if theme in valid_themes:
+            filtered_defaults.append(theme)
+        elif theme.lower() in theme_mapping:
+            # Use the correctly cased version from valid_themes
+            filtered_defaults.append(theme_mapping[theme.lower()])
+
+    selected = st.multiselect(
+        "Adjust themes:",
+        options=valid_themes,
+        default=filtered_defaults,
+        key="theme_select",
+        disabled=state.get("theme_done", False)
+    )
+
     if not state.get("theme_done"):
-        # Parse default selection and filter to only include valid themes
-        default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]
-
-        # Create a case-insensitive mapping for matching
-        theme_mapping = {theme.lower(): theme for theme in valid_themes}
-
-        # Only include defaults that exist in valid_themes (case-insensitive matching)
-        filtered_defaults = []
-        for theme in default_sel:
-            if theme in valid_themes:
-                filtered_defaults.append(theme)
-            elif theme.lower() in theme_mapping:
-                # Use the correctly cased version from valid_themes
-                filtered_defaults.append(theme_mapping[theme.lower()])
-
-        selected = st.multiselect(
-            "Adjust themes:",
-            options=valid_themes,
-            default=filtered_defaults,
-            key="theme_select"
-        )
-
         if st.button("Submit Final Themes"):
             if selected:
                 new_sel = ", ".join(selected)
@@ -85,15 +85,13 @@ def handle_theme_editing(state, last_theme, valid_themes):
 
 def display_final_themes(state):
     """
-    Display the final edited themes.
+    Display the final edited themes - removed as redundant.
 
     Args:
         state: The current analysis state
     """
-    if state.get("theme_done"):
-        final = state.get("classification", [])[-1]
-        st.markdown("**Final Themes:**")
-        st.markdown(f"<div class='user-message'>{final}</div>", unsafe_allow_html=True)
+    # No longer display - multiselect shows the themes
+    pass
 
 
 def render_theme_classification(state):

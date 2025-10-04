@@ -305,6 +305,36 @@ def render_final_editing_phase(state):
     steps = get_analysis_steps(state)
     edited_values = {}
 
+    # Add custom CSS for textarea heights
+    st.markdown("""
+    <style>
+    /* Taller textareas for most fields */
+    div[data-testid="stTextArea"] textarea {
+        min-height: 600px !important;
+        max-height: 80vh !important;
+    }
+    /* Shorter textarea for COL Issue */
+    div[data-testid="stTextArea"] textarea[aria-label*="Choice of Law Issue"] {
+        min-height: 200px !important;
+        max-height: 30vh !important;
+    }
+    /* Chip styling for PIL provisions */
+    .pil-chip {
+        display: inline-block;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #1976d2;
+        border-radius: 16px;
+        padding: 6px 12px;
+        margin: 4px;
+        font-size: 14px;
+    }
+    .pil-chips-container {
+        margin: 10px 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     # Create editable text areas for all steps
     for name, _ in steps:
         display_name = get_step_display_name(name, state)
@@ -318,42 +348,42 @@ def render_final_editing_phase(state):
 
         # Special handling for PIL provisions display
         if name == "pil_provisions":
-            formatted_content = display_pil_provisions(state, name)
-            if formatted_content:
-                # For PIL provisions, we need special handling
-                st.markdown(f"**{display_name}**")
-                # Show formatted display
-                st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
+            st.markdown(f"**{display_name}**")
+
+            # Display as chips
+            if isinstance(current_value, list):
+                chips_html = '<div class="pil-chips-container">'
+                for provision in current_value:
+                    provision_str = str(provision).strip('"')
+                    chips_html += f'<span class="pil-chip">{provision_str}</span>'
+                chips_html += '</div>'
+                st.markdown(chips_html, unsafe_allow_html=True)
 
                 # Provide text area with JSON for editing
                 import json
-                if isinstance(current_value, list):
-                    edit_value = json.dumps(current_value, indent=2)
-                else:
-                    edit_value = str(current_value)
-
-                edited = st.text_area(
-                    f"Edit {display_name} (JSON format):",
-                    value=edit_value,
-                    height=200,
-                    key=f"final_edit_{name}"
-                )
-                edited_values[name] = edited
+                edit_value = json.dumps(current_value, indent=2)
             else:
-                # Fallback to standard display
-                edited = st.text_area(
-                    f"**{display_name}**",
-                    value=str(current_value),
-                    height=200,
-                    key=f"final_edit_{name}"
-                )
-                edited_values[name] = edited
+                edit_value = str(current_value)
+
+            edited = st.text_area(
+                f"Edit {display_name} (JSON format):",
+                value=edit_value,
+                height=600,
+                key=f"final_edit_{name}"
+            )
+            edited_values[name] = edited
         else:
             # Standard text area for other steps
+            # Determine height based on step name
+            if name == "col_issue":
+                height = 200
+            else:
+                height = 600
+
             edited = st.text_area(
                 f"**{display_name}**",
                 value=str(current_value),
-                height=200,
+                height=height,
                 key=f"final_edit_{name}"
             )
             edited_values[name] = edited
