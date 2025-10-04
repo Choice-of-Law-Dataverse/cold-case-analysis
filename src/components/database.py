@@ -53,5 +53,11 @@ def save_to_db(state):
                     ),
                 )
             conn_pg.commit()
+
+        # Mark analysis as submitted in localStorage
+        from utils.browser_storage import mark_analysis_submitted
+
+        mark_analysis_submitted()
+
     except Exception as e:
         st.error(f"Failed to save results: {e}")

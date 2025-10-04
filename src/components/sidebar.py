@@ -7,7 +7,7 @@ import config
 
 def render_sidebar():
     """
-    Render the sidebar with login controls, instructions, and documentation.
+    Render the sidebar with login controls, analysis management, instructions, and documentation.
     """
     credentials = config.USER_CREDENTIALS
     with st.sidebar:
@@ -31,6 +31,13 @@ def render_sidebar():
                 st.success("Logged out")
                 st.rerun()
 
+        # Analysis Manager
+        st.divider()
+        from components.analysis_manager import render_analysis_manager
+
+        render_analysis_manager()
+
+        st.divider()
         st.header("How to Use")
         st.markdown("""
         1. (Optional) Log in to access more advanced models
@@ -97,7 +104,15 @@ def render_sidebar():
 
         # clear history button
         if st.button("Clear History", key="clear_history"):
+            from utils.browser_storage import clear_all_storage
+            clear_all_storage()
             st.session_state.clear()
+            st.rerun()
+
+        # restart analysis button (keeps user logged in)
+        if st.button("Restart Analysis", key="restart_analysis"):
+            from utils.state_manager import clear_analysis_state_only
+            clear_analysis_state_only()
             st.rerun()
 
         # Footer endorsement and logo at the bottom of the sidebar

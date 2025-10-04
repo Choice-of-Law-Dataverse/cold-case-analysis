@@ -14,6 +14,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
     "streamlit>=1.50.0",
+    "streamlit-local-storage>=0.0.25",
 ]
 
 [dependency-groups]

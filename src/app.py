@@ -4,10 +4,13 @@ from components.auth import initialize_auth, render_model_selector
 from components.css import load_css
 from components.main_workflow import render_main_workflow
 from components.sidebar import render_sidebar
-from utils.state_manager import initialize_col_state
+from utils.state_manager import initialize_col_state, restore_state_from_browser, save_state_to_browser
 
 # Initialize authentication
 initialize_auth()
+
+# Restore state from browser localStorage (if available)
+restore_state_from_browser()
 
 # Set page config
 st.set_page_config(
@@ -48,3 +51,6 @@ initialize_col_state()
 
 # Render main workflow
 render_main_workflow()
+
+# Save state to browser localStorage (at end of each render)
+save_state_to_browser()
