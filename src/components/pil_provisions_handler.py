@@ -2,9 +2,12 @@
 """
 PIL Provisions display and editing components.
 """
+import logging
 import re
 
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 
 def parse_pil_provisions(raw_content):
@@ -17,7 +20,6 @@ def parse_pil_provisions(raw_content):
     Returns:
         dict: Structured PIL data with categories
     """
-    # Handle different input formats and ensure we have a string
     if isinstance(raw_content, list):
         if len(raw_content) == 1:
             content = str(raw_content[0])
@@ -26,12 +28,10 @@ def parse_pil_provisions(raw_content):
     else:
         content = str(raw_content)
 
-    # Remove outer list brackets if present
     content = content.strip()
     if content.startswith("['") and content.endswith("']"):
-        content = content[2:-2]  # Remove [' and ']
+        content = content[2:-2]
 
-    # Initialize structure
     parsed = {
         "judicial_precedents": [],
         "textbooks_sources": [],
@@ -40,7 +40,6 @@ def parse_pil_provisions(raw_content):
         "summary": ""
     }
 
-    # Parse different sections with more flexible patterns
     sections = {
         "judicial_precedents": r"\*\*Judicial Precedents:\*\*(.*?)(?=\n\*\*|$)",
         "textbooks_sources": r"\*\*Textbooks/Academic Sources:\*\*(.*?)(?=\n\*\*|$)",
@@ -56,7 +55,6 @@ def parse_pil_provisions(raw_content):
             if key == "summary":
                 parsed[key] = section_content
             else:
-                # Split by lines and clean up
                 lines = section_content.split("\n")
                 items = []
                 current_item = ""
@@ -66,19 +64,16 @@ def parse_pil_provisions(raw_content):
                     if not line:
                         continue
 
-                    # Check if it's a new item (starts with - or bullet)
                     if line.startswith("-") or line.startswith("•"):
                         if current_item:
                             items.append(current_item.strip())
                         current_item = line.lstrip("-•").strip()
                     else:
-                        # Continuation of previous item
                         if current_item:
                             current_item += " " + line
                         else:
                             current_item = line
 
-                # Add the last item
                 if current_item:
                     items.append(current_item.strip())
 
@@ -156,40 +151,31 @@ def display_pil_provisions(state, step_name="pil_provisions"):
     if not raw_content:
         return None
 
-    # Debug information (can be removed later)
-    print(f"DEBUG: raw_content type: {type(raw_content)}")
-    print(f"DEBUG: raw_content: {raw_content}")
+    logger.debug("raw_content type: %s", type(raw_content))
+    logger.debug("raw_content: %s", raw_content)
 
-    # Handle different input formats
     if isinstance(raw_content, list) and len(raw_content) >= 1:
-        content_str = raw_content[-1]  # Get the latest/last content
-        # If it's still a list, convert to string
+        content_str = raw_content[-1]
         if isinstance(content_str, list):
             content_str = str(content_str)
     else:
         content_str = str(raw_content)
 
-    # Ensure content_str is a string
     content_str = str(content_str)
 
-    print(f"DEBUG: content_str type: {type(content_str)}")
-    print(f"DEBUG: content_str preview: {content_str[:100]}...")
+    logger.debug("content_str type: %s", type(content_str))
+    logger.debug("content_str preview: %s...", content_str[:100])
 
-    # Check for simple list format first
     if content_str.strip().startswith("[") and content_str.strip().endswith("]"):
         try:
             import ast
             provision_list = ast.literal_eval(content_str)
             if isinstance(provision_list, list) and all(isinstance(item, str) for item in provision_list):
-                # Simple list format - just display as bullets
                 formatted_content = "**Private International Law Sources:**\n\n"
                 formatted_content += "\n".join([f"• {item}" for item in provision_list])
                 return formatted_content
         except (ValueError, SyntaxError):
-            # If ast.literal_eval fails, continue with other parsing methods
             pass
-
-    # Handle complex structured format
     try:
         parsed_data = parse_pil_provisions(content_str)
 

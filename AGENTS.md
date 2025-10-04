@@ -84,6 +84,27 @@
   ```
 - **Configuration**: See `pyproject.toml` for linting rules
 
+## Coding Conventions
+
+### Logging
+
+- Use `logging` instead of `print` statements in application code
+- Import at module level: `import logging` and `logger = logging.getLogger(__name__)`
+- Use appropriate log levels:
+  - `logger.debug()` for detailed diagnostic information (prompts, responses, intermediate values)
+  - `logger.info()` for general informational messages
+  - `logger.warning()` for potentially problematic situations  
+  - `logger.error()` for serious problems
+- DO NOT use section header logs like `logger.debug("--- SECTION NAME ---")` - the logger already includes module context via `__name__`
+- Print statements are acceptable in: scripts (`populate_readme.py`), test files, and `if __name__ == "__main__"` blocks
+
+### Comments
+
+- Minimize comments - let the code explain what it does
+- Only comment to explain **why** something is done, not **what** is being done
+- Remove comments that simply repeat function names or obvious operations
+- Keep comments that explain design choices, edge cases, or non-obvious requirements
+
 ## Validation
 
 ### Always perform these validation steps after making changes:
