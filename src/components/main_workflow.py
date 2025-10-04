@@ -49,28 +49,44 @@ def render_initial_input_phase():
                 "The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review."
             )
 
-            with st.spinner("Extracting Choice of Law section..."):
-                # Get final jurisdiction data
-                final_jurisdiction_data = get_final_jurisdiction_data()
+            # Show progress banner while extracting
+            banner_placeholder = st.empty()
+            with banner_placeholder:
+                st.markdown("""
+                <div class="progress-banner">
+                    <div class="progress-banner-content">
+                        <div class="progress-banner-message">Extracting Choice of Law section...</div>
+                        <div class="progress-banner-bar-container">
+                            <div class='progress-banner-spinner'></div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                # Create initial analysis state
-                state = create_initial_analysis_state(
-                    case_citation=st.session_state.get("case_citation"),
-                    username=st.session_state.get("user"),
-                    model=st.session_state.get("llm_model_select"),
-                    full_text=full_text,
-                    final_jurisdiction_data=final_jurisdiction_data,
-                    user_email=st.session_state.get("user_email"),
-                )
+            # Get final jurisdiction data
+            final_jurisdiction_data = get_final_jurisdiction_data()
 
-                # Extract COL section
-                result = extract_col_section(state)
-                state.update(result)
+            # Create initial analysis state
+            state = create_initial_analysis_state(
+                case_citation=st.session_state.get("case_citation"),
+                username=st.session_state.get("user"),
+                model=st.session_state.get("llm_model_select"),
+                full_text=full_text,
+                final_jurisdiction_data=final_jurisdiction_data,
+                user_email=st.session_state.get("user_email"),
+            )
 
-                # Update session state
-                st.session_state.col_state = state
-                st.session_state["col_extraction_started"] = True
-                st.rerun()
+            # Extract COL section
+            result = extract_col_section(state)
+            state.update(result)
+
+            # Update session state
+            st.session_state.col_state = state
+            st.session_state["col_extraction_started"] = True
+
+            # Clear the progress banner
+            banner_placeholder.empty()
+            st.rerun()
 
     return False
 

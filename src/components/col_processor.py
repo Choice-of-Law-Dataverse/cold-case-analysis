@@ -165,10 +165,27 @@ def render_edit_section(col_state):
 
                 from tools.themes_classifier import theme_classification_node
 
+                # Show progress banner while classifying
+                banner_placeholder = st.empty()
+                with banner_placeholder:
+                    st.markdown("""
+                    <div class="progress-banner">
+                        <div class="progress-banner-content">
+                            <div class="progress-banner-message">Identifying themes...</div>
+                            <div class="progress-banner-bar-container">
+                                <div class='progress-banner-spinner'></div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
                 init_result = theme_classification_node(col_state)
                 col_state.update(init_result)
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
+
+                # Clear the progress banner
+                banner_placeholder.empty()
                 st.rerun()
             else:
                 st.warning("Please edit the extracted section before proceeding.")

@@ -39,23 +39,38 @@ def render_jurisdiction_detection(full_text: str):
 
         if detect_clicked:
             if full_text.strip():
-                with st.spinner("Analyzing jurisdiction..."):
-                    # Detect precise jurisdiction (now returns just the jurisdiction name)
-                    jurisdiction_name = detect_precise_jurisdiction(full_text)
+                # Show progress banner while analyzing
+                banner_placeholder = st.empty()
+                with banner_placeholder:
+                    st.markdown("""
+                    <div class="progress-banner">
+                        <div class="progress-banner-content">
+                            <div class="progress-banner-message">Identifying jurisdiction...</div>
+                            <div class="progress-banner-bar-container">
+                                <div class='progress-banner-spinner'></div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                    st.session_state["precise_jurisdiction"] = jurisdiction_name
-                    st.session_state["precise_jurisdiction_detected"] = True
+                # Detect precise jurisdiction (now returns just the jurisdiction name)
+                jurisdiction_name = detect_precise_jurisdiction(full_text)
 
-                    # Determine legal system type using the existing jurisdiction detection logic
-                    legal_system = detect_legal_system_type(jurisdiction_name, full_text)
+                st.session_state["precise_jurisdiction"] = jurisdiction_name
+                st.session_state["precise_jurisdiction_detected"] = True
 
-                    # Handle the case where the existing detector says "No court decision"
-                    if legal_system == "No court decision":
-                        legal_system = "Unknown legal system"
+                # Determine legal system type using the existing jurisdiction detection logic
+                legal_system = detect_legal_system_type(jurisdiction_name, full_text)
 
-                    st.session_state["legal_system_type"] = legal_system
+                # Handle the case where the existing detector says "No court decision"
+                if legal_system == "No court decision":
+                    legal_system = "Unknown legal system"
 
-                    st.rerun()
+                st.session_state["legal_system_type"] = legal_system
+
+                # Clear the progress banner
+                banner_placeholder.empty()
+                st.rerun()
             else:
                 st.warning("Please enter the court decision text before detecting jurisdiction.")
 

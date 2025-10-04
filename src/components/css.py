@@ -215,5 +215,88 @@ def load_css():
         text-decoration: none !important;
         font-weight: 400 !important;
     }
+
+    /* Progress Banner Container */
+    .progress-banner {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #6F4DFA 0%, #5a3fd9 100%);
+        color: white;
+        padding: 16px 24px;
+        box-shadow: 0 -4px 12px rgba(111, 77, 250, 0.3);
+        z-index: 9999;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Progress Banner Content */
+    .progress-banner-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* Message Text */
+    .progress-banner-message {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        color: white !important;
+        text-align: center;
+    }
+
+    /* Progress Bar Container */
+    .progress-banner-bar-container {
+        width: 100%;
+        height: 8px;
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Progress Bar Fill */
+    .progress-banner-bar {
+        height: 100%;
+        background-color: white;
+        border-radius: 4px;
+        transition: width 0.3s ease-out;
+    }
+
+    /* Indeterminate Spinner */
+    .progress-banner-spinner {
+        height: 100%;
+        width: 30%;
+        background-color: white;
+        border-radius: 4px;
+        animation: indeterminate 1.5s infinite;
+    }
+
+    @keyframes indeterminate {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(400%);
+        }
+    }
+
+    /* Adjust main content to account for banner */
+    .main .block-container {
+        padding-bottom: 100px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
