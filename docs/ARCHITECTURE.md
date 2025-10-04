@@ -1,6 +1,6 @@
-# Cold Case Analysis (CoLD) - Architecture and Data Flow Documentation
+# CoLD Case Analyzer - Architecture and Data Flow Documentation
 
-This document provides a comprehensive overview of the Cold Case Analysis project structure, data flow patterns, and component interactions.
+This document provides a comprehensive overview of the CoLD Case Analyzer project structure, data flow patterns, and component interactions.
 
 ## Table of Contents
 
@@ -9,95 +9,132 @@ This document provides a comprehensive overview of the Cold Case Analysis projec
 - [Application Components](#application-components)
 - [Data Flow Patterns](#data-flow-patterns)
 - [Data Models and Schema](#data-models-and-schema)
-- [Component Interactions](#component-interactions)
 - [Setup and Configuration](#setup-and-configuration)
 
 ## Project Overview
 
-The Cold Case Analysis (CoLD) project is a comprehensive legal analysis system that leverages Large Language Models (LLMs) to analyze court decisions concerning choice of law in international commercial contracts. The system provides three distinct interfaces for different use cases:
+The CoLD Case Analyzer is a Streamlit-based web application that leverages Large Language Models (LLMs) to analyze court decisions concerning choice of law (COL) in international commercial contracts. The system provides an interactive interface for step-by-step analysis with human validation at each stage.
 
-1. **CLI Case Analyzer** - Batch processing tool for analyzing multiple court cases
-2. **LangGraph Analysis Engine** - Advanced workflow orchestration with human-in-the-loop capabilities  
-3. **Streamlit Web Application** - Interactive web interface for guided analysis
+### Key Features
+
+- **Interactive Workflow**: User-guided analysis with validation at each step
+- **Jurisdiction Detection**: Identifies legal system (Civil Law, Common Law, or Indian law)
+- **COL Extraction**: Extracts relevant Choice of Law sections
+- **Theme Classification**: Categorizes cases against PIL taxonomy
+- **Comprehensive Analysis**: Extracts abstract, facts, provisions, issues, and court positions
+- **Database Persistence**: Optional PostgreSQL storage for analyses
+- **Multi-jurisdiction Support**: Specialized prompts for different legal systems
 
 ## System Architecture
 
 ```mermaid
 graph TB
     subgraph "External Services"
-        OpenAI[OpenAI API<br/>GPT-4o, GPT-4o-mini]
-        Llama[Llama API<br/>llama3.1]
-        Airtable[Airtable API<br/>Data Source]
-        PostgreSQL[(PostgreSQL<br/>Results Storage)]
+        OpenAI[OpenAI API<br/>GPT Models]
+        PostgreSQL[(PostgreSQL<br/>Optional Storage)]
+        Airtable[Airtable API<br/>LATAM Module]
     end
 
-    subgraph "Cold Case Analysis System"
-        subgraph "CLI Application"
-            CLI[CLI Case Analyzer<br/>main.py]
-            CaseAnalyzer[CaseAnalyzer Class<br/>Batch Processing]
-            DataHandler[Data Handler<br/>Local/Airtable]
-            Evaluator[Result Evaluator<br/>Ground Truth Comparison]
+    subgraph "CoLD Case Analyzer"
+        subgraph "Streamlit Application"
+            App[Main App<br/>app.py]
+            
+            subgraph "Components Layer"
+                Auth[Authentication<br/>Model Selection]
+                Input[Input Handler<br/>PDF/Text/Demo]
+                Jurisdiction[Jurisdiction<br/>Detection]
+                COL[COL Processor<br/>Extraction]
+                Theme[Theme Classifier<br/>Classification]
+                PIL[PIL Provisions<br/>Handler]
+                Analysis[Analysis Workflow<br/>Orchestration]
+                MainWF[Main Workflow<br/>Coordinator]
+            end
+            
+            subgraph "Tools Layer"
+                CaseAnalyzer[Case Analyzer<br/>Core Logic]
+                COLExtractor[COL Extractor<br/>Extraction Tool]
+                JurDetector[Jurisdiction<br/>Detector]
+                ThemeClassifier[Theme Classifier<br/>Classification Tool]
+            end
+            
+            subgraph "Utilities Layer"
+                StateManager[State Manager<br/>Session State]
+                DataLoaders[Data Loaders<br/>Themes/Demos]
+                PDFHandler[PDF Handler<br/>Text Extraction]
+                PromptSelector[Prompt Selector<br/>Jurisdiction-based]
+            end
+            
+            subgraph "Prompts Library"
+                CivilLaw[Civil Law<br/>Prompts]
+                CommonLaw[Common Law<br/>Prompts]
+                India[India<br/>Prompts]
+                System[System-Level<br/>Prompts]
+            end
         end
-
-        subgraph "LangGraph Engine"
-            LangGraph[LangGraph Main<br/>main.py]
-            GraphConfig[Graph Configuration<br/>Node Orchestration]
-            Nodes[Analysis Nodes<br/>COL, Theme, Facts, etc.]
-            Tools[Analysis Tools<br/>LLM Integration]
-            Interrupts[Human Interrupts<br/>Validation Points]
-        end
-
-        subgraph "Streamlit Web App"
-            StreamlitApp[Streamlit App<br/>app.py]
-            MainWorkflow[Main Workflow<br/>Step Orchestration]
-            Components[UI Components<br/>Input, Processing, Display]
-            StateManager[State Manager<br/>Session Management]
-            Database[Database Handler<br/>Result Persistence]
-        end
-
-        subgraph "Shared Components"
-            LLMHandler[LLM Handler<br/>Model Access]
-            PromptLibrary[Prompt Library<br/>Analysis Templates]
-            ConfigManager[Config Manager<br/>Settings & Secrets]
+        
+        subgraph "LATAM Module"
+            PDFExtractor[PDF Extractor<br/>Airtable Download]
+            TXTConverter[TXT Converter<br/>Format Conversion]
         end
     end
 
     subgraph "Data Sources"
-        LocalFiles[Local Excel Files<br/>cases.xlsx, concepts.xlsx]
-        GroundTruth[Ground Truth Data<br/>Evaluation Reference]
-        DemoData[Demo Case Data<br/>BGE 132 III 285]
+        LocalData[Local Data<br/>themes.csv<br/>jurisdictions.csv]
+        DemoCase[Demo Case<br/>BGE 132 III 285]
     end
 
-    %% External API connections
-    CLI --> OpenAI
-    CLI --> Llama
-    CLI --> Airtable
-    LangGraph --> OpenAI
-    StreamlitApp --> OpenAI
-    StreamlitApp --> PostgreSQL
-
-    %% Data source connections
-    CLI --> LocalFiles
-    CLI --> GroundTruth
-    StreamlitApp --> DemoData
-
-    %% Internal component connections
-    CLI --> CaseAnalyzer
-    CaseAnalyzer --> DataHandler
-    CaseAnalyzer --> Evaluator
+    %% External connections
+    App --> OpenAI
+    App --> PostgreSQL
+    PDFExtractor --> Airtable
     
-    LangGraph --> GraphConfig
-    GraphConfig --> Nodes
-    Nodes --> Tools
-    Nodes --> Interrupts
-
-    StreamlitApp --> MainWorkflow
-    MainWorkflow --> Components
-    Components --> StateManager
-    Components --> Database
-
-    %% Shared component usage
-    CLI --> LLMHandler
+    %% Component connections
+    App --> MainWF
+    MainWF --> Auth
+    MainWF --> Input
+    MainWF --> Jurisdiction
+    MainWF --> COL
+    MainWF --> Theme
+    MainWF --> PIL
+    MainWF --> Analysis
+    
+    %% Tools usage
+    Jurisdiction --> JurDetector
+    COL --> COLExtractor
+    Theme --> ThemeClassifier
+    Analysis --> CaseAnalyzer
+    
+    %% Utilities usage
+    Auth --> StateManager
+    Input --> PDFHandler
+    Input --> DataLoaders
+    Jurisdiction --> PromptSelector
+    COL --> PromptSelector
+    Theme --> PromptSelector
+    Analysis --> PromptSelector
+    
+    %% Prompts usage
+    PromptSelector --> CivilLaw
+    PromptSelector --> CommonLaw
+    PromptSelector --> India
+    PromptSelector --> System
+    
+    %% Data access
+    DataLoaders --> LocalData
+    DataLoaders --> DemoCase
+    
+    classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef app fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef component fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef tool fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef data fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class OpenAI,PostgreSQL,Airtable external
+    class App,MainWF app
+    class Auth,Input,Jurisdiction,COL,Theme,PIL,Analysis component
+    class CaseAnalyzer,COLExtractor,JurDetector,ThemeClassifier tool
+    class LocalData,DemoCase data
+```
     LangGraph --> LLMHandler
     StreamlitApp --> LLMHandler
     
@@ -126,55 +163,107 @@ graph TB
 
 ## Application Components
 
-### 1. CLI Case Analyzer
+## Application Components
 
-**Location**: `cold_case_analyzer/`
+### Streamlit Web Application
 
-The CLI application provides a command-line interface for batch processing of court cases with interactive model selection.
+**Location**: `src/`
 
-#### Key Components:
+The Streamlit application provides an interactive web interface for analyzing court decisions with step-by-step user validation and feedback.
 
-- **Main Entry Point** (`main.py`): Interactive menu system for data source and model selection
-- **CaseAnalyzer Class** (`case_analyzer/__init__.py`): Core analysis logic with sequential processing
-- **Data Handlers** (`data_handler/`): Local file and Airtable data retrieval
-- **Evaluator** (`evaluator/`): Ground truth comparison and result validation
+#### Application Structure:
+
+**Entry Point**:
+- `app.py`: Main application initialization, page config, authentication, and workflow rendering
+
+**Components** (`components/`):
+- `auth.py`: Authentication and model selection
+- `input_handler.py`: Case citation, PDF upload, text input, demo case loading
+- `jurisdiction_detection.py`: Legal system identification interface
+- `col_processor.py`: Choice of Law section extraction and validation
+- `theme_classifier.py`: PIL theme classification and scoring
+- `pil_provisions_handler.py`: PIL provisions extraction
+- `analysis_workflow.py`: Main analysis execution and step management
+- `main_workflow.py`: Overall workflow orchestration
+- `sidebar.py`: Sidebar navigation and information
+- `css.py`: Custom styling
+- `database.py`: PostgreSQL persistence
+
+**Tools** (`tools/`):
+- `case_analyzer.py`: Core case analysis logic with LLM integration
+- `col_extractor.py`: COL section extraction tool
+- `jurisdiction_detector.py`: Jurisdiction detection logic
+- `precise_jurisdiction_detector.py`: Precise jurisdiction identification
+- `themes_classifier.py`: Theme classification tool
+
+**Utilities** (`utils/`):
+- `state_manager.py`: Session state management
+- `data_loaders.py`: Data loading (themes, demo cases)
+- `pdf_handler.py`: PDF text extraction
+- `themes_extractor.py`: Theme extraction utilities
+- `system_prompt_generator.py`: Jurisdiction-specific prompt generation
+
+**Prompts** (`prompts/`):
+- `civil_law/`: Civil law jurisdiction prompts
+- `common_law/`: Common law jurisdiction prompts
+- `india/`: Indian law jurisdiction prompts
+- `legal_system_type_detection.py`: System-level detection prompts
+- `precise_jurisdiction_detection_prompt.py`: Precise jurisdiction prompts
+- `prompt_selector.py`: Jurisdiction-based prompt selection
+
+**Data** (`data/`):
+- `themes.csv`: PIL theme taxonomy
+- `jurisdictions.csv`: Jurisdiction reference data
 
 #### Processing Flow:
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as CLI Main
-    participant Analyzer as CaseAnalyzer
-    participant LLM as LLM Handler
-    participant Data as Data Source
+    participant App as Streamlit App
+    participant Components as UI Components
+    participant Tools as Analysis Tools
+    participant LLM as OpenAI API
+    participant DB as PostgreSQL
 
-    User->>CLI: Run python main.py
-    CLI->>User: Select data source (Own data/Airtable)
-    CLI->>User: Select model (gpt-4o/gpt-4o-mini/llama3.1)
-    CLI->>Data: Fetch cases and concepts
+    User->>App: Access application
+    App->>Components: Render input phase
+    User->>Components: Enter citation & text/PDF
     
-    loop For each case
-        CLI->>Analyzer: Create CaseAnalyzer instance
-        Analyzer->>LLM: Extract COL section
-        Analyzer->>LLM: Get abstract
-        Analyzer->>LLM: Get relevant facts  
-        Analyzer->>LLM: Get PIL provisions
-        Analyzer->>LLM: Get choice of law issue
-        Analyzer->>LLM: Get court's position
-        Analyzer->>CLI: Return analysis results
+    User->>Components: Click "Detect Jurisdiction"
+    Components->>Tools: Detect jurisdiction
+    Tools->>LLM: Analyze court decision
+    LLM->>Tools: Return jurisdiction
+    Tools->>Components: Display results
+    User->>Components: Score/Edit jurisdiction (0-100)
+    
+    User->>Components: Proceed to COL extraction
+    Components->>Tools: Extract COL sections
+    Tools->>LLM: Identify COL content
+    LLM->>Tools: Return COL sections
+    Tools->>Components: Display extractions
+    User->>Components: Score/Edit COL sections
+    
+    User->>Components: Proceed to theme classification
+    Components->>Tools: Classify PIL themes
+    Tools->>LLM: Categorize against taxonomy
+    LLM->>Tools: Return themes
+    Tools->>Components: Display themes
+    User->>Components: Score/Edit themes
+    
+    User->>Components: Proceed to detailed analysis
+    loop Analysis Steps
+        Components->>Tools: Execute step (Abstract/Facts/Provisions/Issue/Position)
+        Tools->>LLM: Generate analysis
+        LLM->>Tools: Return results
+        Tools->>Components: Display results
+        User->>Components: Score/Edit results
     end
     
-    CLI->>Data: Save results to CSV
-    CLI->>User: Offer evaluation option
-    
-    alt User chooses evaluation
-        CLI->>Evaluator: Compare with ground truth
-        Evaluator->>User: Display evaluation metrics
-    end
+    Components->>DB: Save complete analysis
+    DB->>Components: Confirm save
+    Components->>User: Display completion message
 ```
-
-### 2. LangGraph Analysis Engine
 
 **Location**: `cold_case_analyzer/cca_langgraph/`
 
@@ -189,75 +278,32 @@ The LangGraph engine provides advanced workflow orchestration with human-in-the-
 
 #### Workflow Architecture:
 
-```mermaid
-graph TD
-    Start([Court Decision Text])
-    
-    subgraph "LangGraph Workflow"
-        TextInput[Text Input Node]
-        COLExtract[COL Section Extraction]
-        COLValidation{User COL Validation}
-        ThemeClass[PIL Theme Classification]
-        ThemeValidation{User Theme Validation}
-        
-        subgraph "Analysis Phase"
-            Abstract[Abstract Extraction]
-            Facts[Relevant Facts]
-            Provisions[PIL Provisions]
-            Issue[COL Issue Identification]
-            Position[Court's Position]
-        end
-        
-        Formatter[Result Formatting]
-        FinalReview{Final Analysis Review}
-        End([Complete Analysis])
-    end
+### LATAM Case Analysis Module
 
-    Start --> TextInput
-    TextInput --> COLExtract
-    COLExtract --> COLValidation
-    
-    COLValidation -->|Approved| ThemeClass
-    COLValidation -->|Rejected| COLExtract
-    
-    ThemeClass --> ThemeValidation
-    ThemeValidation -->|Approved| Abstract
-    ThemeValidation -->|Rejected| ThemeClass
-    
-    Abstract --> Facts
-    Facts --> Provisions
-    Provisions --> Issue
-    Issue --> Position
-    Position --> Formatter
-    Formatter --> FinalReview
-    
-    FinalReview -->|Approved| End
-    FinalReview -->|Refinement Needed| Formatter
+**Location**: `latam_case_analysis/`
 
-    classDef input fill:#e3f2fd,stroke:#1976d2
-    classDef process fill:#f3e5f5,stroke:#7b1fa2
-    classDef decision fill:#fff3e0,stroke:#f57c00
-    classDef output fill:#e8f5e8,stroke:#388e3c
+A specialized module for processing Latin American court cases with Airtable integration.
 
-    class TextInput,Start input
-    class COLExtract,ThemeClass,Abstract,Facts,Provisions,Issue,Position,Formatter process
-    class COLValidation,ThemeValidation,FinalReview decision
-    class End output
+#### Components:
+
+- `pdf_extractor.py`: Downloads PDFs from Airtable for South & Latin America region cases
+- `txt_converter.py`: Converts downloaded PDFs to text format for analysis
+
+#### Usage:
+
+```python
+# Set environment variables
+export AIRTABLE_API_KEY="your_key"
+export AIRTABLE_BASE_ID="base_id"
+
+# Download PDFs from Airtable
+python latam_case_analysis/pdf_extractor.py
+
+# Convert to text
+python latam_case_analysis/txt_converter.py
 ```
 
-### 3. Streamlit Web Application
-
-**Location**: `cold_case_analyzer_agent/streamlit/`
-
-The Streamlit application provides an interactive web interface with step-by-step guided analysis and user feedback integration.
-
-#### Key Components:
-
-- **Main App** (`app.py`): Application orchestration and configuration
-- **Main Workflow** (`components/main_workflow.py`): Step-by-step processing coordination
-- **UI Components** (`components/`): Modular interface components for each analysis phase
-- **State Manager** (`utils/state_manager.py`): Session state and data persistence
-- **Analysis Tools** (`tools/`): LLM integration and processing utilities
+This module integrates with Airtable's Court Decisions table and filters records by region for targeted data extraction.
 
 #### Component Architecture:
 
@@ -336,374 +382,404 @@ graph TB
 
 ## Data Flow Patterns
 
-### CLI Application Data Flow
+### User Interaction Flow
 
 ```mermaid
 flowchart TD
-    subgraph "Input Phase"
-        UserInput[User Selects:<br/>• Data Source<br/>• Model]
-        DataFetch[Fetch Data:<br/>• cases.xlsx<br/>• concepts.xlsx<br/>• Airtable data]
+    Start([User Opens App]) --> Input[Input Phase]
+    
+    subgraph Input[Input Phase]
+        Citation[Enter Case Citation]
+        Upload[Upload PDF or Enter Text]
+        Demo[Or Use Demo Case]
     end
     
-    subgraph "Processing Phase"
-        CaseLoop[For Each Case]
-        COLSection[Extract COL Section]
-        Abstract[Extract Abstract]
-        Facts[Extract Relevant Facts]
-        Provisions[Extract PIL Provisions]
-        Theme[Classify PIL Theme]
-        Issue[Identify COL Issue]
-        Position[Extract Court Position]
+    Input --> Jurisdiction[Jurisdiction Detection]
+    
+    subgraph Jurisdiction[Jurisdiction Detection]
+        Detect[Detect Legal System]
+        JurisScore[Score Result: 0-100]
+        JurisEdit[Edit if Needed]
     end
     
-    subgraph "Output Phase"
-        Results[Compile Results]
-        SaveCSV[Save to CSV]
-        Evaluation[Optional Evaluation<br/>vs Ground Truth]
+    Jurisdiction --> COLExtract[COL Extraction]
+    
+    subgraph COLExtract[COL Section Extraction]
+        ExtractCOL[Extract COL Sections]
+        COLScore[Score Result: 0-100]
+        COLEdit[Edit if Needed]
     end
     
-    UserInput --> DataFetch
-    DataFetch --> CaseLoop
-    CaseLoop --> COLSection
-    COLSection --> Abstract
-    Abstract --> Facts
-    Facts --> Provisions
-    Provisions --> Theme
-    Theme --> Issue
-    Issue --> Position
-    Position --> Results
-    Results --> SaveCSV
-    SaveCSV --> Evaluation
-
-    classDef input fill:#e3f2fd,stroke:#1976d2
-    classDef process fill:#f3e5f5,stroke:#7b1fa2
-    classDef output fill:#e8f5e8,stroke:#388e3c
-
-    class UserInput,DataFetch input
-    class CaseLoop,COLSection,Abstract,Facts,Provisions,Theme,Issue,Position process
-    class Results,SaveCSV,Evaluation output
+    COLExtract --> ThemeClass[Theme Classification]
+    
+    subgraph ThemeClass[Theme Classification]
+        ClassifyTheme[Classify PIL Themes]
+        ThemeScore[Score Result: 0-100]
+        ThemeEdit[Edit if Needed]
+    end
+    
+    ThemeClass --> PILProv[PIL Provisions]
+    
+    subgraph PILProv[PIL Provisions Extraction]
+        ExtractProv[Extract Provisions]
+        ProvScore[Score Result: 0-100]
+        ProvEdit[Edit if Needed]
+    end
+    
+    PILProv --> Analysis[Detailed Analysis]
+    
+    subgraph Analysis[Detailed Analysis Steps]
+        Abstract[1. Abstract]
+        Facts[2. Relevant Facts]
+        Provisions[3. PIL Provisions]
+        Issue[4. COL Issue]
+        Position[5. Court Position]
+    end
+    
+    Analysis --> Save[Save to Database]
+    Save --> Complete([Analysis Complete])
+    
+    classDef phase fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef step fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Input,Jurisdiction,COLExtract,ThemeClass,PILProv,Analysis phase
+    class Abstract,Facts,Provisions,Issue,Position step
 ```
 
-### LangGraph Engine Data Flow
+### LLM Integration Data Flow
 
 ```mermaid
-flowchart TD
-    subgraph "Input & Initial Processing"
-        CourtText[Court Decision Text]
-        InitState[Initialize State Schema]
-        TextNode[Text Input Node]
+flowchart LR
+    subgraph "User Input"
+        Text[Court Decision<br/>Text/PDF]
+        Citation[Case Citation]
+        Jurisdiction[Jurisdiction Info]
     end
     
-    subgraph "Validation Loop 1: COL Section"
-        COLExtract[COL Extraction Node]
-        COLInterrupt[User COL Validation]
-        COLApproved{Approved?}
-        COLRefine[Refinement Feedback]
+    subgraph "Prompt Generation"
+        PromptSelector[Prompt Selector]
+        CivilLaw[Civil Law Prompts]
+        CommonLaw[Common Law Prompts]
+        India[India Prompts]
     end
     
-    subgraph "Validation Loop 2: PIL Theme"  
-        ThemeNode[Theme Classification Node]
-        ThemeInterrupt[User Theme Validation]
-        ThemeApproved{Approved?}
-        ThemeRefine[Theme Refinement]
+    subgraph "LLM Processing"
+        OpenAI[OpenAI API]
+        Context[Context:<br/>• Decision Text<br/>• Jurisdiction<br/>• Previous Results]
+        Response[LLM Response]
     end
     
-    subgraph "Sequential Analysis"
-        AbstractNode[Abstract Node]
-        FactsNode[Relevant Facts Node]
-        ProvisionsNode[PIL Provisions Node]
-        IssueNode[COL Issue Node]
-        PositionNode[Court Position Node]
+    subgraph "Result Processing"
+        Parse[Parse Response]
+        Validate[Validate Format]
+        Store[Store in State]
     end
     
-    subgraph "Final Review & Output"
-        FormatNode[Format Results Node]
-        FinalInterrupt[Final Review Interrupt]
-        FinalApproved{Analysis Approved?}
-        Complete[Analysis Complete]
+    subgraph "User Review"
+        Display[Display to User]
+        Score[User Score: 0-100]
+        Edit[User Edits]
+        Approve[Approve/Continue]
     end
-
-    CourtText --> InitState
-    InitState --> TextNode
-    TextNode --> COLExtract
-    COLExtract --> COLInterrupt
-    COLInterrupt --> COLApproved
     
-    COLApproved -->|Yes| ThemeNode
-    COLApproved -->|No| COLRefine
-    COLRefine --> COLExtract
+    Text --> PromptSelector
+    Citation --> PromptSelector
+    Jurisdiction --> PromptSelector
     
-    ThemeNode --> ThemeInterrupt
-    ThemeInterrupt --> ThemeApproved
-    ThemeApproved -->|Yes| AbstractNode
-    ThemeApproved -->|No| ThemeRefine
-    ThemeRefine --> ThemeNode
+    PromptSelector --> CivilLaw
+    PromptSelector --> CommonLaw
+    PromptSelector --> India
     
-    AbstractNode --> FactsNode
-    FactsNode --> ProvisionsNode
-    ProvisionsNode --> IssueNode
-    IssueNode --> PositionNode
-    PositionNode --> FormatNode
+    CivilLaw --> Context
+    CommonLaw --> Context
+    India --> Context
     
-    FormatNode --> FinalInterrupt
-    FinalInterrupt --> FinalApproved
-    FinalApproved -->|Yes| Complete
-    FinalApproved -->|No| FormatNode
-
+    Context --> OpenAI
+    OpenAI --> Response
+    Response --> Parse
+    Parse --> Validate
+    Validate --> Store
+    Store --> Display
+    Display --> Score
+    Score --> Edit
+    Edit --> Approve
+    
     classDef input fill:#e3f2fd,stroke:#1976d2
-    classDef validation fill:#fff3e0,stroke:#f57c00
-    classDef process fill:#f3e5f5,stroke:#7b1fa2
-    classDef output fill:#e8f5e8,stroke:#388e3c
-    classDef decision fill:#ffebee,stroke:#d32f2f
-
-    class CourtText,InitState,TextNode input
-    class COLExtract,COLInterrupt,ThemeNode,ThemeInterrupt validation
-    class AbstractNode,FactsNode,ProvisionsNode,IssueNode,PositionNode,FormatNode process
-    class Complete output
-    class COLApproved,ThemeApproved,FinalApproved decision
+    classDef prompt fill:#f3e5f5,stroke:#7b1fa2
+    classDef llm fill:#fff3e0,stroke:#f57c00
+    classDef process fill:#e8f5e9,stroke:#388e3c
+    classDef user fill:#fce4ec,stroke:#c2185b
+    
+    class Text,Citation,Jurisdiction input
+    class PromptSelector,CivilLaw,CommonLaw,India prompt
+    class OpenAI,Context,Response llm
+    class Parse,Validate,Store process
+    class Display,Score,Edit,Approve user
 ```
 
-### Streamlit Application Data Flow
+### State Management Data Flow
+
+### State Management Data Flow
 
 ```mermaid
 flowchart TD
-    subgraph "User Input Phase"
-        CaseCitation[Case Citation Input]
-        TextInput[Court Decision Text<br/>• Manual Input<br/>• PDF Upload<br/>• Demo Case]
-        Authentication[User Authentication]
-        ModelSelect[Model Selection]
+    subgraph "Streamlit Session"
+        InitState[Initialize State<br/>initialize_col_state]
+        SessionDict[st.session_state Dictionary]
     end
     
-    subgraph "Jurisdiction Phase"
-        JurisdictDetect[Jurisdiction Detection]
-        JurisdictConfirm[User Confirmation]
-        JurisdictData[Final Jurisdiction Data]
+    subgraph "State Keys"
+        CaseCit[case_citation]
+        FullText[full_text_input]
+        Juris[jurisdiction]
+        COLData[col_sections]
+        Themes[themes_data]
+        AnalysisData[analysis_results]
+        Scores[user_scores]
     end
     
-    subgraph "COL Processing Phase"
-        COLExtraction[COL Section Extraction]
-        COLDisplay[Display COL Sections]
-        COLFeedback[User Feedback Collection]
-        COLRefinement[Section Refinement]
+    subgraph "State Operations"
+        Update[Update State<br/>st.session_state.key = value]
+        Retrieve[Retrieve State<br/>value = st.session_state.key]
+        Check[Check Existence<br/>if key in st.session_state]
     end
     
-    subgraph "Theme Classification Phase"
-        ThemeExtract[Theme Classification]
-        ThemeDisplay[Display Themes]
-        ThemeScore[User Theme Scoring]
-        ThemeRefine[Theme Refinement]
+    subgraph "Component Access"
+        InputComp[Input Components]
+        ProcComp[Processing Components]
+        DispComp[Display Components]
     end
     
-    subgraph "Complete Analysis Phase"
-        FullAnalysis[Complete Case Analysis]
-        ResultsDisplay[Display Full Results]
-        UserFeedback[User Feedback]
-        ResultsSave[Save to Database]
-    end
+    InitState --> SessionDict
+    SessionDict --> CaseCit
+    SessionDict --> FullText
+    SessionDict --> Juris
+    SessionDict --> COLData
+    SessionDict --> Themes
+    SessionDict --> AnalysisData
+    SessionDict --> Scores
     
-    subgraph "State Management"
-        SessionState[Streamlit Session State]
-        StateUpdates[State Updates]
-        StateRetrieval[State Retrieval]
-    end
-
-    CaseCitation --> JurisdictDetect
-    TextInput --> JurisdictDetect
-    Authentication --> ModelSelect
-    ModelSelect --> JurisdictDetect
+    CaseCit --> Update
+    FullText --> Update
+    Juris --> Update
+    COLData --> Update
+    Themes --> Update
+    AnalysisData --> Update
+    Scores --> Update
     
-    JurisdictDetect --> JurisdictConfirm
-    JurisdictConfirm --> JurisdictData
-    JurisdictData --> COLExtraction
+    Update --> Retrieve
+    Retrieve --> Check
     
-    COLExtraction --> COLDisplay
-    COLDisplay --> COLFeedback
-    COLFeedback --> COLRefinement
-    COLRefinement --> ThemeExtract
+    Check --> InputComp
+    Check --> ProcComp
+    Check --> DispComp
     
-    ThemeExtract --> ThemeDisplay
-    ThemeDisplay --> ThemeScore
-    ThemeScore --> ThemeRefine
-    ThemeRefine --> FullAnalysis
+    InputComp --> Update
+    ProcComp --> Update
+    DispComp --> Retrieve
     
-    FullAnalysis --> ResultsDisplay
-    ResultsDisplay --> UserFeedback
-    UserFeedback --> ResultsSave
+    classDef session fill:#e3f2fd,stroke:#1976d2
+    classDef keys fill:#f3e5f5,stroke:#7b1fa2
+    classDef ops fill:#fff3e0,stroke:#f57c00
+    classDef comp fill:#e8f5e9,stroke:#388e3c
     
-    %% State management connections
-    COLExtraction --> SessionState
-    ThemeExtract --> SessionState
-    FullAnalysis --> SessionState
-    SessionState --> StateUpdates
-    StateUpdates --> StateRetrieval
-
-    classDef input fill:#e3f2fd,stroke:#1976d2
-    classDef process fill:#f3e5f5,stroke:#7b1fa2
-    classDef feedback fill:#fff3e0,stroke:#f57c00
-    classDef state fill:#e8f5e8,stroke:#388e3c
-    classDef output fill:#fce4ec,stroke:#880e4f
-
-    class CaseCitation,TextInput,Authentication,ModelSelect input
-    class JurisdictDetect,COLExtraction,ThemeExtract,FullAnalysis process
-    class JurisdictConfirm,COLFeedback,ThemeScore,UserFeedback feedback
-    class SessionState,StateUpdates,StateRetrieval state
-    class ResultsDisplay,ResultsSave output
+    class InitState,SessionDict session
+    class CaseCit,FullText,Juris,COLData,Themes,AnalysisData,Scores keys
+    class Update,Retrieve,Check ops
+    class InputComp,ProcComp,DispComp comp
 ```
 
 ## Data Models and Schema
 
 ### Core Analysis Schema
 
-The system uses consistent data structures across all applications:
+The system uses consistent data structures for case analysis:
 
 ```python
-# Core Case Analysis Result Schema
+# Complete Case Analysis Result
 {
-    "ID": str,                           # Case identifier
-    "Quote": str,                        # Choice of Law section
-    "Abstract": str,                     # Case abstract/summary
-    "Relevant facts / Summary": str,     # Factual background
-    "PIL provisions": List[str],         # Legal provisions
-    "Themes": List[str],                 # PIL themes
-    "Choice of law issue": str,          # Main legal issue
-    "Court's position": str,             # Court's ruling
-    "processing_time": str               # Analysis duration
+    "case_citation": str,                # Case identification
+    "jurisdiction": str,                 # Legal system (Civil Law/Common Law/India)
+    "col_sections": List[str],           # Choice of Law sections extracted
+    "themes": List[str],                 # PIL themes classified
+    "abstract": str,                     # Case abstract/summary
+    "relevant_facts": str,               # Factual background
+    "pil_provisions": List[str],         # Legal provisions cited
+    "themes": List[str],                 # PIL themes classified
+    "col_issue": str,                    # Choice of Law issue identified
+    "courts_position": str,              # Court's reasoning and position
+    "user_email": Optional[str],         # Optional user contact
+    "username": Optional[str],           # User identification
+    "model": str,                        # LLM model used
+    "timestamp": datetime,               # Analysis timestamp
+    "scores": Dict[str, int]             # User scores for each step (0-100)
 }
 ```
 
-### LangGraph State Schema
+### Session State Structure
 
 ```python
-# LangGraph CourtAnalysisSchema
-class CourtAnalysisSchema(TypedDict):
-    full_text: str                       # Input court decision
-    quote: Optional[str]                 # COL section
-    themes_table: str                    # Available themes
-    themes_table_data: Dict[str, str]    # Theme definitions
-    classification: Optional[List[str]]   # Theme classifications
-    user_approved_col: Optional[bool]    # COL validation
-    user_approved_theme: Optional[bool]  # Theme validation
-    abstract: Optional[str]              # Extracted abstract
-    relevant_facts: Optional[str]        # Relevant facts
-    pil_provisions: Optional[List[str]]  # PIL provisions
-    col_issue: Optional[str]             # COL issue
-    courts_position: Optional[str]       # Court position
-    formatted_analysis: Optional[str]    # Final formatted result
-    goto_node: Optional[str]             # Routing control
-```
-
-### Streamlit State Schema
-
-```python
-# Streamlit Session State Structure
+# Streamlit Session State Keys
 {
-    "col_state": {
-        "case_citation": str,
-        "username": str,
-        "model": str,
-        "full_text": str,
-        "col_section": List[str],
-        "col_section_feedback": List[str],
-        "col_section_eval_iter": int,
-        "jurisdiction": str,
-        "precise_jurisdiction": str,
-        "jurisdiction_eval_score": float,
-        "theme_first_score_submitted": bool,
-        "theme_classifications": List[str],
-        "theme_feedback": str,
-        "analysis_complete": bool,
-        "final_analysis": Dict[str, str],
-        "user_email": Optional[str]
-    }
+    # Input Phase
+    "case_citation": str,
+    "full_text_input": str,
+    "user_email": str,
+    
+    # Authentication
+    "authenticated": bool,
+    "username": str,
+    "selected_model": str,
+    
+    # Jurisdiction Detection
+    "jurisdiction": str,
+    "precise_jurisdiction": str,
+    "jurisdiction_detected": bool,
+    "jurisdiction_score": int,
+    
+    # COL Processing
+    "col_sections": List[str],
+    "col_first_score_submitted": bool,
+    "col_section_feedback": List[str],
+    "col_approved": bool,
+    
+    # Theme Classification
+    "themes_data": List[str],
+    "theme_first_score_submitted": bool,
+    "theme_feedback": str,
+    "theme_approved": bool,
+    
+    # PIL Provisions
+    "pil_provisions": List[str],
+    "pil_provisions_score": int,
+    
+    # Analysis Results
+    "analysis_results": Dict[str, str],
+    "analysis_complete": bool,
+    "current_analysis_step": int,
+    
+    # Demo Case
+    "demo_case_loaded": bool
 }
 ```
 
-## Component Interactions
+### Database Schema
 
-### LLM Handler Integration
+```python
+# PostgreSQL Table Structure (optional)
+{
+    "id": SERIAL PRIMARY KEY,
+    "case_citation": TEXT,
+    "username": TEXT,
+    "user_email": TEXT,
+    "model": TEXT,
+    "jurisdiction": TEXT,
+    "col_sections": JSONB,
+    "themes": JSONB,
+    "abstract": TEXT,
+    "relevant_facts": TEXT,
+    "pil_provisions": JSONB,
+    "col_issue": TEXT,
+    "courts_position": TEXT,
+    "scores": JSONB,
+    "created_at": TIMESTAMP,
+    "updated_at": TIMESTAMP
+}
+```
 
-All applications share a common LLM handler that provides standardized access to language models:
+## LLM Integration
+
+The application integrates with OpenAI's API for language model processing:
 
 ```mermaid
 graph TB
-    subgraph "Applications"
-        CLI[CLI Case Analyzer]
-        LangGraph[LangGraph Engine]
-        Streamlit[Streamlit App]
+    subgraph "Application Layer"
+        Components[UI Components]
+        Tools[Analysis Tools]
     end
     
-    subgraph "LLM Handler Layer"
-        ModelAccess[Model Access<br/>llm_handler/model_access.py]
-        PromptManager[Prompt Manager<br/>Template Loading]
-        ConfigLoader[Config Loader<br/>API Keys & Settings]
+    subgraph "Prompt Layer"
+        PromptSelector[Prompt Selector<br/>prompt_selector.py]
+        CivilLaw[Civil Law Prompts]
+        CommonLaw[Common Law Prompts]
+        India[India Prompts]
+        SystemPrompts[System Prompts]
     end
     
-    subgraph "External APIs"
-        OpenAI[OpenAI API<br/>gpt-4o, gpt-4o-mini]
-        LlamaAPI[Llama API<br/>llama3.1]
+    subgraph "LLM Layer"
+        LangChain[LangChain<br/>langchain-openai]
+        Config[Config Manager<br/>config.py]
     end
     
-    CLI --> ModelAccess
-    LangGraph --> ModelAccess
-    Streamlit --> ModelAccess
+    subgraph "External API"
+        OpenAI[OpenAI API<br/>GPT Models]
+    end
     
-    ModelAccess --> PromptManager
-    ModelAccess --> ConfigLoader
+    Components --> Tools
+    Tools --> PromptSelector
     
-    ModelAccess --> OpenAI
-    ModelAccess --> LlamaAPI
+    PromptSelector --> CivilLaw
+    PromptSelector --> CommonLaw
+    PromptSelector --> India
+    PromptSelector --> SystemPrompts
+    
+    CivilLaw --> LangChain
+    CommonLaw --> LangChain
+    India --> LangChain
+    SystemPrompts --> LangChain
+    
+    LangChain --> Config
+    Config --> OpenAI
 
-    classDef app fill:#1976d2,color:white
-    classDef handler fill:#388e3c,color:white
-    classDef api fill:#d32f2f,color:white
+    classDef app fill:#e3f2fd,stroke:#1976d2
+    classDef prompt fill:#f3e5f5,stroke:#7b1fa2
+    classDef llm fill:#fff3e0,stroke:#f57c00
+    classDef api fill:#ffebee,stroke:#d32f2f
 
-    class CLI,LangGraph,Streamlit app
-    class ModelAccess,PromptManager,ConfigLoader handler
-    class OpenAI,LlamaAPI api
+    class Components,Tools app
+    class PromptSelector,CivilLaw,CommonLaw,India,SystemPrompts prompt
+    class LangChain,Config llm
+    class OpenAI api
 ```
 
 ### Data Source Integration
 
-The system supports multiple data sources with a unified interface:
+The system integrates with multiple data sources:
 
 ```mermaid
 graph TB
     subgraph "Data Sources"
-        LocalExcel[Local Excel Files<br/>cases.xlsx, concepts.xlsx]
-        AirtableDB[Airtable Database<br/>Remote Data]
+        LocalCSV[Local CSV Files<br/>themes.csv<br/>jurisdictions.csv]
         DemoData[Demo Case Data<br/>BGE 132 III 285]
-        GroundTruth[Ground Truth CSV<br/>Evaluation Data]
+        AirtableDB[Airtable Database<br/>LATAM Module Only]
     end
     
-    subgraph "Data Handlers"
-        LocalHandler[Local File Handler<br/>data_handler/local_file_retrieval.py]
-        AirtableHandler[Airtable Handler<br/>data_handler/airtable_retrieval.py]
-        DemoLoader[Demo Loader<br/>utils/data_loaders.py]
+    subgraph "Data Loaders"
+        ThemeLoader[Theme Loader<br/>load_valid_themes]
+        DemoLoader[Demo Loader<br/>get_demo_case_text]
+        AirtableExtractor[PDF Extractor<br/>latam_case_analysis]
     end
     
-    subgraph "Applications"
-        CLIApp[CLI Application]
-        StreamlitApp[Streamlit App]
-        EvaluationSystem[Evaluation System]
+    subgraph "Application"
+        StreamlitApp[Streamlit Application]
+        LATAMModule[LATAM Processing Module]
     end
 
-    LocalExcel --> LocalHandler
-    AirtableDB --> AirtableHandler
+    LocalCSV --> ThemeLoader
     DemoData --> DemoLoader
-    GroundTruth --> LocalHandler
+    AirtableDB --> AirtableExtractor
     
-    LocalHandler --> CLIApp
-    AirtableHandler --> CLIApp
+    ThemeLoader --> StreamlitApp
     DemoLoader --> StreamlitApp
-    LocalHandler --> EvaluationSystem
+    AirtableExtractor --> LATAMModule
 
-    classDef data fill:#e8f5e8,stroke:#388e3c
-    classDef handler fill:#fff3e0,stroke:#f57c00
+    classDef data fill:#e8f5e9,stroke:#388e3c
+    classDef loader fill:#fff3e0,stroke:#f57c00
     classDef app fill:#e3f2fd,stroke:#1976d2
 
-    class LocalExcel,AirtableDB,DemoData,GroundTruth data
-    class LocalHandler,AirtableHandler,DemoLoader handler
-    class CLIApp,StreamlitApp,EvaluationSystem app
+    class LocalCSV,DemoData,AirtableDB data
+    class ThemeLoader,DemoLoader,AirtableExtractor loader
+    class StreamlitApp,LATAMModule app
 ```
 
 ## Setup and Configuration
@@ -713,23 +789,30 @@ graph TB
 The system uses environment variables for configuration management:
 
 ```bash
-# Required for LLM functionality
+# Required Configuration
 OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-5-nano  # Or your preferred model
 
-# Optional for alternative LLM
-LLAMA_API_KEY=your_llama_api_key_here
+# Optional Database Configuration
+SQL_CONN_STRING=postgresql+psycopg2://user:pass@host:port/db
+POSTGRESQL_HOST=your_host
+POSTGRESQL_PORT=5432
+POSTGRESQL_DATABASE=your_database
+POSTGRESQL_USERNAME=your_username
+POSTGRESQL_PASSWORD=your_password
 
-# Optional for Airtable data source
+# Optional Authentication
+USER_CREDENTIALS='{"username":"password","admin":"admin123"}'
+
+# Optional LATAM Module (Airtable Integration)
 AIRTABLE_API_KEY=your_airtable_key
 AIRTABLE_BASE_ID=your_base_id
-AIRTABLE_CD_TABLE=your_table_name
 AIRTABLE_CONCEPTS_TABLE=your_concepts_table
 
-# Optional for Streamlit authentication
-USER_CREDENTIALS={"username":"password"}
-
-# Optional for database persistence
-SQL_CONN_STRING=postgresql://user:pass@host:port/db
+# Optional NoCode Database
+NOCODB_BASE_URL=https://your-nocodb-instance/api/v1/db/data/noco/project_id
+NOCODB_API_TOKEN=your_nocodb_token
+NOCODB_POSTGRES_SCHEMA=your_schema_id
 ```
 
 ### Directory Structure
@@ -737,68 +820,115 @@ SQL_CONN_STRING=postgresql://user:pass@host:port/db
 ```
 cold-case-analysis/
 ├── README.md                           # Main project documentation
-├── requirements.txt                    # Python dependencies for CLI
-├── blueprint.env                       # Environment template
+├── pyproject.toml                      # Python project configuration
+├── uv.lock                             # Dependency lock file
+├── .env.example                        # Environment template
+├── Dockerfile                          # Docker deployment
 ├── docs/                               # Documentation
 │   ├── ARCHITECTURE.md                 # This document
-│   └── agent.md                        # Agent workflow documentation
-├── cold_case_analyzer/                 # CLI Application
-│   ├── main.py                         # CLI entry point
+│   ├── QUICK_START.md                  # Quick start guide
+│   ├── WORKFLOWS.md                    # Workflow documentation
+│   ├── agent.md                        # Agent workflow details
+│   └── DYNAMIC_SYSTEM_PROMPTS_README.md  # Prompts documentation
+├── src/                                # Main application
+│   ├── app.py                          # Streamlit app entry point
 │   ├── config.py                       # Configuration management
-│   ├── case_analyzer/                  # Core analysis logic
-│   ├── data_handler/                   # Data source handlers
-│   ├── evaluator/                      # Result evaluation
-│   ├── llm_handler/                    # LLM integration
-│   ├── visualizer/                     # Result visualization
-│   ├── cca_langgraph/                  # LangGraph engine
-│   │   ├── main.py                     # LangGraph entry point
-│   │   ├── graph_config.py             # Workflow configuration
-│   │   ├── nodes/                      # Analysis nodes
-│   │   ├── tools/                      # Analysis tools
-│   │   └── prompts/                    # LangGraph prompts
-│   ├── data/                           # Input/output data
-│   │   ├── cases.xlsx                  # Input cases
-│   │   ├── concepts.xlsx               # PIL concepts
-│   │   └── ground_truth.csv            # Evaluation reference
-│   └── prompts/                        # Analysis prompts
-├── cold_case_analyzer_agent/           # Web Application
-│   ├── streamlit/                      # Streamlit app
-│   │   ├── app.py                      # Web app entry point
-│   │   ├── requirements.txt            # Web app dependencies
-│   │   ├── components/                 # UI components
-│   │   ├── utils/                      # Utility functions
-│   │   ├── tools/                      # Analysis tools
-│   │   ├── prompts/                    # Streamlit prompts
-│   │   └── tests/                      # Test suite
-│   └── app_requirements.md             # Full-stack architecture spec
-└── 5_IPR_Nachwuchstagung/             # Presentation materials
+│   ├── components/                     # UI components
+│   │   ├── auth.py                     # Authentication
+│   │   ├── input_handler.py            # Input handling
+│   │   ├── jurisdiction_detection.py   # Jurisdiction detection
+│   │   ├── col_processor.py            # COL processing
+│   │   ├── theme_classifier.py         # Theme classification
+│   │   ├── pil_provisions_handler.py   # PIL provisions
+│   │   ├── analysis_workflow.py        # Analysis workflow
+│   │   └── main_workflow.py            # Main orchestration
+│   ├── tools/                          # Analysis tools
+│   │   ├── case_analyzer.py            # Core analyzer
+│   │   ├── col_extractor.py            # COL extraction
+│   │   ├── jurisdiction_detector.py    # Jurisdiction detection
+│   │   └── themes_classifier.py        # Theme classification
+│   ├── utils/                          # Utility functions
+│   │   ├── state_manager.py            # State management
+│   │   ├── data_loaders.py             # Data loading
+│   │   ├── pdf_handler.py              # PDF processing
+│   │   └── themes_extractor.py         # Theme extraction
+│   ├── prompts/                        # Prompt templates
+│   │   ├── civil_law/                  # Civil law prompts
+│   │   ├── common_law/                 # Common law prompts
+│   │   ├── india/                      # India prompts
+│   │   ├── legal_system_type_detection.py  # Detection prompts
+│   │   └── prompt_selector.py          # Prompt selection
+│   ├── data/                           # Application data
+│   │   ├── themes.csv                  # PIL theme taxonomy
+│   │   └── jurisdictions.csv           # Jurisdiction data
+│   └── tests/                          # Test suite
+├── latam_case_analysis/                # LATAM module
+│   ├── pdf_extractor.py                # PDF extraction from Airtable
+│   └── txt_converter.py                # Text conversion
+└── .streamlit/                         # Streamlit configuration
 ```
 
 ### Installation and Setup
 
-1. **Environment Setup**:
+1. **Clone Repository**:
    ```bash
-   cp blueprint.env .env
-   # Edit .env with your API keys
+   git clone https://github.com/Choice-of-Law-Dataverse/cold-case-analysis.git
+   cd cold-case-analysis
    ```
 
-2. **CLI Application**:
+2. **Environment Setup**:
    ```bash
-   pip install -r requirements.txt
-   python cold_case_analyzer/main.py
+   cp .env.example .env
+   # Edit .env with your OPENAI_API_KEY
    ```
 
-3. **LangGraph Engine**:
+3. **Install Dependencies**:
+
+   Using pip:
    ```bash
-   cd cold_case_analyzer/cca_langgraph
-   python main.py
+   pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
    ```
 
-4. **Streamlit Web App**:
+   Or using uv (recommended):
    ```bash
-   cd cold_case_analyzer_agent/streamlit
-   pip install pymupdf4llm psycopg2-binary
-   streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+   uv sync
    ```
 
-This documentation provides a comprehensive overview of the Cold Case Analysis system architecture and data flow patterns. Each component is designed to work independently while sharing common utilities and following consistent data schemas.
+4. **Run Application**:
+   ```bash
+   # With pip
+   cd src
+   streamlit run app.py
+   
+   # With uv
+   uv run streamlit run src/app.py
+   ```
+
+5. **Access Application**:
+   - Open browser to `http://localhost:8501`
+   - Click "Use Demo Case" to try the BGE 132 III 285 example
+
+### Docker Deployment
+
+```bash
+# Build image
+docker build -t cold-case-analyzer .
+
+# Run container
+docker run -p 8501:8501 --env-file .env cold-case-analyzer
+```
+
+## Summary
+
+The CoLD Case Analyzer is a comprehensive Streamlit-based application for analyzing court decisions related to private international law. It provides:
+
+- **Interactive Analysis**: Step-by-step workflow with user validation
+- **Multi-jurisdiction Support**: Specialized prompts for civil law, common law, and Indian legal systems
+- **Comprehensive Extraction**: Jurisdiction, COL sections, themes, provisions, and detailed analysis
+- **User Feedback Integration**: Score and edit results at each stage
+- **Optional Persistence**: PostgreSQL database integration
+- **LATAM Module**: Specialized tools for Latin American case processing
+
+The modular architecture with separate components, tools, utilities, and jurisdiction-specific prompts allows for easy maintenance and extension. The system integrates with OpenAI's API for language model processing and supports optional database persistence for storing analysis results.
+
+For detailed workflow information, see [WORKFLOWS.md](WORKFLOWS.md). For quick start instructions, see [QUICK_START.md](QUICK_START.md).

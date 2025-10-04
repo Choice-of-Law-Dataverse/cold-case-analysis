@@ -1,120 +1,134 @@
-# Quick Start Guide - Cold Case Analysis System
+# Quick Start Guide - CoLD Case Analyzer
 
-This guide provides a quick overview of how to get started with the Cold Case Analysis system.
+This guide provides a quick overview of how to get started with the CoLD Case Analyzer Streamlit application.
 
 ## System Overview
 
-The Cold Case Analysis system provides three different interfaces for analyzing court decisions:
+The CoLD Case Analyzer is a Streamlit web application for analyzing court decisions related to private international law (PIL). The system provides an interactive interface for step-by-step case analysis with AI assistance.
 
 ```mermaid
 graph TB
     User[Legal Analyst/Researcher]
     
-    subgraph "Analysis Interfaces"
-        CLI[🖥️ CLI Application<br/>Batch Processing]
-        Web[🌐 Web Application<br/>Interactive Analysis]
-        API[⚙️ LangGraph Engine<br/>Advanced Workflows]
+    subgraph "CoLD Case Analyzer"
+        WebApp[🌐 Streamlit Web Application]
     end
     
-    subgraph "Use Cases"
-        Batch[Bulk Analysis<br/>Multiple Cases]
-        Interactive[Single Case<br/>Step-by-step Review]
-        Advanced[Custom Workflows<br/>Human-in-the-loop]
+    subgraph "Key Features"
+        Interactive[Interactive Analysis<br/>Step-by-step Workflow]
+        Validation[User Validation<br/>Edit & Score Results]
+        Storage[Database Storage<br/>Save Analyses]
     end
     
-    User --> CLI
-    User --> Web
-    User --> API
-    
-    CLI --> Batch
-    Web --> Interactive
-    API --> Advanced
+    User --> WebApp
+    WebApp --> Interactive
+    WebApp --> Validation
+    WebApp --> Storage
 
-    classDef interface fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef usecase fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef app fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef feature fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     
-    class CLI,Web,API interface
-    class Batch,Interactive,Advanced usecase
+    class WebApp app
+    class Interactive,Validation,Storage feature
 ```
 
 ## Quick Setup
 
 ### Prerequisites
-- Python 3.12.3
-- OpenAI API Key (recommended) or Llama API Key
+- Python 3.12+
+- OpenAI API Key
 
-### 1. Environment Setup
+### Installation Steps
+
+1. **Clone the repository**:
 ```bash
-# Clone and enter repository
+git clone https://github.com/Choice-of-Law-Dataverse/cold-case-analysis.git
 cd cold-case-analysis
+```
 
-# Create environment file
-cp blueprint.env .env
+2. **Set up environment**:
+```bash
+# Copy environment template
+cp .env.example .env
 
 # Edit .env and add your API key
-# OPENAI_API_KEY=your_key_here
-
-# Install dependencies
-pip install -r requirements.txt
+# Required: OPENAI_API_KEY=your_key_here
 ```
 
-### 2. Choose Your Interface
+3. **Install dependencies**:
 
-#### 🖥️ CLI Application (Batch Processing)
-**Best for**: Processing multiple court cases, evaluation against ground truth
-
+Using pip:
 ```bash
-# Run CLI analyzer
-python cold_case_analyzer/main.py
-
-# Follow interactive prompts:
-# 1. Select data source (Own data/Airtable)
-# 2. Choose model (gpt-4o/gpt-4o-mini/llama3.1)
-# 3. Wait for analysis completion
-# 4. Optional: Run evaluation
+pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
 ```
 
-**Requirements**: 
-- `cases.xlsx` in `cold_case_analyzer/data/` folder
-- `concepts.xlsx` for legal theme classification
-
-#### 🌐 Web Application (Interactive Analysis)
-**Best for**: Single case analysis, step-by-step review, user feedback
-
+Or using uv (recommended):
 ```bash
-# Install additional dependencies
-cd cold_case_analyzer_agent/streamlit
-pip install pymupdf4llm psycopg2-binary
-
-# Start web application
-streamlit run app.py --server.port=8501 --server.address=0.0.0.0
-
-# Open browser: http://localhost:8501
+uv sync
 ```
 
-**Features**:
-- Demo case available (BGE 132 III 285)
-- PDF upload support
-- Interactive feedback at each step
-- Optional database persistence
-
-#### ⚙️ LangGraph Engine (Advanced Workflows)
-**Best for**: Custom workflows, experimental features, developer integration
-
+4. **Run the application**:
 ```bash
-# Run LangGraph analyzer
-cd cold_case_analyzer/cca_langgraph
-python main.py
+# With pip installation
+cd src
+streamlit run app.py
+
+# With uv
+uv run streamlit run src/app.py
 ```
 
-**Features**:
-- Graph-based workflow orchestration
-- Human-in-the-loop validation points
-- Customizable analysis pipeline
+5. **Open browser**: Navigate to `http://localhost:8501`
+
+## Using the Application
+
+### Demo Case
+
+The easiest way to try the application:
+
+1. Open the application at `http://localhost:8501`
+2. Click **"Use Demo Case"** button
+3. The BGE 132 III 285 Swiss court case will be loaded
+4. Click **"Detect Jurisdiction"** to start the analysis
+5. Follow the workflow, reviewing and scoring each step
+
+### Analyzing Your Own Case
+
+1. **Enter Case Citation**:
+   - Required field
+   - Example: "Federal Court, 20.12.2005 - BGE 132 III 285"
+   - Include court, parties, case number, and date
+
+2. **Provide Court Decision Text**:
+   - Option A: Upload PDF file
+   - Option B: Paste text directly into the text area
+
+3. **Start Analysis**:
+   - Click "Detect Jurisdiction" to begin
+   - The system will identify the legal system (Civil Law, Common Law, or Indian)
+
+4. **Review Each Step**:
+   - **Jurisdiction Detection**: Confirm or correct the identified jurisdiction
+   - **COL Extraction**: Review extracted Choice of Law sections
+   - **Theme Classification**: Validate PIL theme categorization
+   - **PIL Provisions**: Review extracted provisions
+   - **Detailed Analysis**: Review comprehensive legal analysis
+
+5. **Provide Feedback**:
+   - Score each step (0-100)
+   - Edit results as needed
+   - Provide specific feedback for refinement
+
+### Optional: Save to Database
+
+If you've configured `SQL_CONN_STRING` in your `.env` file, analyses will be automatically saved to the PostgreSQL database with:
+- User identification
+- Model information
+- Timestamps
+- Complete analysis results
 
 ## Analysis Workflow
 
-All interfaces follow this general analysis pattern:
+The application follows this analysis pattern:
 
 ```mermaid
 flowchart LR
@@ -170,20 +184,24 @@ Federal Court, 20.12.2005 - BGE 132 III 285
 ### Basic Validation
 ```bash
 # Test Python environment
-python --version  # Should show Python 3.12.3
+python --version  # Should show Python 3.12+
 
-# Test imports
+# Test imports from src directory
+cd src
 python -c "import streamlit; print('✓ Streamlit works')"
-
-# Test CLI module (with proper path)
-cd cold_case_analyzer
-PYTHONPATH=/path/to/cold_case_analyzer python -c "from main import main; print('✓ CLI works')"
+python -c "from components.input_handler import render_input_phase; print('✓ App imports work')"
 ```
 
 ### Demo Case Testing
-1. **Web Interface**: Click "Use Demo Case" to load BGE 132 III 285
-2. **CLI Interface**: Ensure `cases.xlsx` contains demo data
-3. **LangGraph**: Uses built-in sample case in `main.py`
+1. Open the web application
+2. Click "Use Demo Case" to load BGE 132 III 285
+3. Follow the workflow to test all features
+
+### Run Tests
+```bash
+cd src
+pytest tests/ -v
+```
 
 ## Troubleshooting
 
@@ -191,38 +209,69 @@ PYTHONPATH=/path/to/cold_case_analyzer python -c "from main import main; print('
 
 1. **Module Import Errors**
    ```bash
-   # Set PYTHONPATH for CLI
-   export PYTHONPATH=/path/to/cold_case_analyzer
+   # Make sure you're in the src/ directory
+   cd src
+   streamlit run app.py
    ```
 
 2. **Missing API Key**
    ```bash
-   # Check .env file
-   cat .env | grep OPENAI_API_KEY
+   # Check .env file in repository root
+   cat ../.env | grep OPENAI_API_KEY
    ```
 
-3. **Streamlit Won't Start**
+3. **Missing Dependencies**
    ```bash
-   # Install missing dependencies
-   pip install pymupdf4llm psycopg2-binary
+   # Install all required packages
+   pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
    ```
 
-4. **Long Processing Times**
-   - CLI analysis: Several minutes per case (normal)
-   - LLM calls: 30+ seconds per component (normal)
-   - Never cancel long-running operations
+4. **PDF Upload Not Working**
+   - Ensure `pymupdf4llm` is installed
+   - Check PDF file is not encrypted or corrupted
+
+5. **Database Connection Issues**
+   - Verify `SQL_CONN_STRING` format in `.env`
+   - Database persistence is optional - app works without it
+
+## Configuration Options
+
+### Environment Variables
+
+Required:
+- `OPENAI_API_KEY`: Your OpenAI API key
+
+Optional:
+- `OPENAI_MODEL`: Model to use (default: "gpt-5-nano")
+- `SQL_CONN_STRING`: PostgreSQL connection string
+- `USER_CREDENTIALS`: JSON for authentication (e.g., `{"admin":"password"}`)
+- `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`: For LATAM module integration
+
+### Model Selection
+
+Different models available based on authentication:
+- **Guest users**: Limited to basic models
+- **Authenticated users**: Access to advanced models
+
+Configure authentication in `.env`:
+```bash
+USER_CREDENTIALS='{"username":"password","admin":"admin123"}'
+```
 
 ## Next Steps
 
-- **Read Full Documentation**: [Architecture & Data Flow](ARCHITECTURE.md)
-- **Understand Workflows**: [Workflows & Processes](WORKFLOWS.md)
-- **Explore Agent Implementation**: [Agent Workflow](agent.md)
-- **Review Ground Truth**: See `cold_case_analyzer/data/ground_truth.csv`
-- **Customize Prompts**: Edit files in `prompts/` directories
+- **Explore Documentation**: Review detailed architecture and workflow documentation
+  - [Architecture Documentation](ARCHITECTURE.md)
+  - [Workflows Documentation](WORKFLOWS.md)
+  - [Agent Documentation](agent.md)
+- **Customize Prompts**: Edit jurisdiction-specific prompts in `src/prompts/`
+- **Review Themes**: Check `src/data/themes.csv` for PIL theme taxonomy
+- **Database Integration**: Set up PostgreSQL for persistent storage
+- **LATAM Module**: Explore `latam_case_analysis/` for regional case processing
 
 ## Support
 
 For issues and questions:
-- Check the comprehensive documentation in the `docs/` folder
-- Review existing issues in the GitHub repository
+- Review comprehensive documentation in the `docs/` folder
+- Check existing GitHub repository issues
 - Consult the [CoLD project website](https://cold.global/) for research context

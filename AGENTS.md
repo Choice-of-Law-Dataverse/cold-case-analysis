@@ -1,23 +1,25 @@
-# Cold Case Analysis - Choice of Law Dataverse (CoLD)
+# CoLD Case Analyzer - Choice of Law Dataverse
 
 **ALWAYS reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.**
 
 ## Working Effectively
 
 ### Environment Setup
+
 - **Python Version**: Python 3.12.3 (specified in `.python-version`)
 - **Package Manager**: Uses `uv` for dependency management (modern Python package manager) or `pip`
 - **NEVER CANCEL** build or install commands - they may take several minutes
 - Bootstrap the repository:
+
   ```bash
   # Create environment file from template
   cp .env.example .env
-  
+
   # Edit .env and add your OPENAI_API_KEY
-  
+
   # Install dependencies using uv (recommended if available)
   uv sync
-  
+
   # OR install using pip (if uv not available)
   pip install -e .
   ```
@@ -25,11 +27,12 @@
 ### Running the Application
 
 #### Streamlit Web Application (Primary Interface)
+
 - **Entry point**: `streamlit run src/app.py --server.port=8501 --server.address=0.0.0.0`
 - **Working directory**: Run from repository root
 - **URL**: http://localhost:8501
 - **Demo data**: Click "Use Demo Case" button in the UI to load a Swiss court case for testing
-- **Features**: 
+- **Features**:
   - Interactive case analysis workflow with step-by-step validation
   - Jurisdiction detection (Civil Law, Common Law, India)
   - Choice of Law section extraction with user feedback
@@ -41,27 +44,32 @@
 - **Dependencies**: Requires `OPENAI_API_KEY` in .env file; optional PostgreSQL database connection
 
 ### Docker Setup
+
 - **Location**: `Dockerfile` in repository root
 - Docker support available but native Python environment recommended for development
 - Docker configuration generates necessary Streamlit secrets from environment variables
 
 ### Testing
+
 - **Test location**: `src/tests/`
-- **Run tests**: 
+- **Run tests**:
+
   ```bash
   # Run all tests
   pytest src/tests/ -v
-  
+
   # Run specific test file
   pytest src/tests/test_prompt_logic.py -v
   ```
-- **Requirements**: 
+
+- **Requirements**:
   - Set `OPENAI_API_KEY=test_key` in .env file for tests that don't require actual API calls
   - Some tests may require actual OpenAI API access
   - Tests cover prompt logic, workflow integration, system prompts, and full analysis workflow
 - **Test timeout**: Set timeout to 300+ seconds for integration test runs. NEVER CANCEL.
 
 ### Linting and Code Quality
+
 - **Linter**: Uses `ruff` for linting and code formatting (install with dev dependencies)
 - **Type Checker**: Uses `pyright` for static type checking (install with dev dependencies)
 - **Installing dev tools**:
@@ -81,18 +89,20 @@
 ### Always perform these validation steps after making changes:
 
 1. **Basic Python environment**:
+
    ```bash
    python --version  # Should show Python 3.12.3
-   
+
    # Install dependencies (use uv if available, otherwise pip)
    uv sync
    # OR
    pip install -e .
-   
+
    python -c "import streamlit; print('✓ Streamlit works')"
    ```
 
 2. **Streamlit Application Validation**:
+
    ```bash
    cd /home/runner/work/cold-case-analysis/cold-case-analysis
    streamlit run src/app.py --server.port=8501 --server.address=0.0.0.0
@@ -102,6 +112,7 @@
    ```
 
 3. **Run tests**:
+
    ```bash
    pytest src/tests/ -v --tb=short
    ```
@@ -114,6 +125,7 @@
 ## Common Tasks
 
 ### Repository Structure
+
 ```
 cold-case-analysis/
 ├── .github/
@@ -177,6 +189,7 @@ cold-case-analysis/
 ```
 
 ### Key Files to Check When Making Changes
+
 - **Config files**: `src/config.py`
 - **Environment**: `.env` (created from `.env.example`)
 - **Main entry point**: `src/app.py`
@@ -186,11 +199,13 @@ cold-case-analysis/
 - **Analysis tools**: Files in `src/tools/`
 
 ### Data Files
+
 - **Jurisdiction reference**: `src/data/jurisdictions.csv` - Maps jurisdictions to legal systems
 - **Theme taxonomy**: `src/data/themes.csv` - Legal themes for classification
 - **Demo case**: Embedded in code via `src/utils/data_loaders.py`
 
 ### API Integration
+
 - **OpenAI**: Primary LLM provider (GPT-4o, GPT-4o-mini models, configurable in `src/config.py`)
 - **Model selection**: Available through UI, different models for authenticated vs guest users
 - **Airtable**: Optional external data source (configured via environment variables)
@@ -198,7 +213,9 @@ cold-case-analysis/
 - **PostgreSQL**: Optional database for persistence (configured via `SQL_CONN_STRING`)
 
 ### Dynamic System Prompts
+
 The application uses **jurisdiction-specific system prompts** that are dynamically generated based on:
+
 - Detected legal system type (Civil Law, Common Law, India)
 - Precise jurisdiction (e.g., Switzerland, USA, India)
 - Analysis phase (jurisdiction detection, CoL extraction, theme classification, analysis)
@@ -206,6 +223,7 @@ The application uses **jurisdiction-specific system prompts** that are dynamical
 See `src/utils/system_prompt_generator.py` and `docs/DYNAMIC_SYSTEM_PROMPTS_README.md` for details.
 
 ### Performance Notes
+
 - **Streamlit startup**: App takes ~5-10 seconds to fully load
 - **Install time**: Dependencies installation takes ~60 seconds with uv
 - **LLM analysis**: Each analysis step can take 10-30 seconds depending on case complexity
@@ -214,24 +232,30 @@ See `src/utils/system_prompt_generator.py` and `docs/DYNAMIC_SYSTEM_PROMPTS_READ
 ## Troubleshooting
 
 ### Common Issues
-1. **OPENAI_API_KEY not set**: 
+
+1. **OPENAI_API_KEY not set**:
+
    - Copy `.env.example` to `.env` and add your API key
    - Required format: `OPENAI_API_KEY="sk-your-key-here"`
 
-2. **ModuleNotFoundError**: 
+2. **ModuleNotFoundError**:
+
    - Run `uv sync` or `pip install -e .` to install all dependencies
    - Ensure you're using Python 3.12.3
 
-3. **Streamlit won't start**: 
+3. **Streamlit won't start**:
+
    - Check you're running from repository root
    - Command: `streamlit run src/app.py`
    - Verify OPENAI_API_KEY is set in .env
 
-4. **Test failures**: 
+4. **Test failures**:
+
    - Ensure OPENAI_API_KEY is set (can use dummy value like "test_key" for some tests)
    - Run from repository root: `pytest src/tests/ -v`
 
-5. **Import errors in tests**: 
+5. **Import errors in tests**:
+
    - Tests may have hardcoded paths that need adjustment
    - Check sys.path modifications in test files
 
@@ -241,12 +265,14 @@ See `src/utils/system_prompt_generator.py` and `docs/DYNAMIC_SYSTEM_PROMPTS_READ
    - Configuration in `pyproject.toml`
 
 ### Expected Timeouts
+
 - **uv sync or pip install -e .**: 120+ seconds (NEVER CANCEL)
 - **Streamlit app startup**: 30+ seconds (NEVER CANCEL)
 - **LLM API calls**: 30-60 seconds per call (NEVER CANCEL)
 - **Test execution**: 300+ seconds for full suite (NEVER CANCEL)
 
 ### Environment Variables Required
+
 See `.env.example` for complete configuration. Key variables:
 
 ```bash
@@ -277,6 +303,7 @@ POSTGRESQL_PASSWORD="password"
 ## Development Workflow
 
 ### Making Changes
+
 1. **Create a new feature/fix**: Work on focused, minimal changes
 2. **Test locally**: Run the Streamlit app and verify changes work
 3. **Run tests**: `pytest src/tests/ -v` to ensure nothing breaks
@@ -284,12 +311,14 @@ POSTGRESQL_PASSWORD="password"
 5. **Update documentation**: If you change prompts, run `python src/prompts/populate_readme.py`
 
 ### Adding New Prompts
+
 1. Add prompt file in appropriate jurisdiction folder (`src/prompts/civil_law/`, `common_law/`, or `india/`)
 2. Follow naming convention: `*_prompt.py` with uppercase `*_PROMPT` variables
 3. Run `python src/prompts/populate_readme.py` to update `src/prompts/README.md`
 4. Test prompt selection logic: `pytest src/tests/test_prompt_logic.py -v`
 
 ### Modifying Workflows
+
 1. Workflow phases are in `src/components/`
 2. Main orchestration in `src/components/main_workflow.py`
 3. Each phase component handles its own UI, state management, and LLM calls
