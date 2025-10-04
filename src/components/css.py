@@ -258,39 +258,89 @@ def load_css():
         text-align: center;
     }
 
-    /* Progress Bar Container */
+    /* Progress Bar Container - Squiggly Line Design */
     .progress-banner-bar-container {
         width: 100%;
-        height: 8px;
-        background-color: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-        overflow: hidden;
+        height: 40px;
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* Progress Bar Fill */
-    .progress-banner-bar {
+    /* SVG Squiggly Path */
+    .progress-banner-bar-container svg {
+        width: 100%;
         height: 100%;
-        background-color: white;
-        border-radius: 4px;
-        transition: width 0.3s ease-out;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 
-    /* Indeterminate Spinner */
+    /* Progress Dot */
+    .progress-dot {
+        width: 16px;
+        height: 16px;
+        background-color: #4CAF50;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+        z-index: 2;
+        transition: left 0.5s ease-out;
+    }
+
+    /* Indeterminate Spinner - Squiggly Animation */
     .progress-banner-spinner {
-        height: 100%;
-        width: 30%;
-        background-color: white;
-        border-radius: 4px;
-        animation: indeterminate 1.5s infinite;
+        width: 16px;
+        height: 16px;
+        background-color: #4CAF50;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+        z-index: 2;
+        animation: squigglyMove 3s ease-in-out infinite;
     }
 
-    @keyframes indeterminate {
+    @keyframes squigglyMove {
         0% {
-            transform: translateX(-100%);
+            left: 0%;
+            top: 50%;
+        }
+        12.5% {
+            left: 12.5%;
+            top: 30%;
+        }
+        25% {
+            left: 25%;
+            top: 50%;
+        }
+        37.5% {
+            left: 37.5%;
+            top: 70%;
+        }
+        50% {
+            left: 50%;
+            top: 50%;
+        }
+        62.5% {
+            left: 62.5%;
+            top: 30%;
+        }
+        75% {
+            left: 75%;
+            top: 50%;
+        }
+        87.5% {
+            left: 87.5%;
+            top: 70%;
         }
         100% {
-            transform: translateX(400%);
+            left: 100%;
+            top: 50%;
         }
     }
 

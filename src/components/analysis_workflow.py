@@ -249,13 +249,31 @@ def execute_all_analysis_steps_parallel(state):
 
     def update_banner(message, progress):
         """Update the progress banner with current status."""
+        # Calculate dot position along the squiggly path
+        dot_position = progress * 100
+
         with banner_placeholder:
             st.markdown(f"""
             <div class="progress-banner">
                 <div class="progress-banner-content">
                     <div class="progress-banner-message">{message}</div>
                     <div class="progress-banner-bar-container">
-                        <div class='progress-banner-bar' style='width: {int(progress * 100)}%;'></div>
+                        <svg viewBox="0 0 400 40" preserveAspectRatio="none">
+                            <!-- Background squiggly path (light) -->
+                            <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
+                                  stroke="rgba(255, 255, 255, 0.3)"
+                                  stroke-width="3"
+                                  fill="none"/>
+                            <!-- Progress squiggly path (white) -->
+                            <path d="M 0,20 Q 25,10 50,20 T 100,20 Q 125,30 150,20 T 200,20 Q 225,10 250,20 T 300,20 Q 325,30 350,20 T 400,20"
+                                  stroke="white"
+                                  stroke-width="3"
+                                  fill="none"
+                                  stroke-dasharray="1000"
+                                  stroke-dashoffset="{1000 - (progress * 1000)}"
+                                  style="transition: stroke-dashoffset 0.5s ease-out;"/>
+                        </svg>
+                        <div class='progress-dot' style='left: {dot_position}%;'></div>
                     </div>
                 </div>
             </div>
