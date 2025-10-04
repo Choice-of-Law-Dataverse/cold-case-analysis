@@ -5,6 +5,7 @@ Main workflow orchestrator for the CoLD Case Analyzer.
 
 import streamlit as st
 
+from components.agents_integration import execute_agents_workflow, render_agents_workflow_button
 from components.analysis_workflow import render_analysis_workflow
 from components.col_processor import render_col_processing
 from components.input_handler import render_input_phase
@@ -42,7 +43,29 @@ def render_initial_input_phase():
 
     # Automatically start COL extraction after jurisdiction confirmed
     if jurisdiction_confirmed:
-        # Check if we haven't already started extraction
+        # Get final jurisdiction data
+        final_jurisdiction_data = get_final_jurisdiction_data()
+
+        # Create initial analysis state
+        state = create_initial_analysis_state(
+            case_citation=st.session_state.get("case_citation"),
+            username=st.session_state.get("user"),
+            model=st.session_state.get("llm_model_select"),
+            full_text=full_text,
+            final_jurisdiction_data=final_jurisdiction_data,
+            user_email=st.session_state.get("user_email"),
+        )
+
+        # Update session state with initial state
+        if not st.session_state.get("col_state"):
+            st.session_state.col_state = state
+
+        # Check if user wants to use agents workflow
+        if render_agents_workflow_button(state):
+            execute_agents_workflow(state)
+            return False
+
+        # Traditional workflow: Check if we haven't already started extraction
         if not st.session_state.get("col_extraction_started", False):
             st.markdown("## Choice of Law Analysis")
             st.markdown(
@@ -53,19 +76,6 @@ def render_initial_input_phase():
             from utils.progress_banner import hide_progress_banner, show_progress_banner
 
             show_progress_banner("Extracting Choice of Law section...")
-
-            # Get final jurisdiction data
-            final_jurisdiction_data = get_final_jurisdiction_data()
-
-            # Create initial analysis state
-            state = create_initial_analysis_state(
-                case_citation=st.session_state.get("case_citation"),
-                username=st.session_state.get("user"),
-                model=st.session_state.get("llm_model_select"),
-                full_text=full_text,
-                final_jurisdiction_data=final_jurisdiction_data,
-                user_email=st.session_state.get("user_email"),
-            )
 
             # Extract COL section
             result = extract_col_section(state)

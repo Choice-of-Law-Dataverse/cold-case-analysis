@@ -127,7 +127,9 @@ def render_edit_section(col_state):
     Args:
         col_state: The current analysis state
     """
-    last_extraction = col_state.get("col_section", [""])[-1]
+    # Safely get the last extraction, handling empty lists
+    col_sections = col_state.get("col_section", [""])
+    last_extraction = col_sections[-1] if col_sections else ""
 
     # Use custom CSS to set height with min and max
     st.markdown(
