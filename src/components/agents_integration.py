@@ -72,6 +72,13 @@ def convert_agents_result_to_state(result) -> dict:
     Returns:
         dict: State dictionary compatible with existing application
     """
+    # Ensure col_sections is not empty, provide a default message if needed
+    col_sections_text = (
+        "\n\n".join(result.col_extraction.col_sections)
+        if result.col_extraction.col_sections
+        else "No Choice of Law sections were extracted from this case."
+    )
+
     state = {
         # Case information
         "case_citation": result.case_citation,
@@ -80,21 +87,25 @@ def convert_agents_result_to_state(result) -> dict:
         "jurisdiction": result.jurisdiction_detection.legal_system_type,
         "precise_jurisdiction": result.jurisdiction_detection.precise_jurisdiction,
         # CoL sections - automatically extracted
-        "col_section": ["\n\n".join(result.col_extraction.col_sections)],
+        "col_section": [col_sections_text],
         "col_section_feedback": [],
         "col_first_score_submitted": True,
         "col_ready_edit": True,
         "col_done": True,
         # Themes - automatically classified
-        "classification": [", ".join(result.theme_classification.themes)],
+        "classification": [
+            ", ".join(result.theme_classification.themes) if result.theme_classification.themes else "No themes classified"
+        ],
         "theme_first_score_submitted": True,
         "theme_done": True,
-        # Analysis results
-        "relevant_facts": [result.relevant_facts.facts],
-        "pil_provisions": [result.pil_provisions.provisions],
-        "col_issue": [result.col_issue.issue],
-        "courts_position": [result.courts_position.position],
-        "abstract": [result.abstract.abstract],
+        # Analysis results (ensure non-empty strings)
+        "relevant_facts": [result.relevant_facts.facts if result.relevant_facts.facts else "No relevant facts extracted."],
+        "pil_provisions": [result.pil_provisions.provisions if result.pil_provisions.provisions else []],
+        "col_issue": [result.col_issue.issue if result.col_issue.issue else "No choice of law issue identified."],
+        "courts_position": [
+            result.courts_position.position if result.courts_position.position else "No court's position extracted."
+        ],
+        "abstract": [result.abstract.abstract if result.abstract.abstract else "No abstract generated."],
         # Common Law specific
         "obiter_dicta": [result.obiter_dicta.obiter_dicta] if result.obiter_dicta else [],
         "dissenting_opinions": [result.dissenting_opinions.dissenting_opinions] if result.dissenting_opinions else [],
