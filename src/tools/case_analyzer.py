@@ -97,11 +97,7 @@ def relevant_facts(state):
         state.setdefault("relevant_facts_reasoning", []).append(reasoning)
 
         logfire.info("Extracted relevant facts", chars=len(facts), time_seconds=facts_time, confidence=confidence)
-        return {
-            "relevant_facts": state["relevant_facts"],
-            "relevant_facts_confidence": state["relevant_facts_confidence"],
-            "relevant_facts_reasoning": state["relevant_facts_reasoning"],
-        }
+        return result
 
 
 def pil_provisions(state):
@@ -140,11 +136,7 @@ def pil_provisions(state):
         state.setdefault("pil_provisions_reasoning", []).append(reasoning)
 
         logfire.info("Extracted PIL provisions", count=len(pil_provisions), time_seconds=provisions_time, confidence=confidence)
-        return {
-            "pil_provisions": state["pil_provisions"],
-            "pil_provisions_confidence": state["pil_provisions_confidence"],
-            "pil_provisions_reasoning": state["pil_provisions_reasoning"],
-        }
+        return result
 
 
 def col_issue(state):
@@ -198,11 +190,7 @@ def col_issue(state):
         state.setdefault("col_issue_reasoning", []).append(reasoning)
 
         logfire.info("Extracted CoL issue", chars=len(col_issue_text), time_seconds=issue_time, confidence=confidence)
-        return {
-            "col_issue": state["col_issue"],
-            "col_issue_confidence": state["col_issue_confidence"],
-            "col_issue_reasoning": state["col_issue_reasoning"],
-        }
+        return result
 
 
 def courts_position(state):
@@ -252,11 +240,7 @@ def courts_position(state):
     state.setdefault("courts_position_confidence", []).append(confidence)
     state.setdefault("courts_position_reasoning", []).append(reasoning)
 
-    return {
-        "courts_position": state["courts_position"],
-        "courts_position_confidence": state["courts_position_confidence"],
-        "courts_position_reasoning": state["courts_position_reasoning"],
-    }
+    return result
 
 
 def obiter_dicta(state):
@@ -290,11 +274,7 @@ def obiter_dicta(state):
     state.setdefault("obiter_dicta_confidence", []).append(confidence)
     state.setdefault("obiter_dicta_reasoning", []).append(reasoning)
 
-    return {
-        "obiter_dicta": state["obiter_dicta"],
-        "obiter_dicta_confidence": state["obiter_dicta_confidence"],
-        "obiter_dicta_reasoning": state["obiter_dicta_reasoning"],
-    }
+    return result
 
 
 def dissenting_opinions(state):
@@ -328,11 +308,7 @@ def dissenting_opinions(state):
     state.setdefault("dissenting_opinions_confidence", []).append(confidence)
     state.setdefault("dissenting_opinions_reasoning", []).append(reasoning)
 
-    return {
-        "dissenting_opinions": state["dissenting_opinions"],
-        "dissenting_opinions_confidence": state["dissenting_opinions_confidence"],
-        "dissenting_opinions_reasoning": state["dissenting_opinions_reasoning"],
-    }
+    return result
 
 
 def abstract(state):
@@ -387,8 +363,4 @@ def abstract(state):
         state.setdefault("abstract_reasoning", []).append(reasoning)
 
         logfire.info("Generated abstract", chars=len(abstract_text), time_seconds=abstract_time, confidence=confidence)
-        return {
-            "abstract": state["abstract"],
-            "abstract_confidence": state["abstract_confidence"],
-            "abstract_reasoning": state["abstract_reasoning"],
-        }
+        return result

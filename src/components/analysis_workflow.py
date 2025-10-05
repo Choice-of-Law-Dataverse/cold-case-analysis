@@ -133,7 +133,6 @@ def execute_analysis_step(state, name, func):
     """
     if not state.get(f"{name}_printed"):
         result = func(state)
-        state.update(result)
 
         display_name = get_step_display_name(name, state)
 
@@ -240,7 +239,6 @@ def execute_all_analysis_steps_parallel(state):
     for name, func in sequential_steps:
         try:
             result = func(state)
-            state.update(result)
             completed += 1
             progress = completed / total_steps
             progress_bar.progress(progress)

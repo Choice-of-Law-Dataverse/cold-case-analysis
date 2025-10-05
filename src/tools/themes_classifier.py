@@ -104,9 +104,4 @@ def theme_classification_node(state):
             attempts=attempt,
             confidence=confidence,
         )
-        return {
-            "classification": state["classification"],
-            "classification_confidence": state["classification_confidence"],
-            "classification_reasoning": state["classification_reasoning"],
-            "theme_feedback": state.get("theme_feedback", []),
-        }
+        return result

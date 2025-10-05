@@ -93,7 +93,6 @@ def render_feedback_input(col_state):
             if feedback:
                 col_state["col_section_feedback"].append(feedback)
                 result = extract_col_section(col_state)
-                col_state.update(result)
                 st.rerun()
             else:
                 st.warning("Please enter feedback to improve the extraction.")
@@ -166,7 +165,6 @@ def render_edit_section(col_state):
                 from tools.themes_classifier import theme_classification_node
 
                 init_result = theme_classification_node(col_state)
-                col_state.update(init_result)
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
                 st.rerun()
