@@ -2,6 +2,7 @@
 """
 Input handling components for the CoLD Case Analyzer.
 """
+
 import streamlit as st
 
 from utils.pdf_handler import extract_text_from_pdf
@@ -50,12 +51,11 @@ def render_pdf_uploader():
         "Or drag and drop a PDF file here:",
         type=["pdf"],
         key="pdf_upload",
-        help="Upload a PDF to extract the full text automatically"
+        help="Upload a PDF to extract the full text automatically",
     )
 
     if pdf_file is not None:
         try:
-            # Show progress banner while extracting
             from utils.progress_banner import hide_progress_banner, show_progress_banner
 
             show_progress_banner("Extracting text from PDF...")
@@ -63,7 +63,6 @@ def render_pdf_uploader():
             extracted = extract_text_from_pdf(pdf_file)
             st.session_state.full_text_input = extracted
 
-            # Clear the progress banner
             hide_progress_banner()
             st.success("Extracted text from PDF successfully.")
             return True
@@ -89,7 +88,7 @@ def render_text_input():
         "Paste the court decision text here:",
         height=200,
         help="Enter the full text of the court decision to extract the Choice of Law section.",
-        key="full_text_input"
+        key="full_text_input",
     )
 
 

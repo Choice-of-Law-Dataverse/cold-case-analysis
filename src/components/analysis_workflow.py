@@ -1,14 +1,13 @@
-# components/analysis_workflow.py
 """
 Analysis workflow components for the CoLD Case Analyzer.
 """
 
+import json
 import logging
 
 import streamlit as st
 
 from components.database import save_to_db
-from components.pil_provisions_handler import display_pil_provisions
 from utils.debug_print_state import print_state
 
 logger = logging.getLogger(__name__)
@@ -50,12 +49,11 @@ def display_analysis_history(state):
     """
     for speaker, msg in state.get("chat_history", []):
         if speaker == "machine":
-            # Separate step label and content if formatted as 'Step: content'
             if ": " in msg:
                 step_label, content = msg.split(": ", 1)
-                # Display step label in bold
+
                 st.markdown(f"**{step_label}**")
-                # Display content as machine message
+
                 st.markdown(f"<div class='machine-message'>{content}</div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<div class='machine-message'>{msg}</div>", unsafe_allow_html=True)
@@ -103,7 +101,6 @@ def get_analysis_steps(state):
         relevant_facts,
     )
 
-    # Build base pipeline - abstract moved to end
     steps = [
         ("relevant_facts", relevant_facts),
         ("pil_provisions", pil_provisions),
@@ -111,11 +108,9 @@ def get_analysis_steps(state):
         ("courts_position", courts_position),
     ]
 
-    # Add extra steps for common-law decisions
     if state.get("jurisdiction") == "Common-law jurisdiction":
         steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
 
-    # Add abstract as final step for all jurisdictions
     steps.append(("abstract", abstract))
 
     return steps
@@ -141,21 +136,17 @@ def execute_all_analysis_steps_parallel(state):
         relevant_facts,
     )
 
-    # Steps that can run in parallel (don't depend on each other)
     parallel_steps = [
         ("relevant_facts", relevant_facts),
         ("pil_provisions", pil_provisions),
         ("col_issue", col_issue),
     ]
 
-    # Steps that depend on parallel steps
     sequential_steps = [("courts_position", courts_position)]
 
-    # Add jurisdiction-specific steps
     if state.get("jurisdiction") == "Common-law jurisdiction":
         sequential_steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
 
-    # Abstract runs last using all previous results
     sequential_steps.append(("abstract", abstract))
 
     from utils.progress_banner import hide_progress_banner, show_progress_banner
@@ -163,12 +154,10 @@ def execute_all_analysis_steps_parallel(state):
     total_steps = len(parallel_steps) + len(sequential_steps)
     completed = 0
 
-    # Create a function to update the progress banner
     def update_banner(message, progress):
         """Update the progress banner with current status."""
         show_progress_banner(message, progress)
 
-    # Execute parallel steps
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(func, state): name for name, func in parallel_steps}
 
@@ -183,7 +172,6 @@ def execute_all_analysis_steps_parallel(state):
             except Exception as e:
                 st.error(f"Error processing {name}: {str(e)}")
 
-    # Execute sequential steps
     for name, func in sequential_steps:
         try:
             result = func(state)
@@ -194,17 +182,14 @@ def execute_all_analysis_steps_parallel(state):
         except Exception as e:
             st.error(f"Error processing {name}: {str(e)}")
 
-    # Show completion message
     update_banner("✓ Analysis complete!", 1.0)
 
-    # Give a moment to see the completion message
     import time
+
     time.sleep(1)
 
-    # Clear the banner
     hide_progress_banner()
 
-    # Mark all steps as printed and scored
     for name, _ in parallel_steps + sequential_steps:
         state[f"{name}_printed"] = True
         state[f"{name}_score_submitted"] = True
@@ -224,7 +209,6 @@ def render_final_editing_phase(state):
     steps = get_analysis_steps(state)
     edited_values = {}
 
-    # Add custom CSS for textarea heights using key-based targeting
     st.markdown(
         """
     <style>
@@ -277,22 +261,18 @@ def render_final_editing_phase(state):
         unsafe_allow_html=True,
     )
 
-    # Create editable text areas for all steps
     for name, _ in steps:
         display_name = get_step_display_name(name, state)
 
-        # Get current value
         content = state.get(name)
         if not content:
             continue
 
         current_value = content[-1] if isinstance(content, list) else content
 
-        # Special handling for PIL provisions display
         if name == "pil_provisions":
             st.markdown(f"**{display_name}**")
 
-            # Display as chips
             if isinstance(current_value, list):
                 chips_html = '<div class="pil-chips-container">'
                 for provision in current_value:
@@ -301,9 +281,6 @@ def render_final_editing_phase(state):
                 chips_html += "</div>"
                 st.markdown(chips_html, unsafe_allow_html=True)
 
-                # Provide text area with JSON for editing
-                import json
-
                 edit_value = json.dumps(current_value, indent=2)
             else:
                 edit_value = str(current_value)
@@ -311,24 +288,17 @@ def render_final_editing_phase(state):
             edited = st.text_area(f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}")
             edited_values[name] = edited
         else:
-            # Standard text area for other steps - height controlled by CSS
             edited = st.text_area(f"**{display_name}**", value=str(current_value), key=f"final_edit_{name}")
             edited_values[name] = edited
 
-    # Submit button
     if st.button("Submit Final Analysis", type="primary", key="submit_final_analysis"):
-        # Update state with edited values
         for name, edited_value in edited_values.items():
             if name == "pil_provisions":
-                # Try to parse JSON for PIL provisions
                 try:
-                    import json
-
                     parsed = json.loads(edited_value)
                     state[name][-1] = parsed
                     state[f"{name}_edited"] = parsed
                 except json.JSONDecodeError:
-                    # If not valid JSON, store as string
                     state[name][-1] = edited_value
                     state[f"{name}_edited"] = edited_value
             else:
@@ -350,15 +320,12 @@ def render_analysis_workflow(state):
     if not state.get("analysis_ready"):
         return
 
-    # Check if we should use new parallel workflow
     if not state.get("parallel_execution_started"):
-        # Execute all steps in parallel
-        execute_all_analysis_steps_parallel(state)
         state["parallel_execution_started"] = True
+        execute_all_analysis_steps_parallel(state)
+
         st.rerun()
     elif state.get("analysis_done"):
-        # Display completion message
         display_completion_message(state)
     else:
-        # Show final editing phase
         render_final_editing_phase(state)

@@ -5,7 +5,6 @@ Choice of Law section processing components.
 
 import streamlit as st
 
-from tools.col_extractor import extract_col_section
 from utils.debug_print_state import print_state
 
 
@@ -98,7 +97,6 @@ def render_edit_section(col_state):
                 from tools.themes_classifier import theme_classification_node
                 from utils.progress_banner import hide_progress_banner, show_progress_banner
 
-                # Show progress banner while classifying
                 show_progress_banner("Identifying themes...")
 
                 init_result = theme_classification_node(col_state)
@@ -106,7 +104,6 @@ def render_edit_section(col_state):
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
 
-                # Clear the progress banner
                 hide_progress_banner()
                 st.rerun()
             else:
@@ -120,20 +117,14 @@ def render_col_processing(col_state):
     Args:
         col_state: The current analysis state
     """
-    # Display case information
+
     display_case_info(col_state)
 
-    # Auto-approve the first COL extraction without scoring UI
     if not col_state.get("col_first_score_submitted"):
         col_state["col_first_score_submitted"] = True
 
-    # Always show the edit section (even after col_done) so user can see extracted text
-    # Handle feedback and editing if COL not done
     if not col_state.get("col_done"):
-        # Auto-approve first extraction, skip to editing
         if not col_state.get("col_ready_edit"):
             col_state["col_ready_edit"] = True
-        render_edit_section(col_state)
-    else:
-        # Show the textarea in read-only mode after classification
-        render_edit_section(col_state)
+
+    render_edit_section(col_state)

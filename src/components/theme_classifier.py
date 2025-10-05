@@ -72,7 +72,7 @@ def render_theme_classification(state):
     themes = state.get("classification", [])
     if not themes:
         return
-    
+
     last_theme = themes[-1]
 
     # Auto-approve theme classification without scoring UI
