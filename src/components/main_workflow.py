@@ -73,9 +73,9 @@ def render_main_workflow():
     """Render the complete main workflow."""
     col_state = get_col_state()
     
-    if not col_state.get("full_text"):
-        # Initial phase: input and jurisdiction detection
-        render_initial_input_phase()
-    else:
-        # Results phase: show agents results for editing
+    # If agents workflow is completed, show results
+    if col_state.get("agents_workflow_completed", False):
         render_results_phase()
+    else:
+        # Otherwise, show initial input and jurisdiction phase
+        render_initial_input_phase()
