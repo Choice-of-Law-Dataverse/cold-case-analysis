@@ -61,8 +61,18 @@ def render_initial_input_phase():
             st.session_state.col_state = state
 
         # Check if user wants to use agents workflow
-        if render_agents_workflow_button(state):
+        workflow_choice = render_agents_workflow_button(state)
+
+        if workflow_choice == "agents":
+            # User selected automated analysis
             execute_agents_workflow(state)
+            return False
+        elif workflow_choice == "traditional":
+            # User selected traditional workflow - mark and start extraction
+            st.session_state["col_extraction_started"] = True
+            st.rerun()
+        elif workflow_choice == "waiting":
+            # Still showing the choice UI, don't proceed yet
             return False
 
         # Traditional workflow: Check if we haven't already started extraction

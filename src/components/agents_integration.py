@@ -151,7 +151,8 @@ def render_agents_workflow_button(state):
         state: Current application state
 
     Returns:
-        bool: True if workflow was triggered, False otherwise
+        str or None: 'agents' if agents workflow selected, 'traditional' if traditional selected,
+                     'waiting' if showing choice UI, None if choice already made
     """
     # Only show if jurisdiction is confirmed and agents workflow hasn't run yet
     # and traditional workflow hasn't progressed too far
@@ -161,7 +162,8 @@ def render_agents_workflow_button(state):
         and not state.get("col_done", False)
     ):
         st.markdown("---")
-        st.markdown("### Analysis Method")
+        st.markdown("### Choose Analysis Method")
+        st.markdown("Please select how you would like to proceed with the analysis:")
 
         # Create two columns for the choice
         col1, col2 = st.columns(2)
@@ -195,13 +197,14 @@ def render_agents_workflow_button(state):
             use_traditional = st.button("Use Step-by-Step", key="use_traditional_workflow_btn")
 
         if use_agents:
-            return True
+            return "agents"
         elif use_traditional:
-            # Mark that user chose traditional workflow
-            st.session_state["col_extraction_started"] = True
-            st.rerun()
+            return "traditional"
+        else:
+            # Return 'waiting' to indicate we're showing the choice UI and waiting for user input
+            return "waiting"
 
-    return False
+    return None
 
 
 def execute_agents_workflow(state):

@@ -105,6 +105,14 @@ def render_theme_classification(state):
     if not state.get("col_done"):
         return
 
+    # Skip rendering the detailed theme interface if agents workflow completed
+    # (user chose automated analysis, no need to show theme selection details)
+    if state.get("agents_workflow_completed", False):
+        # Just show a brief summary that themes were classified automatically
+        st.markdown("### PIL Theme Classification")
+        st.info("✓ PIL themes were automatically classified by the AI agents workflow.")
+        return
+
     # Load valid themes
     valid_themes = load_valid_themes()
     # Add "NA" option to the list

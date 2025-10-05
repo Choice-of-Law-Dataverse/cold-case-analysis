@@ -190,6 +190,14 @@ def render_col_processing(col_state):
     Args:
         col_state: The current analysis state
     """
+    # Skip rendering the detailed CoL interface if agents workflow completed
+    # (user chose automated analysis, no need to show extraction details)
+    if col_state.get("agents_workflow_completed", False):
+        # Just show a brief summary that CoL extraction was completed automatically
+        st.markdown("### Choice of Law Extraction")
+        st.info("✓ Choice of Law sections were automatically extracted by the AI agents workflow.")
+        return
+
     # Display case information
     display_case_info(col_state)
 
