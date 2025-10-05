@@ -216,7 +216,7 @@ def execute_agents_workflow(state):
     """
     from utils.progress_banner import hide_progress_banner, show_progress_banner
 
-    show_progress_banner("Running automated analysis with OpenAI Agents... This may take 60-90 seconds.")
+    show_progress_banner("⏳ Running automated analysis with OpenAI Agents... This may take 60-90 seconds.")
 
     try:
         # Run agents workflow
@@ -236,6 +236,10 @@ def execute_agents_workflow(state):
         
         # Mark that we've done COL extraction (to prevent traditional workflow from running)
         st.session_state["col_extraction_started"] = True
+        
+        # Set flags to skip parallel execution and go straight to final editing phase
+        state["parallel_execution_started"] = True
+        state["analysis_done"] = False  # Not done yet - user needs to review/edit
 
         # Update session state
         st.session_state.col_state = state
@@ -243,7 +247,7 @@ def execute_agents_workflow(state):
         hide_progress_banner()
 
         # Show success message
-        st.success("✅ Automated analysis complete! Review the results below.")
+        st.success("✅ Automated analysis complete! Review and edit the results below, then submit.")
 
         # Force rerun to show results
         st.rerun()
