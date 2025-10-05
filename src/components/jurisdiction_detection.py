@@ -47,13 +47,12 @@ def render_jurisdiction_detection(full_text: str):
         if detect_clicked:
             if full_text.strip():
                 with st.spinner("Analyzing jurisdiction..."):
-                    # Detect precise jurisdiction with confidence
                     jurisdiction_data = detect_precise_jurisdiction_with_confidence(full_text)
 
-                    st.session_state["precise_jurisdiction"] = jurisdiction_data["jurisdiction_name"]
-                    st.session_state["legal_system_type"] = jurisdiction_data["legal_system_type"]
-                    st.session_state["jurisdiction_confidence"] = jurisdiction_data["confidence"]
-                    st.session_state["jurisdiction_reasoning"] = jurisdiction_data["reasoning"]
+                    st.session_state["precise_jurisdiction"] = jurisdiction_data.precise_jurisdiction
+                    st.session_state["legal_system_type"] = jurisdiction_data.legal_system_type
+                    st.session_state["jurisdiction_confidence"] = jurisdiction_data.confidence
+                    st.session_state["jurisdiction_reasoning"] = jurisdiction_data.reasoning
                     st.session_state["precise_jurisdiction_detected"] = True
 
                     st.rerun()
