@@ -51,7 +51,6 @@ def extract_col_section(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        # Create and run agent
         selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="ColSectionExtractor",

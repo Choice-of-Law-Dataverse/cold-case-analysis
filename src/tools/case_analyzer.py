@@ -78,7 +78,6 @@ def relevant_facts(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        # Create and run agent
         selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="RelevantFactsExtractor",
@@ -123,7 +122,6 @@ def pil_provisions(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        # Create and run agent
         selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="PILProvisionsExtractor",
@@ -183,7 +181,6 @@ def col_issue(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        # Create and run agent
         selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="ColIssueExtractor",
@@ -240,7 +237,6 @@ def courts_position(state):
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    # Create and run agent
     selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
     agent = Agent(
         name="CourtsPositionAnalyzer",
@@ -281,7 +277,6 @@ def obiter_dicta(state):
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    # Create and run agent
     selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
     agent = Agent(
         name="ObiterDictaExtractor",
@@ -320,7 +315,6 @@ def dissenting_opinions(state):
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    # Create and run agent
     selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
     agent = Agent(
         name="DissentingOpinionsExtractor",
@@ -378,7 +372,6 @@ def abstract(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        # Create and run agent
         selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="AbstractGenerator",

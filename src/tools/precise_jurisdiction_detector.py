@@ -106,7 +106,6 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
     try:
         system_prompt = "You are an expert in legal systems and court jurisdictions worldwide. Analyze the court decision and identify the precise jurisdiction, legal system type, and provide your confidence level and reasoning."
 
-        # Create and run agent
         selected_model = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="JurisdictionDetector",

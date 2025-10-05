@@ -56,7 +56,6 @@ def display_col_extractions(col_state):
     Args:
         col_state: The current analysis state
     """
-    # Handle scoring for first extraction
     handle_first_extraction_scoring(col_state)
 
 
@@ -67,7 +66,6 @@ def handle_first_extraction_scoring(col_state):
     Args:
         col_state: The current analysis state
     """
-    # Automatically mark as submitted without user interaction
     if not col_state.get("col_first_score_submitted"):
         col_state["col_first_score_submitted"] = True
 
@@ -79,7 +77,6 @@ def handle_col_feedback_phase(col_state):
     Args:
         col_state: The current analysis state
     """
-    # Auto-approve first extraction, skip to editing
     if not col_state.get("col_ready_edit"):
         col_state["col_ready_edit"] = True
 
