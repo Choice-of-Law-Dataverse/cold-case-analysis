@@ -261,7 +261,7 @@ def load_css():
     /* Progress Bar Container - Squiggly Line Design */
     .progress-banner-bar-container {
         width: 100%;
-        height: 50px;
+        height: 60px;
         position: relative;
         display: flex;
         align-items: center;
@@ -279,14 +279,14 @@ def load_css():
 
     /* Indeterminate Spinner - Moving dot along path */
     .progress-banner-spinner {
-        width: 12px;
-        height: 12px;
-        background-color: white;
-        border-radius: 50%;
+        width: 14px;
+        height: 10px;
+        background-color: #4CAF50;
+        border-radius: 50% / 35%;
         position: absolute;
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 12px rgba(76, 175, 80, 0.9);
         z-index: 2;
-        offset-path: path('M 5,25 Q 12,10 20,25 Q 28,40 35,25 Q 42,15 50,30 Q 58,45 65,25 Q 72,10 80,25 Q 88,35 95,20 Q 102,10 110,25 L 115,25');
+        offset-path: path('M 8,30 Q 15,15 25,25 Q 30,30 35,35 Q 40,42 50,38 Q 55,36 58,30 Q 62,20 70,25 Q 75,28 78,35 Q 82,45 90,40 Q 95,37 98,30 Q 102,20 108,25 L 112,28');
         animation: squigglyMove 3s ease-in-out infinite;
         offset-anchor: center;
         offset-rotate: 0deg;
