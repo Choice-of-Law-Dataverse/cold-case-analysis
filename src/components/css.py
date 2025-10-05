@@ -261,7 +261,7 @@ def load_css():
     /* Progress Bar Container - Squiggly Line Design */
     .progress-banner-bar-container {
         width: 100%;
-        height: 40px;
+        height: 50px;
         position: relative;
         display: flex;
         align-items: center;
@@ -277,35 +277,16 @@ def load_css():
         left: 0;
     }
 
-    /* Progress Dot - follows SVG path using offset-path */
-    .progress-dot {
-        width: 16px;
-        height: 16px;
-        background-color: #4CAF50;
-        border-radius: 50%;
-        position: absolute;
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
-        z-index: 2;
-        /* Scale path to 100% width using percentage coordinates */
-        offset-path: path('M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20');
-        offset-distance: 0%;
-        transition: offset-distance 0.5s ease-out;
-        /* Anchor the dot at its center */
-        offset-anchor: center;
-        offset-rotate: 0deg;
-    }
-
-    /* Indeterminate Spinner - Squiggly Animation following path */
+    /* Indeterminate Spinner - Moving dot along path */
     .progress-banner-spinner {
-        width: 16px;
-        height: 16px;
-        background-color: #4CAF50;
+        width: 12px;
+        height: 12px;
+        background-color: white;
         border-radius: 50%;
         position: absolute;
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
         z-index: 2;
-        /* Scale path to 100% width using percentage coordinates */
-        offset-path: path('M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20');
+        offset-path: path('M 5,25 Q 12,10 20,25 Q 28,40 35,25 Q 42,15 50,30 Q 58,45 65,25 Q 72,10 80,25 Q 88,35 95,20 Q 102,10 110,25 L 115,25');
         animation: squigglyMove 3s ease-in-out infinite;
         offset-anchor: center;
         offset-rotate: 0deg;

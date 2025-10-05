@@ -27,48 +27,60 @@ def show_progress_banner(message, progress=None):
     placeholder = get_banner_placeholder()
 
     if progress is not None:
-        # Determinate progress with dot following path
-        dot_distance = progress * 100
+        clip_percent = progress * 100
         banner_html = f"""
         <div class="progress-banner">
             <div class="progress-banner-content">
                 <div class="progress-banner-message">{message}</div>
                 <div class="progress-banner-bar-container">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <!-- Background squiggly path (light) -->
-                        <path d="M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20"
+                    <svg viewBox="0 0 120 50" preserveAspectRatio="none">
+                        <defs>
+                            <clipPath id="progressClip">
+                                <rect x="0" y="0" width="{clip_percent}%" height="50"/>
+                            </clipPath>
+                        </defs>
+                        <!-- Background path (light) with dots at ends -->
+                        <path d="M 5,25 Q 12,10 20,25 Q 28,40 35,25 Q 42,15 50,30 Q 58,45 65,25 Q 72,10 80,25 Q 88,35 95,20 Q 102,10 110,25 L 115,25"
                               stroke="rgba(255, 255, 255, 0.3)"
                               stroke-width="3"
                               fill="none"
+                              stroke-linecap="round"
                               vector-effect="non-scaling-stroke"/>
-                        <!-- Progress squiggly path (white) -->
-                        <path d="M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20"
-                              stroke="white"
-                              stroke-width="3"
-                              fill="none"
-                              vector-effect="non-scaling-stroke"
-                              stroke-dasharray="1000"
-                              stroke-dashoffset="{1000 - (progress * 1000)}"
-                              style="transition: stroke-dashoffset 0.5s ease-out;"/>
+                        <circle cx="5" cy="25" r="4" fill="rgba(255, 255, 255, 0.3)"/>
+                        <circle cx="115" cy="25" r="4" fill="rgba(255, 255, 255, 0.3)"/>
+                        <!-- Progress path (white) with clipping and dots -->
+                        <g clip-path="url(#progressClip)">
+                            <path d="M 5,25 Q 12,10 20,25 Q 28,40 35,25 Q 42,15 50,30 Q 58,45 65,25 Q 72,10 80,25 Q 88,35 95,20 Q 102,10 110,25 L 115,25"
+                                  stroke="white"
+                                  stroke-width="3"
+                                  fill="none"
+                                  stroke-linecap="round"
+                                  vector-effect="non-scaling-stroke"
+                                  style="transition: opacity 0.5s ease-out;"/>
+                            <circle cx="5" cy="25" r="4" fill="white"/>
+                            <circle cx="115" cy="25" r="4" fill="white"/>
+                        </g>
                     </svg>
-                    <div class='progress-dot' style='offset-distance: {dot_distance}%;'></div>
                 </div>
             </div>
         </div>
         """
     else:
-        # Indeterminate progress with spinning dot
         banner_html = """
         <div class="progress-banner">
             <div class="progress-banner-content">
                 <div class="progress-banner-message">""" + message + """</div>
                 <div class="progress-banner-bar-container">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <path d="M 0,20 Q 6.25,10 12.5,20 T 25,20 Q 31.25,30 37.5,20 T 50,20 Q 56.25,10 62.5,20 T 75,20 Q 81.25,30 87.5,20 T 100,20"
+                    <svg viewBox="0 0 120 50" preserveAspectRatio="none">
+                        <!-- Background path (light) with dots at ends -->
+                        <path d="M 5,25 Q 12,10 20,25 Q 28,40 35,25 Q 42,15 50,30 Q 58,45 65,25 Q 72,10 80,25 Q 88,35 95,20 Q 102,10 110,25 L 115,25"
                               stroke="rgba(255, 255, 255, 0.3)"
                               stroke-width="3"
                               fill="none"
+                              stroke-linecap="round"
                               vector-effect="non-scaling-stroke"/>
+                        <circle cx="5" cy="25" r="4" fill="rgba(255, 255, 255, 0.3)"/>
+                        <circle cx="115" cy="25" r="4" fill="rgba(255, 255, 255, 0.3)"/>
                     </svg>
                     <div class='progress-banner-spinner'></div>
                 </div>
