@@ -1,12 +1,14 @@
+import asyncio
 import csv
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any
 
 import logfire
+from agents import Agent, Runner
 
-import config
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
@@ -58,6 +60,7 @@ def theme_classification_node(state):
         confidence = "low"
         reasoning = ""
         theme_time = 0.0
+        attempt = 0
 
         for attempt in range(1, max_attempts + 1):
             logger.debug("Prompting agent (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
@@ -66,13 +69,14 @@ def theme_classification_node(state):
             system_prompt = get_system_prompt_for_analysis(state)
 
             # Create and run agent
-            agent = config.create_agent(
+            selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+            agent = Agent(
                 name="ThemeClassifier",
                 instructions=system_prompt,
                 output_type=ThemeClassificationOutput,
-                model=state.get("model"),
+                model=selected_model,
             )
-            result = config.run_agent(agent, prompt)
+            result = asyncio.run(Runner.run(agent, prompt)).final_output
             theme_time = time.time() - start_time
 
             cls_list = result.themes

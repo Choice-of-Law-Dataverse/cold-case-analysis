@@ -6,7 +6,7 @@ Reusable progress banner component that sticks to the bottom of the page.
 import streamlit as st
 
 
-def show_progress_banner(message: str, progress: float = None):
+def show_progress_banner(message: str, progress: float | None = None):
     """
     Display a sticky progress banner at the bottom of the page.
 
@@ -34,7 +34,8 @@ def add_progress_banner_css():
     Add CSS styling for the progress banner.
     Should be called once at app initialization.
     """
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Progress Banner Container */
     .progress-banner {
@@ -119,4 +120,6 @@ def add_progress_banner_css():
         padding-bottom: 100px !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )

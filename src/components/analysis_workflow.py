@@ -287,6 +287,7 @@ def execute_all_analysis_steps_parallel(state):
 
     # Give a moment to see the completion message
     import time
+
     time.sleep(1)
 
     # Clear the banner
@@ -409,16 +410,19 @@ def render_final_editing_phase(state):
                 st.markdown(chips_html, unsafe_allow_html=True)
 
                 # Provide text area with JSON for editing
-
                 edit_value = json.dumps(current_value, indent=2)
             else:
                 edit_value = str(current_value)
 
-            edited = st.text_area(f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}", label_visibility="collapsed")
+            edited = st.text_area(
+                f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}", label_visibility="collapsed"
+            )
             edited_values[name] = edited
         else:
             # Standard text area for other steps - height controlled by CSS
-            edited = st.text_area(f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed")
+            edited = st.text_area(
+                f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed"
+            )
             edited_values[name] = edited
 
     # Submit button

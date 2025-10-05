@@ -1,10 +1,12 @@
+import asyncio
 import logging
+import os
 import time
 from typing import Any
 
 import logfire
+from agents import Agent, Runner
 
-import config
 from models.analysis_models import ColSectionOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
@@ -50,13 +52,14 @@ def extract_col_section(state):
         system_prompt = get_system_prompt_for_analysis(state)
 
         # Create and run agent
-        agent = config.create_agent(
+        selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        agent = Agent(
             name="ColSectionExtractor",
             instructions=system_prompt,
             output_type=ColSectionOutput,
-            model=state.get("model"),
+            model=selected_model,
         )
-        result = config.run_agent(agent, prompt)
+        result = asyncio.run(Runner.run(agent, prompt)).final_output
         col_time = time.time() - start_time
         col_section = result.col_section.strip()
         confidence = result.confidence
@@ -67,7 +70,9 @@ def extract_col_section(state):
         state.setdefault("col_section_reasoning", []).append(reasoning)
         logger.debug("Extracted Choice of Law section: %s (confidence: %s)", col_section, confidence)
 
-        logfire.info("Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time, confidence=confidence)
+        logfire.info(
+            "Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time, confidence=confidence
+        )
         return {
             "col_section": state["col_section"],
             "col_section_confidence": state["col_section_confidence"],

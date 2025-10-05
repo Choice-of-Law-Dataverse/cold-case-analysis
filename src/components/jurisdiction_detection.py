@@ -1,6 +1,7 @@
 """
 Streamlit component for enhanced jurisdiction detection with precise jurisdiction identification.
 """
+
 import streamlit as st
 
 from components.confidence_display import add_confidence_chip_css, render_confidence_chip
@@ -83,25 +84,28 @@ def render_jurisdiction_detection(full_text: str):
 
         # Load all jurisdictions for selection
         from tools.precise_jurisdiction_detector import load_jurisdictions
+
         jurisdictions = load_jurisdictions()
         jurisdiction_names = [j["name"] for j in jurisdictions if j["name"]]
 
         # Find the index of the detected jurisdiction, default to first if not found
         try:
-            default_jurisdiction_index = jurisdiction_names.index(jurisdiction_name) if jurisdiction_name in jurisdiction_names else 0
+            default_jurisdiction_index = (
+                jurisdiction_names.index(jurisdiction_name) if jurisdiction_name in jurisdiction_names else 0
+            )
         except (ValueError, AttributeError):
             default_jurisdiction_index = 0
 
         # Legal system override
-        legal_system_options = [
-            "Civil-law jurisdiction",
-            "Common-law jurisdiction",
-            "Unknown legal system"
-        ]
+        legal_system_options = ["Civil-law jurisdiction", "Common-law jurisdiction", "Unknown legal system"]
 
         # Find the index of the detected legal system, default to last (Unknown) if not found
         try:
-            default_legal_system_index = legal_system_options.index(legal_system) if legal_system in legal_system_options else len(legal_system_options) - 1
+            default_legal_system_index = (
+                legal_system_options.index(legal_system)
+                if legal_system in legal_system_options
+                else len(legal_system_options) - 1
+            )
         except (ValueError, AttributeError):
             default_legal_system_index = len(legal_system_options) - 1
 
@@ -114,7 +118,7 @@ def render_jurisdiction_detection(full_text: str):
             index=default_jurisdiction_index,
             key="jurisdiction_manual_select",
             help="Select a different jurisdiction if the detection was incorrect",
-            disabled=is_confirmed
+            disabled=is_confirmed,
         )
 
         selected_legal_system = st.selectbox(
@@ -123,7 +127,7 @@ def render_jurisdiction_detection(full_text: str):
             index=default_legal_system_index,
             key="legal_system_manual_select",
             help="Override the legal system classification if needed",
-            disabled=is_confirmed
+            disabled=is_confirmed,
         )
 
         # Only show the Confirm button if not yet confirmed
@@ -134,9 +138,7 @@ def render_jurisdiction_detection(full_text: str):
                     # Find the selected jurisdiction data
                     selected_data = next((j for j in jurisdictions if j["name"] == selected_jurisdiction), None)
                     if selected_data:
-                        st.session_state["jurisdiction_manual_override"] = {
-                            "jurisdiction_name": selected_data["name"]
-                        }
+                        st.session_state["jurisdiction_manual_override"] = {"jurisdiction_name": selected_data["name"]}
 
                 # Update legal system if changed
                 if selected_legal_system != legal_system:
@@ -150,6 +152,7 @@ def render_jurisdiction_detection(full_text: str):
             st.success("✓ Jurisdiction confirmed")
 
     return st.session_state.get("precise_jurisdiction_confirmed", False)
+
 
 def get_final_jurisdiction_data():
     """
@@ -165,7 +168,7 @@ def get_final_jurisdiction_data():
             "jurisdiction_name": override_data["jurisdiction_name"],
             "legal_system_type": st.session_state.get("legal_system_type"),
             "confidence": "manual_override",
-            "evaluation_score": st.session_state.get("precise_jurisdiction_eval_score")
+            "evaluation_score": st.session_state.get("precise_jurisdiction_eval_score"),
         }
     else:
         # Use detected data (now just a string)
@@ -174,5 +177,5 @@ def get_final_jurisdiction_data():
             "jurisdiction_name": jurisdiction_name,
             "legal_system_type": st.session_state.get("legal_system_type"),
             "confidence": "auto_detected",
-            "evaluation_score": st.session_state.get("precise_jurisdiction_eval_score")
+            "evaluation_score": st.session_state.get("precise_jurisdiction_eval_score"),
         }

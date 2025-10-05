@@ -3,12 +3,15 @@
 Identifies the precise jurisdiction from court decision text using the jurisdictions.csv database.
 """
 
+import asyncio
 import csv
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
-import config
+from agents import Agent, Runner
+
 from models.classification_models import JurisdictionOutput
 from prompts.precise_jurisdiction_detection_prompt import PRECISE_JURISDICTION_DETECTION_PROMPT
 
@@ -18,6 +21,16 @@ from .jurisdiction_detector import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _run_agent_sync(agent: Agent, prompt: str):
+    """Helper function to run an agent synchronously in Streamlit context."""
+
+    async def run_agent_async():
+        result = await Runner.run(agent, prompt)
+        return result.final_output
+
+    return asyncio.run(run_agent_async())
 
 
 def _coerce_to_text(content: Any) -> str:
@@ -89,7 +102,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
             "legal_system_type": "Unknown",
             "jurisdiction_code": "UNK",
             "confidence": "low",
-            "reasoning": "Text too short for analysis"
+            "reasoning": "Text too short for analysis",
         }
 
     jurisdiction_list = create_jurisdiction_list()
@@ -104,13 +117,15 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
         system_prompt = "You are an expert in legal systems and court jurisdictions worldwide. Analyze the court decision and identify the precise jurisdiction, legal system type, and provide your confidence level and reasoning."
 
         # Create and run agent
-        agent = config.create_agent(
+        selected_model = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        agent = Agent(
             name="JurisdictionDetector",
             instructions=system_prompt,
             output_type=JurisdictionOutput,
-            model=model,
+            model=selected_model,
         )
-        result = config.run_agent(agent, prompt)
+
+        result = asyncio.run(Runner.run(agent, prompt)).final_output
 
         jurisdiction_name = result.precise_jurisdiction
         legal_system_type = result.legal_system_type
@@ -132,7 +147,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
                         "legal_system_type": legal_system_type,
                         "jurisdiction_code": jurisdiction["code"],
                         "confidence": confidence,
-                        "reasoning": reasoning
+                        "reasoning": reasoning,
                     }
 
             # Try partial match
@@ -146,7 +161,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
                         "legal_system_type": legal_system_type,
                         "jurisdiction_code": jurisdiction["code"],
                         "confidence": confidence * 0.9,  # Reduce confidence slightly for partial match
-                        "reasoning": reasoning + " (partial match)"
+                        "reasoning": reasoning + " (partial match)",
                     }
 
             # If we have a reasonable jurisdiction name but it's not in our list
@@ -156,7 +171,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
                     "legal_system_type": legal_system_type,
                     "jurisdiction_code": jurisdiction_code if jurisdiction_code != "UNK" else "N/A",
                     "confidence": confidence * 0.8,  # Reduce confidence for unknown jurisdiction
-                    "reasoning": reasoning + " (not in standard jurisdiction list)"
+                    "reasoning": reasoning + " (not in standard jurisdiction list)",
                 }
 
         return {
@@ -164,7 +179,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
             "legal_system_type": "Unknown",
             "jurisdiction_code": "UNK",
             "confidence": 0.0,
-            "reasoning": "Could not identify jurisdiction from the text"
+            "reasoning": "Could not identify jurisdiction from the text",
         }
 
     except Exception as e:
@@ -174,5 +189,5 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
             "legal_system_type": "Unknown",
             "jurisdiction_code": "UNK",
             "confidence": 0.0,
-            "reasoning": f"Error during detection: {str(e)}"
+            "reasoning": f"Error during detection: {str(e)}",
         }

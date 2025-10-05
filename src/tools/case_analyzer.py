@@ -1,12 +1,14 @@
+import asyncio
 import json
 import logging
+import os
 import time
 from collections.abc import Sequence
 from typing import Any
 
 import logfire
+from agents import Agent, Runner
 
-import config
 from models.analysis_models import (
     AbstractOutput,
     ColIssueOutput,
@@ -77,13 +79,14 @@ def relevant_facts(state):
         system_prompt = get_system_prompt_for_analysis(state)
 
         # Create and run agent
-        agent = config.create_agent(
+        selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        agent = Agent(
             name="RelevantFactsExtractor",
             instructions=system_prompt,
             output_type=RelevantFactsOutput,
-            model=state.get("model"),
+            model=selected_model,
         )
-        result = config.run_agent(agent, prompt)
+        result = asyncio.run(Runner.run(agent, prompt)).final_output
         facts_time = time.time() - start_time
         facts = result.relevant_facts
         confidence = result.confidence
@@ -121,13 +124,14 @@ def pil_provisions(state):
         system_prompt = get_system_prompt_for_analysis(state)
 
         # Create and run agent
-        agent = config.create_agent(
+        selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        agent = Agent(
             name="PILProvisionsExtractor",
             instructions=system_prompt,
             output_type=PILProvisionsOutput,
-            model=state.get("model"),
+            model=selected_model,
         )
-        result = config.run_agent(agent, prompt)
+        result = asyncio.run(Runner.run(agent, prompt)).final_output
         provisions_time = time.time() - start_time
         pil_provisions = result.pil_provisions
         confidence = result.confidence
@@ -171,20 +175,23 @@ def col_issue(state):
         logger.debug("Themes list for classification: %s", themes_list)
         classification_definitions = filter_themes_by_list(themes_list)
 
-        prompt = COL_ISSUE_PROMPT.format(text=text, col_section=col_section, classification_definitions=classification_definitions)
+        prompt = COL_ISSUE_PROMPT.format(
+            text=text, col_section=col_section, classification_definitions=classification_definitions
+        )
         logger.debug("Prompting agent with: %s", prompt)
         start_time = time.time()
 
         system_prompt = get_system_prompt_for_analysis(state)
 
         # Create and run agent
-        agent = config.create_agent(
+        selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        agent = Agent(
             name="ColIssueExtractor",
             instructions=system_prompt,
             output_type=ColIssueOutput,
-            model=state.get("model"),
+            model=selected_model,
         )
-        result = config.run_agent(agent, prompt)
+        result = asyncio.run(Runner.run(agent, prompt)).final_output
         issue_time = time.time() - start_time
         col_issue_text = result.col_issue
         confidence = result.confidence
@@ -234,13 +241,14 @@ def courts_position(state):
     system_prompt = get_system_prompt_for_analysis(state)
 
     # Create and run agent
-    agent = config.create_agent(
+    selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+    agent = Agent(
         name="CourtsPositionAnalyzer",
         instructions=system_prompt,
         output_type=CourtsPositionOutput,
-        model=state.get("model"),
+        model=selected_model,
     )
-    result = config.run_agent(agent, prompt)
+    result = asyncio.run(Runner.run(agent, prompt)).final_output
     position_time = time.time() - start_time
     courts_position_text = result.courts_position
     confidence = result.confidence
@@ -274,13 +282,14 @@ def obiter_dicta(state):
     system_prompt = get_system_prompt_for_analysis(state)
 
     # Create and run agent
-    agent = config.create_agent(
+    selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+    agent = Agent(
         name="ObiterDictaExtractor",
         instructions=system_prompt,
         output_type=ObiterDictaOutput,
-        model=state.get("model"),
+        model=selected_model,
     )
-    result = config.run_agent(agent, prompt)
+    result = asyncio.run(Runner.run(agent, prompt)).final_output
     obiter = result.obiter_dicta
     confidence = result.confidence
     reasoning = result.reasoning
@@ -312,13 +321,14 @@ def dissenting_opinions(state):
     system_prompt = get_system_prompt_for_analysis(state)
 
     # Create and run agent
-    agent = config.create_agent(
+    selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+    agent = Agent(
         name="DissentingOpinionsExtractor",
         instructions=system_prompt,
         output_type=DissentingOpinionsOutput,
-        model=state.get("model"),
+        model=selected_model,
     )
-    result = config.run_agent(agent, prompt)
+    result = asyncio.run(Runner.run(agent, prompt)).final_output
     dissent = result.dissenting_opinions
     confidence = result.confidence
     reasoning = result.reasoning
@@ -369,13 +379,14 @@ def abstract(state):
         system_prompt = get_system_prompt_for_analysis(state)
 
         # Create and run agent
-        agent = config.create_agent(
+        selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        agent = Agent(
             name="AbstractGenerator",
             instructions=system_prompt,
             output_type=AbstractOutput,
-            model=state.get("model"),
+            model=selected_model,
         )
-        result = config.run_agent(agent, prompt)
+        result = asyncio.run(Runner.run(agent, prompt)).final_output
         abstract_time = time.time() - start_time
         abstract_text = result.abstract
         confidence = result.confidence
