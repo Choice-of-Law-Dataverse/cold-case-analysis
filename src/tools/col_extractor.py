@@ -77,5 +77,4 @@ def extract_col_section(state):
             "col_section_confidence": state["col_section_confidence"],
             "col_section_reasoning": state["col_section_reasoning"],
             "col_section_feedback": state.get("col_section_feedback", []),
-            "col_section_time": col_time,
         }

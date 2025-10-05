@@ -101,7 +101,6 @@ def relevant_facts(state):
             "relevant_facts": state["relevant_facts"],
             "relevant_facts_confidence": state["relevant_facts_confidence"],
             "relevant_facts_reasoning": state["relevant_facts_reasoning"],
-            "relevant_facts_time": facts_time,
         }
 
 
@@ -145,7 +144,6 @@ def pil_provisions(state):
             "pil_provisions": state["pil_provisions"],
             "pil_provisions_confidence": state["pil_provisions_confidence"],
             "pil_provisions_reasoning": state["pil_provisions_reasoning"],
-            "pil_provisions_time": provisions_time,
         }
 
 
@@ -204,7 +202,6 @@ def col_issue(state):
             "col_issue": state["col_issue"],
             "col_issue_confidence": state["col_issue_confidence"],
             "col_issue_reasoning": state["col_issue_reasoning"],
-            "col_issue_time": issue_time,
         }
 
 
@@ -259,7 +256,6 @@ def courts_position(state):
         "courts_position": state["courts_position"],
         "courts_position_confidence": state["courts_position_confidence"],
         "courts_position_reasoning": state["courts_position_reasoning"],
-        "courts_position_time": position_time,
     }
 
 
@@ -395,5 +391,4 @@ def abstract(state):
             "abstract": state["abstract"],
             "abstract_confidence": state["abstract_confidence"],
             "abstract_reasoning": state["abstract_reasoning"],
-            "abstract_time": abstract_time,
         }
