@@ -23,31 +23,6 @@ from utils.themes_extractor import filter_themes_by_list
 logger = logging.getLogger(__name__)
 
 
-def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
-    """
-    Call OpenAI API with structured outputs using Pydantic models.
-
-    Args:
-        prompt: The user prompt
-        system_prompt: The system prompt
-        response_format: Pydantic model class for structured output
-        model: Optional model override
-
-    Returns:
-        Parsed response object matching the response_format
-    """
-    client, selected_model = config.get_openai_client(model)
-    completion = client.beta.chat.completions.parse(
-        model=selected_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
-        ],
-        response_format=response_format,
-    )
-    return completion.choices[0].message.parsed
-
-
 def _ensure_text(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -96,18 +71,25 @@ def relevant_facts(state):
         if sections:
             col_section = sections[-1]
         prompt = FACTS_PROMPT.format(text=text, col_section=col_section)
-        logger.debug("Prompting LLM with: %s", prompt)
+        logger.debug("Prompting agent with: %s", prompt)
         start_time = time.time()
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        result = _call_openai_structured(prompt, system_prompt, RelevantFactsOutput, state.get("model"))
+        # Create and run agent
+        agent = config.create_agent(
+            name="RelevantFactsExtractor",
+            instructions=system_prompt,
+            output_type=RelevantFactsOutput,
+            model=state.get("model"),
+        )
+        result = config.run_agent(agent, prompt)
         facts_time = time.time() - start_time
         facts = result.relevant_facts
         confidence = result.confidence
         reasoning = result.reasoning
 
-        logger.debug("Relevant Facts: %s (confidence: %.2f)", facts, confidence)
+        logger.debug("Relevant Facts: %s (confidence: %s)", facts, confidence)
         state.setdefault("relevant_facts", []).append(facts)
         state.setdefault("relevant_facts_confidence", []).append(confidence)
         state.setdefault("relevant_facts_reasoning", []).append(reasoning)
@@ -133,18 +115,25 @@ def pil_provisions(state):
         if sections:
             col_section = sections[-1]
         prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=col_section)
-        logger.debug("Prompting LLM with: %s", prompt)
+        logger.debug("Prompting agent with: %s", prompt)
         start_time = time.time()
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        result = _call_openai_structured(prompt, system_prompt, PILProvisionsOutput, state.get("model"))
+        # Create and run agent
+        agent = config.create_agent(
+            name="PILProvisionsExtractor",
+            instructions=system_prompt,
+            output_type=PILProvisionsOutput,
+            model=state.get("model"),
+        )
+        result = config.run_agent(agent, prompt)
         provisions_time = time.time() - start_time
         pil_provisions = result.pil_provisions
         confidence = result.confidence
         reasoning = result.reasoning
 
-        logger.debug("PIL Provisions: %s (confidence: %.2f)", pil_provisions, confidence)
+        logger.debug("PIL Provisions: %s (confidence: %s)", pil_provisions, confidence)
         state.setdefault("pil_provisions", []).append(pil_provisions)
         state.setdefault("pil_provisions_confidence", []).append(confidence)
         state.setdefault("pil_provisions_reasoning", []).append(reasoning)
@@ -183,18 +172,25 @@ def col_issue(state):
         classification_definitions = filter_themes_by_list(themes_list)
 
         prompt = COL_ISSUE_PROMPT.format(text=text, col_section=col_section, classification_definitions=classification_definitions)
-        logger.debug("Prompting LLM with: %s", prompt)
+        logger.debug("Prompting agent with: %s", prompt)
         start_time = time.time()
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        result = _call_openai_structured(prompt, system_prompt, ColIssueOutput, state.get("model"))
+        # Create and run agent
+        agent = config.create_agent(
+            name="ColIssueExtractor",
+            instructions=system_prompt,
+            output_type=ColIssueOutput,
+            model=state.get("model"),
+        )
+        result = config.run_agent(agent, prompt)
         issue_time = time.time() - start_time
         col_issue_text = result.col_issue
         confidence = result.confidence
         reasoning = result.reasoning
 
-        logger.debug("Choice of Law Issue: %s (confidence: %.2f)", col_issue_text, confidence)
+        logger.debug("Choice of Law Issue: %s (confidence: %s)", col_issue_text, confidence)
         state.setdefault("col_issue", []).append(col_issue_text)
         state.setdefault("col_issue_confidence", []).append(confidence)
         state.setdefault("col_issue_reasoning", []).append(reasoning)
@@ -232,18 +228,25 @@ def courts_position(state):
     prompt = COURTS_POSITION_PROMPT.format(
         col_issue=col_issue, text=text, col_section=col_section, classification=classification
     )
-    logger.debug("Prompting LLM with: %s", prompt)
+    logger.debug("Prompting agent with: %s", prompt)
     start_time = time.time()
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    result = _call_openai_structured(prompt, system_prompt, CourtsPositionOutput, state.get("model"))
+    # Create and run agent
+    agent = config.create_agent(
+        name="CourtsPositionAnalyzer",
+        instructions=system_prompt,
+        output_type=CourtsPositionOutput,
+        model=state.get("model"),
+    )
+    result = config.run_agent(agent, prompt)
     position_time = time.time() - start_time
     courts_position_text = result.courts_position
     confidence = result.confidence
     reasoning = result.reasoning
 
-    logger.debug("Court's Position: %s (confidence: %.2f)", courts_position_text, confidence)
+    logger.debug("Court's Position: %s (confidence: %s)", courts_position_text, confidence)
     state.setdefault("courts_position", []).append(courts_position_text)
     state.setdefault("courts_position_confidence", []).append(confidence)
     state.setdefault("courts_position_reasoning", []).append(reasoning)
@@ -266,16 +269,23 @@ def obiter_dicta(state):
     classification = state.get("classification", [""])[-1]
     col_issue = state.get("col_issue", [""])[-1]
     prompt = OBITER_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    logger.debug("Prompting LLM for obiter dicta with: %s", prompt)
+    logger.debug("Prompting agent for obiter dicta with: %s", prompt)
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    result = _call_openai_structured(prompt, system_prompt, ObiterDictaOutput, state.get("model"))
+    # Create and run agent
+    agent = config.create_agent(
+        name="ObiterDictaExtractor",
+        instructions=system_prompt,
+        output_type=ObiterDictaOutput,
+        model=state.get("model"),
+    )
+    result = config.run_agent(agent, prompt)
     obiter = result.obiter_dicta
     confidence = result.confidence
     reasoning = result.reasoning
 
-    logger.debug("Obiter Dicta: %s (confidence: %.2f)", obiter, confidence)
+    logger.debug("Obiter Dicta: %s (confidence: %s)", obiter, confidence)
     state.setdefault("obiter_dicta", []).append(obiter)
     state.setdefault("obiter_dicta_confidence", []).append(confidence)
     state.setdefault("obiter_dicta_reasoning", []).append(reasoning)
@@ -297,16 +307,23 @@ def dissenting_opinions(state):
     classification = state.get("classification", [""])[-1]
     col_issue = state.get("col_issue", [""])[-1]
     prompt = DISSENT_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    logger.debug("Prompting LLM for dissenting opinions with: %s", prompt)
+    logger.debug("Prompting agent for dissenting opinions with: %s", prompt)
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    result = _call_openai_structured(prompt, system_prompt, DissentingOpinionsOutput, state.get("model"))
+    # Create and run agent
+    agent = config.create_agent(
+        name="DissentingOpinionsExtractor",
+        instructions=system_prompt,
+        output_type=DissentingOpinionsOutput,
+        model=state.get("model"),
+    )
+    result = config.run_agent(agent, prompt)
     dissent = result.dissenting_opinions
     confidence = result.confidence
     reasoning = result.reasoning
 
-    logger.debug("Dissenting Opinions: %s (confidence: %.2f)", dissent, confidence)
+    logger.debug("Dissenting Opinions: %s (confidence: %s)", dissent, confidence)
     state.setdefault("dissenting_opinions", []).append(dissent)
     state.setdefault("dissenting_opinions_confidence", []).append(confidence)
     state.setdefault("dissenting_opinions_reasoning", []).append(reasoning)
@@ -346,18 +363,25 @@ def abstract(state):
             prompt_vars.update({"obiter_dicta": obiter_dicta, "dissenting_opinions": dissenting_opinions})
 
         prompt = ABSTRACT_PROMPT.format(**prompt_vars)
-        logger.debug("Prompting LLM with: %s", prompt)
+        logger.debug("Prompting agent with: %s", prompt)
         start_time = time.time()
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        result = _call_openai_structured(prompt, system_prompt, AbstractOutput, state.get("model"))
+        # Create and run agent
+        agent = config.create_agent(
+            name="AbstractGenerator",
+            instructions=system_prompt,
+            output_type=AbstractOutput,
+            model=state.get("model"),
+        )
+        result = config.run_agent(agent, prompt)
         abstract_time = time.time() - start_time
         abstract_text = result.abstract
         confidence = result.confidence
         reasoning = result.reasoning
 
-        logger.debug("Abstract: %s (confidence: %.2f)", abstract_text, confidence)
+        logger.debug("Abstract: %s (confidence: %s)", abstract_text, confidence)
         state.setdefault("abstract", []).append(abstract_text)
         state.setdefault("abstract_confidence", []).append(confidence)
         state.setdefault("abstract_reasoning", []).append(reasoning)

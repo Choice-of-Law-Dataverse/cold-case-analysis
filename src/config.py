@@ -4,6 +4,7 @@ import os
 import uuid
 
 import logfire
+from agents import Agent, Runner
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
@@ -47,6 +48,43 @@ def get_openai_client(model: str | None = None):
     """
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
     return OpenAI(), selected
+
+
+def create_agent(name: str, instructions: str, output_type: type, model: str | None = None):
+    """
+    Create an OpenAI Agent with structured output.
+
+    Args:
+        name: Name of the agent
+        instructions: System instructions for the agent
+        output_type: Pydantic model for structured output
+        model: Optional model override
+
+    Returns:
+        Agent instance configured for structured output
+    """
+    selected_model = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+    return Agent(
+        name=name,
+        instructions=instructions,
+        output_type=output_type,
+        model=selected_model,
+    )
+
+
+def run_agent(agent: Agent, prompt: str):
+    """
+    Run an agent with the given prompt and return the structured output.
+
+    Args:
+        agent: Agent instance
+        prompt: User prompt
+
+    Returns:
+        Parsed output from the agent
+    """
+    result = Runner.run(agent, prompt)
+    return result.final_output
 
 
 # default llm instance (legacy)

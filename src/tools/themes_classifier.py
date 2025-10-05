@@ -15,20 +15,6 @@ from utils.themes_extractor import THEMES_TABLE_STR
 logger = logging.getLogger(__name__)
 
 
-def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
-    """Call OpenAI API with structured outputs using Pydantic models."""
-    client, selected_model = config.get_openai_client(model)
-    completion = client.beta.chat.completions.parse(
-        model=selected_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
-        ],
-        response_format=response_format,
-    )
-    return completion.choices[0].message.parsed
-
-
 def _coerce_to_text(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -69,17 +55,24 @@ def theme_classification_node(state):
 
         max_attempts = 5
         cls_list: list[str] = []
-        confidence = 0.0
+        confidence = "low"
         reasoning = ""
         theme_time = 0.0
 
         for attempt in range(1, max_attempts + 1):
-            logger.debug("Prompting LLM (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
+            logger.debug("Prompting agent (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
             start_time = time.time()
 
             system_prompt = get_system_prompt_for_analysis(state)
 
-            result = _call_openai_structured(prompt, system_prompt, ThemeClassificationOutput, state.get("model"))
+            # Create and run agent
+            agent = config.create_agent(
+                name="ThemeClassifier",
+                instructions=system_prompt,
+                output_type=ThemeClassificationOutput,
+                model=state.get("model"),
+            )
+            result = config.run_agent(agent, prompt)
             theme_time = time.time() - start_time
 
             cls_list = result.themes

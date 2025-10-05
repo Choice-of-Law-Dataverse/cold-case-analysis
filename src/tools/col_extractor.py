@@ -12,20 +12,6 @@ from utils.system_prompt_generator import get_system_prompt_for_analysis
 logger = logging.getLogger(__name__)
 
 
-def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
-    """Call OpenAI API with structured outputs using Pydantic models."""
-    client, selected_model = config.get_openai_client(model)
-    completion = client.beta.chat.completions.parse(
-        model=selected_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
-        ],
-        response_format=response_format,
-    )
-    return completion.choices[0].message.parsed
-
-
 def _coerce_to_text(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -58,12 +44,19 @@ def extract_col_section(state):
         if feedback:
             last_fb = feedback[-1]
             prompt += f"\n\nFeedback: {last_fb}\n"
-        logger.debug("Prompting LLM with: %s", prompt)
+        logger.debug("Prompting agent with: %s", prompt)
         start_time = time.time()
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        result = _call_openai_structured(prompt, system_prompt, ColSectionOutput, state.get("model"))
+        # Create and run agent
+        agent = config.create_agent(
+            name="ColSectionExtractor",
+            instructions=system_prompt,
+            output_type=ColSectionOutput,
+            model=state.get("model"),
+        )
+        result = config.run_agent(agent, prompt)
         col_time = time.time() - start_time
         col_section = result.col_section.strip()
         confidence = result.confidence
@@ -72,7 +65,7 @@ def extract_col_section(state):
         state.setdefault("col_section", []).append(col_section)
         state.setdefault("col_section_confidence", []).append(confidence)
         state.setdefault("col_section_reasoning", []).append(reasoning)
-        logger.debug("Extracted Choice of Law section: %s (confidence: %.2f)", col_section, confidence)
+        logger.debug("Extracted Choice of Law section: %s (confidence: %s)", col_section, confidence)
 
         logfire.info("Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time, confidence=confidence)
         return {

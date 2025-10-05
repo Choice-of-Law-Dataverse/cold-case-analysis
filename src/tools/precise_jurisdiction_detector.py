@@ -20,20 +20,6 @@ from .jurisdiction_detector import (
 logger = logging.getLogger(__name__)
 
 
-def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
-    """Call OpenAI API with structured outputs using Pydantic models."""
-    client, selected_model = config.get_openai_client(model)
-    completion = client.beta.chat.completions.parse(
-        model=selected_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
-        ],
-        response_format=response_format,
-    )
-    return completion.choices[0].message.parsed
-
-
 def _coerce_to_text(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -102,7 +88,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
             "jurisdiction_name": "Unknown",
             "legal_system_type": "Unknown",
             "jurisdiction_code": "UNK",
-            "confidence": 0.0,
+            "confidence": "low",
             "reasoning": "Text too short for analysis"
         }
 
@@ -112,12 +98,19 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
         jurisdiction_list=jurisdiction_list,
         text=text[:5000],
     )
-    logger.debug("Prompting LLM with structured output for jurisdiction detection")
+    logger.debug("Prompting agent with structured output for jurisdiction detection")
 
     try:
         system_prompt = "You are an expert in legal systems and court jurisdictions worldwide. Analyze the court decision and identify the precise jurisdiction, legal system type, and provide your confidence level and reasoning."
 
-        result = _call_openai_structured(prompt, system_prompt, JurisdictionOutput, model)
+        # Create and run agent
+        agent = config.create_agent(
+            name="JurisdictionDetector",
+            instructions=system_prompt,
+            output_type=JurisdictionOutput,
+            model=model,
+        )
+        result = config.run_agent(agent, prompt)
 
         jurisdiction_name = result.precise_jurisdiction
         legal_system_type = result.legal_system_type
