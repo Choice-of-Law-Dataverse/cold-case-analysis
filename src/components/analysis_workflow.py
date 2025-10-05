@@ -3,6 +3,7 @@
 Analysis workflow components for the CoLD Case Analyzer.
 """
 
+import json
 import logging
 
 import streamlit as st
@@ -380,7 +381,6 @@ def render_final_editing_phase(state):
                 st.markdown(chips_html, unsafe_allow_html=True)
 
                 # Provide text area with JSON for editing
-                import json
 
                 edit_value = json.dumps(current_value, indent=2)
             else:
@@ -400,8 +400,6 @@ def render_final_editing_phase(state):
             if name == "pil_provisions":
                 # Try to parse JSON for PIL provisions
                 try:
-                    import json
-
                     parsed = json.loads(edited_value)
                     state[name][-1] = parsed
                     state[f"{name}_edited"] = parsed
