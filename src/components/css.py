@@ -287,7 +287,19 @@ def load_css():
         left: 0;
     }
 
-
+    /* Animated clip for indeterminate progress */
+    @keyframes clipAnimation {
+        0% {
+            width: 0%;
+        }
+        100% {
+            width: 100%;
+        }
+    }
+    
+    .animated-clip {
+        animation: clipAnimation 2s ease-in-out infinite;
+    }
 
     /* Adjust main content to account for banner */
     .main .block-container {

@@ -38,42 +38,37 @@ def show_progress_banner(message, progress=None):
                             <clipPath id="progressClip">
                                 <rect x="0" y="0" width="{clip_percent}%" height="60"/>
                             </clipPath>
-                            <linearGradient id="pipeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:rgba(255,255,255,0.5);stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:rgba(255,255,255,0.8);stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:rgba(255,255,255,0.5);stop-opacity:1" />
-                            </linearGradient>
-                            <linearGradient id="pipeGradientFilled" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:rgba(255,255,255,0.7);stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:rgba(255,255,255,1);stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:rgba(255,255,255,0.7);stop-opacity:1" />
-                            </linearGradient>
                         </defs>
-                        <!-- Background pipe (light) with treasure map style path -->
-                        <path d="M 8,30 Q 15,15 25,25 Q 30,30 35,35 Q 40,42 50,38 Q 55,36 58,30 Q 62,20 70,25 Q 75,28 78,35 Q 82,45 90,40 Q 95,37 98,30 Q 102,20 108,25 L 112,28"
-                              stroke="url(#pipeGradient)"
-                              stroke-width="8"
+                        <!-- Green dots at both ends -->
+                        <circle cx="8" cy="30" r="6" fill="#4CAF50"/>
+                        <circle cx="112" cy="30" r="6" fill="#4CAF50"/>
+                        <!-- Background double line (semi-transparent white) -->
+                        <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                              stroke="rgba(255,255,255,0.3)"
+                              stroke-width="2"
                               fill="none"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
+                              vector-effect="non-scaling-stroke"/>
+                        <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                              stroke="rgba(255,255,255,0.3)"
+                              stroke-width="2"
+                              fill="none"
                               vector-effect="non-scaling-stroke"
-                              opacity="0.4"/>
-                        <!-- Green circular dots at ends (background) -->
-                        <circle cx="8" cy="30" r="4" fill="rgba(76, 175, 80, 0.4)"/>
-                        <circle cx="112" cy="28" r="4" fill="rgba(76, 175, 80, 0.4)"/>
-                        <!-- Progress pipe (white) with clipping -->
+                              transform="translate(0, 3)"/>
+                        <!-- Progress double line (white) with clipping -->
                         <g clip-path="url(#progressClip)">
-                            <path d="M 8,30 Q 15,15 25,25 Q 30,30 35,35 Q 40,42 50,38 Q 55,36 58,30 Q 62,20 70,25 Q 75,28 78,35 Q 82,45 90,40 Q 95,37 98,30 Q 102,20 108,25 L 112,28"
-                                  stroke="url(#pipeGradientFilled)"
-                                  stroke-width="8"
+                            <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                                  stroke="white"
+                                  stroke-width="2"
                                   fill="none"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
                                   vector-effect="non-scaling-stroke"
                                   style="transition: opacity 0.5s ease-out;"/>
-                            <!-- Green circular dots at ends (filled) -->
-                            <circle cx="8" cy="30" r="4" fill="#4CAF50"/>
-                            <circle cx="112" cy="28" r="4" fill="#4CAF50"/>
+                            <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                                  stroke="white"
+                                  stroke-width="2"
+                                  fill="none"
+                                  vector-effect="non-scaling-stroke"
+                                  transform="translate(0, 3)"
+                                  style="transition: opacity 0.5s ease-out;"/>
                         </g>
                     </svg>
                 </div>
@@ -88,24 +83,39 @@ def show_progress_banner(message, progress=None):
                 <div class="progress-banner-bar-container">
                     <svg viewBox="0 0 120 60" preserveAspectRatio="none">
                         <defs>
-                            <linearGradient id="pipeGradientStatic" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:rgba(255,255,255,0.5);stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:rgba(255,255,255,0.8);stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:rgba(255,255,255,0.5);stop-opacity:1" />
-                            </linearGradient>
+                            <clipPath id="progressClipAnimated">
+                                <rect x="0" y="0" width="100%" height="60" class="animated-clip"/>
+                            </clipPath>
                         </defs>
-                        <!-- Background pipe with treasure map style path -->
-                        <path d="M 8,30 Q 15,15 25,25 Q 30,30 35,35 Q 40,42 50,38 Q 55,36 58,30 Q 62,20 70,25 Q 75,28 78,35 Q 82,45 90,40 Q 95,37 98,30 Q 102,20 108,25 L 112,28"
-                              stroke="url(#pipeGradientStatic)"
-                              stroke-width="8"
+                        <!-- Green dots at both ends -->
+                        <circle cx="8" cy="30" r="6" fill="#4CAF50"/>
+                        <circle cx="112" cy="30" r="6" fill="#4CAF50"/>
+                        <!-- Background double line (semi-transparent white) -->
+                        <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                              stroke="rgba(255,255,255,0.3)"
+                              stroke-width="2"
                               fill="none"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
+                              vector-effect="non-scaling-stroke"/>
+                        <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                              stroke="rgba(255,255,255,0.3)"
+                              stroke-width="2"
+                              fill="none"
                               vector-effect="non-scaling-stroke"
-                              opacity="0.4"/>
-                        <!-- Green circular dots at ends -->
-                        <circle cx="8" cy="30" r="4" fill="rgba(76, 175, 80, 0.4)"/>
-                        <circle cx="112" cy="28" r="4" fill="rgba(76, 175, 80, 0.4)"/>
+                              transform="translate(0, 3)"/>
+                        <!-- Animated progress double line (white) -->
+                        <g clip-path="url(#progressClipAnimated)">
+                            <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                                  stroke="white"
+                                  stroke-width="2"
+                                  fill="none"
+                                  vector-effect="non-scaling-stroke"/>
+                            <path d="M 8,30 Q 20,15 35,25 Q 50,35 65,25 Q 80,15 95,25 Q 105,30 112,30"
+                                  stroke="white"
+                                  stroke-width="2"
+                                  fill="none"
+                                  vector-effect="non-scaling-stroke"
+                                  transform="translate(0, 3)"/>
+                        </g>
                     </svg>
                 </div>
             </div>
