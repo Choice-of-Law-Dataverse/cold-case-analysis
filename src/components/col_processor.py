@@ -133,7 +133,7 @@ def render_edit_section(col_state):
     add_confidence_chip_css()
 
     last_extraction = col_state.get("col_section", [""])[-1]
-    confidence = col_state.get("col_section_confidence", [0.0])[-1] if col_state.get("col_section_confidence") else 0.0
+    confidence = col_state.get("col_section_confidence", [])[-1] if col_state.get("col_section_confidence") else None
     reasoning = col_state.get("col_section_reasoning", [""])[-1] if col_state.get("col_section_reasoning") else "No reasoning available"
 
     # Display title with confidence chip
@@ -141,7 +141,7 @@ def render_edit_section(col_state):
     with col1:
         st.markdown("### Edit extracted Choice of Law section")
     with col2:
-        if confidence > 0:
+        if confidence:
             render_confidence_chip(confidence, reasoning, "col_extraction")
 
     # Use custom CSS to set height with min and max

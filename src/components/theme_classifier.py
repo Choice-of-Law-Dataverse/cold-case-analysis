@@ -54,7 +54,7 @@ def handle_theme_editing(state, last_theme, valid_themes):
     add_confidence_chip_css()
 
     # Get confidence and reasoning
-    confidence = state.get("classification_confidence", [0.0])[-1] if state.get("classification_confidence") else 0.0
+    confidence = state.get("classification_confidence", [])[-1] if state.get("classification_confidence") else None
     reasoning = state.get("classification_reasoning", [""])[-1] if state.get("classification_reasoning") else "No reasoning available"
 
     # Display title with confidence chip
@@ -62,7 +62,7 @@ def handle_theme_editing(state, last_theme, valid_themes):
     with col1:
         st.markdown("### Theme Classification")
     with col2:
-        if confidence > 0:
+        if confidence:
             render_confidence_chip(confidence, reasoning, "theme_classification")
 
     # Parse default selection and filter to only include valid themes

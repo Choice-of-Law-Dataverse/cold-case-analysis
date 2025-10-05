@@ -386,7 +386,7 @@ def render_final_editing_phase(state):
         reasoning_key = f"{name}_reasoning"
         confidence_list = state.get(confidence_key, [])
         reasoning_list = state.get(reasoning_key, [])
-        confidence = confidence_list[-1] if confidence_list else 0.0
+        confidence = confidence_list[-1] if confidence_list else None
         reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
 
         # Display title with confidence chip
@@ -394,7 +394,7 @@ def render_final_editing_phase(state):
         with col1:
             st.markdown(f"**{display_name}**")
         with col2:
-            if confidence > 0:
+            if confidence:
                 render_confidence_chip(confidence, reasoning, f"analysis_{name}")
 
         # Special handling for PIL provisions display

@@ -71,14 +71,14 @@ def render_jurisdiction_detection(full_text: str):
 
         jurisdiction_name = st.session_state["precise_jurisdiction"]  # Now this is just a string
         legal_system = st.session_state["legal_system_type"]
-        confidence = st.session_state.get("jurisdiction_confidence", 0.0)
+        confidence = st.session_state.get("jurisdiction_confidence", None)
         reasoning = st.session_state.get("jurisdiction_reasoning", "No reasoning available")
 
         # Display results in an attractive format
         st.markdown("### Jurisdiction Detection Results")
 
         # Display confidence chip if we have confidence data
-        if confidence > 0:
+        if confidence:
             render_confidence_chip(confidence, reasoning, "jurisdiction_detection")
 
         # Load all jurisdictions for selection
