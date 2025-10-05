@@ -109,26 +109,12 @@ def convert_agents_result_to_state(result) -> dict:
         # Common Law specific
         "obiter_dicta": [result.obiter_dicta.obiter_dicta] if result.obiter_dicta else [],
         "dissenting_opinions": [result.dissenting_opinions.dissenting_opinions] if result.dissenting_opinions else [],
-        # Flags
-        "analysis_ready": True,
-        "analysis_done": True,
         # Metadata
         "username": result.metadata.get("username"),
         "user_email": result.metadata.get("user_email"),
         "model": result.metadata.get("model"),
         "analysis_timestamp": result.metadata.get("analysis_timestamp"),
         "duration_seconds": result.metadata.get("duration_seconds"),
-        # Mark all steps as printed and scored
-        "relevant_facts_printed": True,
-        "relevant_facts_score_submitted": True,
-        "pil_provisions_printed": True,
-        "pil_provisions_score_submitted": True,
-        "col_issue_printed": True,
-        "col_issue_score_submitted": True,
-        "courts_position_printed": True,
-        "courts_position_score_submitted": True,
-        "abstract_printed": True,
-        "abstract_score_submitted": True,
     }
 
     # Add Common Law specific flags if applicable
@@ -141,70 +127,6 @@ def convert_agents_result_to_state(result) -> dict:
         state["dissenting_opinions_score_submitted"] = True
 
     return state
-
-
-def render_agents_workflow_button(state):
-    """
-    Render button to trigger agents workflow after jurisdiction confirmation.
-
-    Args:
-        state: Current application state
-
-    Returns:
-        str or None: 'agents' if agents workflow selected, 'traditional' if traditional selected,
-                     'waiting' if showing choice UI, None if choice already made
-    """
-    # Only show if jurisdiction is confirmed and agents workflow hasn't run yet
-    # and traditional workflow hasn't progressed too far
-    if (
-        not state.get("agents_workflow_completed", False)
-        and not state.get("col_extraction_started", False)
-        and not state.get("col_done", False)
-    ):
-        st.markdown("---")
-        st.markdown("### Choose Analysis Method")
-        st.markdown("Please select how you would like to proceed with the analysis:")
-
-        # Create two columns for the choice
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("#### 🤖 Automated Analysis")
-            st.markdown(
-                """
-                **Fast & Efficient**: Uses OpenAI Agents workflow to automatically:
-                - Extract Choice of Law sections
-                - Classify PIL themes
-                - Perform complete analysis
-                
-                ⚡ **50-67% faster** (60-90 seconds total)
-                """
-            )
-            use_agents = st.button("Use Automated Analysis", type="primary", key="use_agents_workflow_btn")
-
-        with col2:
-            st.markdown("#### 👤 Step-by-Step Analysis")
-            st.markdown(
-                """
-                **Interactive & Controlled**: Traditional workflow with human-in-the-loop at each step:
-                - Review and edit CoL sections
-                - Confirm theme classifications
-                - Approve each analysis component
-                
-                🕐 Takes approximately 3-5 minutes
-                """
-            )
-            use_traditional = st.button("Use Step-by-Step", key="use_traditional_workflow_btn")
-
-        if use_agents:
-            return "agents"
-        elif use_traditional:
-            return "traditional"
-        else:
-            # Return 'waiting' to indicate we're showing the choice UI and waiting for user input
-            return "waiting"
-
-    return None
 
 
 def execute_agents_workflow(state):
@@ -233,13 +155,6 @@ def execute_agents_workflow(state):
         # Update state with results
         state.update(agents_result)
         state["agents_workflow_completed"] = True
-        
-        # Mark that we've done COL extraction (to prevent traditional workflow from running)
-        st.session_state["col_extraction_started"] = True
-        
-        # Set flags to skip parallel execution and go straight to final editing phase
-        state["parallel_execution_started"] = True
-        state["analysis_done"] = False  # Not done yet - user needs to review/edit
 
         # Update session state
         st.session_state.col_state = state
@@ -256,3 +171,126 @@ def execute_agents_workflow(state):
         hide_progress_banner()
         st.error(f"❌ Error during automated analysis: {str(e)}")
         logger.exception("Error in agents workflow")
+
+
+def render_agents_results(state):
+    """
+    Render the agents workflow results in an editable format.
+    
+    Args:
+        state: Current application state with agents results
+    """
+    st.markdown("## Analysis Results")
+    st.markdown("Review and edit the automated analysis results below. When satisfied, click Submit to save.")
+    
+    # CoL Sections
+    st.markdown("### Choice of Law Sections")
+    col_section = st.text_area(
+        "Extracted Choice of Law sections",
+        value=state.get("col_section", [""])[0],
+        height=200,
+        key="agents_col_section_edit"
+    )
+    state["col_section"] = [col_section]
+    
+    # Themes
+    st.markdown("### PIL Themes")
+    classification = st.text_area(
+        "Classified PIL themes",
+        value=state.get("classification", [""])[0],
+        height=100,
+        key="agents_themes_edit"
+    )
+    state["classification"] = [classification]
+    
+    # Abstract
+    st.markdown("### Abstract")
+    abstract = st.text_area(
+        "Case abstract",
+        value=state.get("abstract", [""])[0],
+        height=150,
+        key="agents_abstract_edit"
+    )
+    state["abstract"] = [abstract]
+    
+    # Relevant Facts
+    st.markdown("### Relevant Facts")
+    relevant_facts = st.text_area(
+        "Relevant facts",
+        value=state.get("relevant_facts", [""])[0],
+        height=200,
+        key="agents_facts_edit"
+    )
+    state["relevant_facts"] = [relevant_facts]
+    
+    # PIL Provisions
+    st.markdown("### PIL Provisions")
+    pil_provisions_value = state.get("pil_provisions", [[]])[0]
+    if isinstance(pil_provisions_value, list):
+        pil_provisions_str = "\n".join(pil_provisions_value) if pil_provisions_value else ""
+    else:
+        pil_provisions_str = str(pil_provisions_value)
+    
+    pil_provisions = st.text_area(
+        "PIL provisions (one per line)",
+        value=pil_provisions_str,
+        height=150,
+        key="agents_provisions_edit"
+    )
+    state["pil_provisions"] = [[line.strip() for line in pil_provisions.split("\n") if line.strip()]]
+    
+    # CoL Issue
+    st.markdown("### Choice of Law Issue")
+    col_issue = st.text_area(
+        "Choice of Law issue",
+        value=state.get("col_issue", [""])[0],
+        height=150,
+        key="agents_issue_edit"
+    )
+    state["col_issue"] = [col_issue]
+    
+    # Court's Position
+    st.markdown("### Court's Position")
+    courts_position = st.text_area(
+        "Court's position",
+        value=state.get("courts_position", [""])[0],
+        height=200,
+        key="agents_position_edit"
+    )
+    state["courts_position"] = [courts_position]
+    
+    # Common Law specific (if applicable)
+    if state.get("obiter_dicta"):
+        st.markdown("### Obiter Dicta")
+        obiter_dicta = st.text_area(
+            "Obiter dicta",
+            value=state.get("obiter_dicta", [""])[0],
+            height=150,
+            key="agents_obiter_edit"
+        )
+        state["obiter_dicta"] = [obiter_dicta]
+    
+    if state.get("dissenting_opinions"):
+        st.markdown("### Dissenting Opinions")
+        dissenting_opinions = st.text_area(
+            "Dissenting opinions",
+            value=state.get("dissenting_opinions", [""])[0],
+            height=150,
+            key="agents_dissenting_edit"
+        )
+        state["dissenting_opinions"] = [dissenting_opinions]
+    
+    # Update session state
+    st.session_state.col_state = state
+    
+    # Submit button
+    st.markdown("---")
+    if st.button("Submit Analysis", type="primary", key="submit_agents_analysis"):
+        from components.database import save_analysis_to_database
+        
+        try:
+            save_analysis_to_database(state)
+            st.success("✅ Analysis saved successfully!")
+        except Exception as e:
+            st.error(f"❌ Error saving analysis: {str(e)}")
+            logger.exception("Error saving analysis")

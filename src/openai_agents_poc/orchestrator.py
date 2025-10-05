@@ -68,25 +68,32 @@ class CaseAnalysisOrchestrator:
         Args:
             case_text: The full text of the court decision
             case_citation: Citation or identifier for the case
-            case_metadata: Optional metadata about the case
+            case_metadata: Optional metadata about the case (should include jurisdiction and precise_jurisdiction)
 
         Returns:
             CompleteCaseAnalysis: Complete structured analysis of the case
         """
         logger.info("Starting case analysis for: %s", case_citation)
         start_time = datetime.now()
+        
+        case_metadata = case_metadata or {}
 
-        # Step 1: Detect jurisdiction (must be done first)
-        logger.info("Step 1: Detecting jurisdiction...")
-        jurisdiction_result = await self._detect_jurisdiction(case_text)
-        logger.info(
-            "Jurisdiction detected: %s (%s)",
-            jurisdiction_result.legal_system_type,
-            jurisdiction_result.precise_jurisdiction,
+        # Use jurisdiction from metadata (already confirmed by user via HITL)
+        jurisdiction_legal_system = case_metadata.get("jurisdiction", "Unknown")
+        jurisdiction_precise = case_metadata.get("precise_jurisdiction")
+        
+        logger.info("Using jurisdiction from HITL: %s (%s)", jurisdiction_legal_system, jurisdiction_precise)
+        
+        # Create jurisdiction result from HITL data
+        jurisdiction_result = JurisdictionDetection(
+            legal_system_type=jurisdiction_legal_system,
+            precise_jurisdiction=jurisdiction_precise,
+            confidence="high",
+            reasoning="Jurisdiction confirmed by user via human-in-the-loop"
         )
 
-        # Step 2: Run initial parallel analysis (CoL extraction, themes, relevant facts)
-        logger.info("Step 2: Running initial parallel analysis (CoL extraction, themes, facts)...")
+        # Step 1: Run initial parallel analysis (CoL extraction, themes, relevant facts)
+        logger.info("Step 1: Running initial parallel analysis (CoL extraction, themes, facts)...")
         col_extraction, themes, relevant_facts = await asyncio.gather(
             self._extract_col_sections(
                 case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction
@@ -98,8 +105,8 @@ class CaseAnalysisOrchestrator:
         )
         logger.info("Initial parallel analysis complete")
 
-        # Step 3: Run PIL provisions and CoL issue in parallel
-        logger.info("Step 3: Extracting PIL provisions and identifying CoL issue...")
+        # Step 2: Run PIL provisions and CoL issue in parallel
+        logger.info("Step 2: Extracting PIL provisions and identifying CoL issue...")
         pil_provisions, col_issue = await asyncio.gather(
             self._extract_pil_provisions(
                 case_text,
@@ -116,8 +123,8 @@ class CaseAnalysisOrchestrator:
         )
         logger.info("PIL provisions and CoL issue identified")
 
-        # Step 4: Analyze court's position
-        logger.info("Step 4: Analyzing court's position...")
+        # Step 3: Analyze court's position
+        logger.info("Step 3: Analyzing court's position...")
         courts_position = await self._analyze_courts_position(
             case_text,
             col_extraction.col_sections,
@@ -127,11 +134,11 @@ class CaseAnalysisOrchestrator:
         )
         logger.info("Court's position analyzed")
 
-        # Step 5: Extract jurisdiction-specific elements (if Common Law)
+        # Step 4: Extract jurisdiction-specific elements (if Common Law)
         obiter_dicta = None
         dissenting_opinions = None
         if "Common-law" in jurisdiction_result.legal_system_type or "Indian" in jurisdiction_result.legal_system_type:
-            logger.info("Step 5: Extracting Common Law specific elements (obiter dicta, dissenting opinions)...")
+            logger.info("Step 4: Extracting Common Law specific elements (obiter dicta, dissenting opinions)...")
             obiter_dicta, dissenting_opinions = await asyncio.gather(
                 self._extract_obiter_dicta(
                     case_text, jurisdiction_result.legal_system_type, jurisdiction_result.precise_jurisdiction
@@ -142,8 +149,8 @@ class CaseAnalysisOrchestrator:
             )
             logger.info("Common Law specific elements extracted")
 
-        # Step 6: Generate abstract (uses all previous results)
-        logger.info("Step 6: Generating case abstract...")
+        # Step 5: Generate abstract (uses all previous results)
+        logger.info("Step 5: Generating case abstract...")
         abstract = await self._generate_abstract(case_text, jurisdiction_result, col_issue, courts_position, themes)
         logger.info("Abstract generated")
 
