@@ -302,7 +302,6 @@ python latam_case_analysis/txt_converter.py
 - **[Architecture Documentation](docs/ARCHITECTURE.md)**: System architecture and data flow
 - **[Quick Start Guide](docs/QUICK_START.md)**: Quick setup instructions
 - **[Workflows](docs/WORKFLOWS.md)**: Detailed workflow diagrams
-- **[Agent Documentation](docs/agent.md)**: Agent implementation details
 - **[Logfire Monitoring](docs/LOGFIRE_MONITORING.md)**: LLM monitoring and observability setup
 - **[Prompts README](src/prompts/README.md)**: Comprehensive prompt documentation
 
