@@ -220,7 +220,7 @@ def load_css():
     .progress-banner {
         position: fixed;
         bottom: 0;
-        left: 0;
+        left: var(--sidebar-width, 0px);
         right: 0;
         background: linear-gradient(135deg, #6F4DFA 0%, #5a3fd9 100%);
         color: white;
@@ -228,6 +228,16 @@ def load_css():
         box-shadow: 0 -4px 12px rgba(111, 77, 250, 0.3);
         z-index: 9999;
         animation: slideUp 0.3s ease-out;
+    }
+    
+    /* Adjust banner position when sidebar is visible */
+    [data-testid="stSidebar"] ~ * .progress-banner {
+        left: 21rem;
+    }
+    
+    /* When sidebar is collapsed */
+    [data-testid="stSidebar"][aria-expanded="false"] ~ * .progress-banner {
+        left: 0;
     }
 
     @keyframes slideUp {
@@ -277,29 +287,7 @@ def load_css():
         left: 0;
     }
 
-    /* Indeterminate Spinner - Moving dot along path */
-    .progress-banner-spinner {
-        width: 14px;
-        height: 10px;
-        background-color: #4CAF50;
-        border-radius: 50% / 35%;
-        position: absolute;
-        box-shadow: 0 0 12px rgba(76, 175, 80, 0.9);
-        z-index: 2;
-        offset-path: path('M 8,30 Q 15,15 25,25 Q 30,30 35,35 Q 40,42 50,38 Q 55,36 58,30 Q 62,20 70,25 Q 75,28 78,35 Q 82,45 90,40 Q 95,37 98,30 Q 102,20 108,25 L 112,28');
-        animation: squigglyMove 3s ease-in-out infinite;
-        offset-anchor: center;
-        offset-rotate: 0deg;
-    }
 
-    @keyframes squigglyMove {
-        0% {
-            offset-distance: 0%;
-        }
-        100% {
-            offset-distance: 100%;
-        }
-    }
 
     /* Adjust main content to account for banner */
     .main .block-container {

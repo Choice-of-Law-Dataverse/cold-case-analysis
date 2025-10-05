@@ -44,9 +44,9 @@ def show_progress_banner(message, progress=None):
                                 <stop offset="100%" style="stop-color:rgba(255,255,255,0.5);stop-opacity:1" />
                             </linearGradient>
                             <linearGradient id="pipeGradientFilled" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:rgba(76,175,80,0.6);stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:rgba(76,175,80,1);stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:rgba(76,175,80,0.6);stop-opacity:1" />
+                                <stop offset="0%" style="stop-color:rgba(255,255,255,0.7);stop-opacity:1" />
+                                <stop offset="50%" style="stop-color:rgba(255,255,255,1);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:rgba(255,255,255,0.7);stop-opacity:1" />
                             </linearGradient>
                         </defs>
                         <!-- Background pipe (light) with treasure map style path -->
@@ -58,10 +58,10 @@ def show_progress_banner(message, progress=None):
                               stroke-linejoin="round"
                               vector-effect="non-scaling-stroke"
                               opacity="0.4"/>
-                        <!-- Green elliptical dots at ends (background) -->
-                        <ellipse cx="8" cy="30" rx="5" ry="3.5" fill="rgba(76, 175, 80, 0.3)"/>
-                        <ellipse cx="112" cy="28" rx="5" ry="3.5" fill="rgba(76, 175, 80, 0.3)"/>
-                        <!-- Progress pipe (green) with clipping -->
+                        <!-- Green circular dots at ends (background) -->
+                        <circle cx="8" cy="30" r="4" fill="rgba(76, 175, 80, 0.4)"/>
+                        <circle cx="112" cy="28" r="4" fill="rgba(76, 175, 80, 0.4)"/>
+                        <!-- Progress pipe (white) with clipping -->
                         <g clip-path="url(#progressClip)">
                             <path d="M 8,30 Q 15,15 25,25 Q 30,30 35,35 Q 40,42 50,38 Q 55,36 58,30 Q 62,20 70,25 Q 75,28 78,35 Q 82,45 90,40 Q 95,37 98,30 Q 102,20 108,25 L 112,28"
                                   stroke="url(#pipeGradientFilled)"
@@ -71,9 +71,9 @@ def show_progress_banner(message, progress=None):
                                   stroke-linejoin="round"
                                   vector-effect="non-scaling-stroke"
                                   style="transition: opacity 0.5s ease-out;"/>
-                            <!-- Green elliptical dots at ends (filled) -->
-                            <ellipse cx="8" cy="30" rx="5" ry="3.5" fill="#4CAF50"/>
-                            <ellipse cx="112" cy="28" rx="5" ry="3.5" fill="#4CAF50"/>
+                            <!-- Green circular dots at ends (filled) -->
+                            <circle cx="8" cy="30" r="4" fill="#4CAF50"/>
+                            <circle cx="112" cy="28" r="4" fill="#4CAF50"/>
                         </g>
                     </svg>
                 </div>
@@ -103,11 +103,10 @@ def show_progress_banner(message, progress=None):
                               stroke-linejoin="round"
                               vector-effect="non-scaling-stroke"
                               opacity="0.4"/>
-                        <!-- Green elliptical dots at ends -->
-                        <ellipse cx="8" cy="30" rx="5" ry="3.5" fill="rgba(76, 175, 80, 0.3)"/>
-                        <ellipse cx="112" cy="28" rx="5" ry="3.5" fill="rgba(76, 175, 80, 0.3)"/>
+                        <!-- Green circular dots at ends -->
+                        <circle cx="8" cy="30" r="4" fill="rgba(76, 175, 80, 0.4)"/>
+                        <circle cx="112" cy="28" r="4" fill="rgba(76, 175, 80, 0.4)"/>
                     </svg>
-                    <div class='progress-banner-spinner'></div>
                 </div>
             </div>
         </div>
