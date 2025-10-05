@@ -17,12 +17,30 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture
 def mock_local_storage():
-    """Mock the LocalStorage class and _get_local_storage function."""
+    """Mock the LocalStorage class and session state."""
     instance = MagicMock()
 
+    # Create a mock session state class that behaves like a dict with attribute access
+    class MockSessionState(dict):
+        def __getattr__(self, key):
+            try:
+                return self[key]
+            except KeyError as e:
+                raise AttributeError(key) from e
+
+        def __setattr__(self, key, value):
+            self[key] = value
+
+        def __contains__(self, key):
+            return dict.__contains__(self, key)
+
+    mock_session_state = MockSessionState()
+    mock_session_state["_local_storage_instance"] = instance
+
     with patch("streamlit_local_storage.LocalStorage", return_value=instance):
-        with patch("utils.browser_storage._local_storage", instance):
-            yield instance
+        with patch("streamlit.session_state", mock_session_state, create=True):
+            with patch("utils.browser_storage.st.session_state", mock_session_state):
+                yield instance
 
 
 def test_save_auth_state(mock_local_storage):

@@ -8,6 +8,7 @@ import logging
 import time
 import uuid
 
+import streamlit as st
 from streamlit_local_storage import LocalStorage
 
 logger = logging.getLogger(__name__)
@@ -17,16 +18,12 @@ AUTH_STATE_KEY = "cold_auth_state"
 ANALYSES_LIST_KEY = "cold_analyses_list"
 CURRENT_ANALYSIS_ID_KEY = "cold_current_analysis_id"
 
-# Lazy initialization of localStorage
-_local_storage = None
-
 
 def _get_local_storage():
-    """Get or create LocalStorage instance."""
-    global _local_storage
-    if _local_storage is None:
-        _local_storage = LocalStorage()
-    return _local_storage
+    """Get or create LocalStorage instance from session state."""
+    if "_local_storage_instance" not in st.session_state:
+        st.session_state._local_storage_instance = LocalStorage()
+    return st.session_state._local_storage_instance
 
 
 def _generate_analysis_id() -> str:
