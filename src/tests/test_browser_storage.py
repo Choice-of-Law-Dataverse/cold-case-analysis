@@ -110,7 +110,13 @@ def test_load_analysis_state(mock_local_storage):
 
     result = load_analysis_state("abc12345")
 
-    assert result == analysis_state
+    # Should include defaults for missing keys
+    assert result is not None
+    assert result["col_state"] == {}
+    assert result["case_citation"] == "Test"
+    assert result["full_text_input"] == ""
+    assert result["col_extraction_started"] is False
+    assert result["jurisdiction_detected"] is False
 
 
 def test_mark_analysis_submitted(mock_local_storage):

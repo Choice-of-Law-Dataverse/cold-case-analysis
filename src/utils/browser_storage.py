@@ -120,10 +120,10 @@ def create_new_analysis(case_citation: str = "") -> str:
         analyses.append(metadata)
         localS.setItem(ANALYSES_LIST_KEY, json.dumps(analyses))
 
-        # Initialize empty analysis state
+        # Initialize empty analysis state with proper defaults
         analysis_state = {
             "col_state": {},
-            "case_citation": case_citation,
+            "case_citation": case_citation or "",
             "full_text_input": "",
             "user_email": "",
             "col_extraction_started": False,
@@ -145,6 +145,7 @@ def create_new_analysis(case_citation: str = "") -> str:
 
     except Exception as e:
         logger.error(f"Error creating new analysis: {e}")
+        # Return empty string on error - caller should check for this
         return ""
 
 
@@ -246,7 +247,7 @@ def load_analysis_state(analysis_id: str | None = None) -> dict | None:
         analysis_id: Optional specific analysis ID, uses current if not provided
 
     Returns:
-        dict: Analysis state or None if not found
+        dict: Analysis state with default values, or None if not found
     """
     try:
         localS = _get_local_storage()
@@ -262,6 +263,26 @@ def load_analysis_state(analysis_id: str | None = None) -> dict | None:
 
         if json_str:
             analysis_state = json.loads(json_str)
+
+            # Ensure all expected keys have default values
+            defaults = {
+                "col_state": {},
+                "case_citation": "",
+                "full_text_input": "",
+                "user_email": "",
+                "col_extraction_started": False,
+                "jurisdiction_detected": False,
+                "jurisdiction_confirmed": False,
+                "precise_jurisdiction": None,
+                "precise_jurisdiction_confirmed": False,
+                "legal_system_type": None,
+            }
+
+            # Merge with defaults
+            for key, default_value in defaults.items():
+                if key not in analysis_state or analysis_state[key] is None:
+                    analysis_state[key] = default_value
+
             logger.debug(f"Loaded analysis state for: {analysis_id}")
             return analysis_state
         return None

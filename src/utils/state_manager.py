@@ -30,12 +30,12 @@ def restore_state_from_browser():
             load_auth_state,
         )
 
-        # Restore auth state
+        # Restore auth state with defaults
         auth_state = load_auth_state()
         if auth_state:
             for key, value in auth_state.items():
-                if value is not None and key not in st.session_state:
-                    st.session_state[key] = value
+                if key not in st.session_state:
+                    st.session_state[key] = value if value is not None else ""
             logger.info("Restored auth state from browser localStorage")
 
         # Get current analysis ID
@@ -43,13 +43,32 @@ def restore_state_from_browser():
         if analysis_id:
             st.session_state["current_analysis_id"] = analysis_id
 
-        # Restore current analysis state
-        analysis_state = load_analysis_state()
-        if analysis_state:
-            for key, value in analysis_state.items():
-                if value is not None and key not in st.session_state:
-                    st.session_state[key] = value
-            logger.info(f"Restored analysis state from browser localStorage: {analysis_id}")
+            # Restore current analysis state with defaults
+            analysis_state = load_analysis_state()
+            if analysis_state:
+                # Define default values for analysis state keys
+                defaults = {
+                    "col_state": {},
+                    "case_citation": "",
+                    "full_text_input": "",
+                    "user_email": "",
+                    "col_extraction_started": False,
+                    "jurisdiction_detected": False,
+                    "jurisdiction_confirmed": False,
+                    "precise_jurisdiction": None,
+                    "precise_jurisdiction_confirmed": False,
+                    "legal_system_type": None,
+                }
+
+                for key, default_value in defaults.items():
+                    if key not in st.session_state:
+                        value = analysis_state.get(key)
+                        st.session_state[key] = value if value is not None else default_value
+
+                logger.info(f"Restored analysis state from browser localStorage: {analysis_id}")
+        else:
+            # No current analysis, initialize with defaults
+            logger.info("No current analysis found, starting fresh")
 
         st.session_state.state_restored = True
     except Exception as e:
@@ -69,34 +88,40 @@ def save_state_to_browser():
         auth_state = {
             "logged_in": st.session_state.get("logged_in", False),
             "user": st.session_state.get("user", ""),
-            "llm_model_select": st.session_state.get("llm_model_select"),
+            "llm_model_select": st.session_state.get("llm_model_select", "gpt-5-nano"),
         }
         save_auth_state(auth_state)
 
-        # Save analysis state (to current analysis)
-        analysis_state = {
-            "col_state": st.session_state.get("col_state", {}),
-            "case_citation": st.session_state.get("case_citation"),
-            "full_text_input": st.session_state.get("full_text_input"),
-            "user_email": st.session_state.get("user_email"),
-            "col_extraction_started": st.session_state.get("col_extraction_started", False),
-            "jurisdiction_detected": st.session_state.get("jurisdiction_detected", False),
-            "jurisdiction_confirmed": st.session_state.get("jurisdiction_confirmed", False),
-            "precise_jurisdiction": st.session_state.get("precise_jurisdiction"),
-            "precise_jurisdiction_confirmed": st.session_state.get("precise_jurisdiction_confirmed", False),
-            "legal_system_type": st.session_state.get("legal_system_type"),
-        }
+        # Only save analysis state if there's actual content to save
+        case_citation = st.session_state.get("case_citation", "")
+        full_text = st.session_state.get("full_text_input", "")
 
-        # Get current analysis ID
-        analysis_id = st.session_state.get("current_analysis_id")
-        save_analysis_state(analysis_state, analysis_id)
+        # Check if we have meaningful analysis data to save
+        if case_citation or full_text:
+            # Save analysis state (to current analysis)
+            analysis_state = {
+                "col_state": st.session_state.get("col_state", {}),
+                "case_citation": case_citation,
+                "full_text_input": full_text,
+                "user_email": st.session_state.get("user_email", ""),
+                "col_extraction_started": st.session_state.get("col_extraction_started", False),
+                "jurisdiction_detected": st.session_state.get("jurisdiction_detected", False),
+                "jurisdiction_confirmed": st.session_state.get("jurisdiction_confirmed", False),
+                "precise_jurisdiction": st.session_state.get("precise_jurisdiction"),
+                "precise_jurisdiction_confirmed": st.session_state.get("precise_jurisdiction_confirmed", False),
+                "legal_system_type": st.session_state.get("legal_system_type"),
+            }
 
-        # Update current_analysis_id if it was just created
-        from utils.browser_storage import get_current_analysis_id
+            # Get current analysis ID
+            analysis_id = st.session_state.get("current_analysis_id")
+            save_analysis_state(analysis_state, analysis_id)
 
-        new_id = get_current_analysis_id()
-        if new_id and new_id != analysis_id:
-            st.session_state["current_analysis_id"] = new_id
+            # Update current_analysis_id if it was just created
+            from utils.browser_storage import get_current_analysis_id
+
+            new_id = get_current_analysis_id()
+            if new_id and new_id != analysis_id:
+                st.session_state["current_analysis_id"] = new_id
 
     except Exception as e:
         logger.error(f"Error saving state to browser: {e}")
