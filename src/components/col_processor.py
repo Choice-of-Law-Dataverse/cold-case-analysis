@@ -134,7 +134,9 @@ def render_edit_section(col_state):
 
     last_extraction = col_state.get("col_section", [""])[-1]
     confidence = col_state.get("col_section_confidence", [])[-1] if col_state.get("col_section_confidence") else None
-    reasoning = col_state.get("col_section_reasoning", [""])[-1] if col_state.get("col_section_reasoning") else "No reasoning available"
+    reasoning = (
+        col_state.get("col_section_reasoning", [""])[-1] if col_state.get("col_section_reasoning") else "No reasoning available"
+    )
 
     # Display title with confidence chip
     col1, col2 = st.columns([0.85, 0.15])
@@ -142,7 +144,9 @@ def render_edit_section(col_state):
         st.markdown("### Edit extracted Choice of Law section")
     with col2:
         if confidence:
-            render_confidence_chip(confidence, reasoning, "col_extraction")
+            # Use a more unique key to avoid widget conflicts
+            chip_key = f"col_extraction_{hash(reasoning) % 10000}"
+            render_confidence_chip(confidence, reasoning, chip_key)
 
     # Use custom CSS to set height with min and max
     st.markdown(
@@ -170,9 +174,8 @@ def render_edit_section(col_state):
     print_state("\n\n\nCurrent CoLD State\n\n", col_state)
 
     if not col_state.get("col_done"):
-        if st.button("Submit and Classify"):
+        if st.button("Submit and Classify", key="submit_and_classify_btn"):
             if edited_extraction:
-                # Save edited extraction and run classification
                 col_state["col_section"].append(edited_extraction)
                 col_state["col_done"] = True
                 col_state["classification"] = []
@@ -182,7 +185,6 @@ def render_edit_section(col_state):
                 from tools.themes_classifier import theme_classification_node
                 from utils.progress_banner import hide_progress_banner, show_progress_banner
 
-                # Show progress banner while classifying
                 show_progress_banner("Identifying themes...")
 
                 init_result = theme_classification_node(col_state)
@@ -190,7 +192,6 @@ def render_edit_section(col_state):
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
 
-                # Clear the progress banner
                 hide_progress_banner()
                 st.rerun()
             else:
@@ -204,16 +205,12 @@ def render_col_processing(col_state):
     Args:
         col_state: The current analysis state
     """
-    # Display case information
+
     display_case_info(col_state)
 
-    # Display extraction history
     display_col_extractions(col_state)
 
-    # Always show the edit section (even after col_done) so user can see extracted text
-    # Handle feedback and editing if COL not done
     if not col_state.get("col_done"):
         handle_col_feedback_phase(col_state)
     else:
-        # Show the textarea in read-only mode after classification
         render_edit_section(col_state)

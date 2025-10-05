@@ -21,7 +21,7 @@ def render_initial_input_phase():
     Returns:
         bool: True if ready to proceed to COL extraction, False otherwise
     """
-    # Render input components
+
     case_citation, full_text = render_input_phase()
 
     # Enforce mandatory case citation
@@ -32,7 +32,6 @@ def render_initial_input_phase():
     if not full_text.strip():
         return False
 
-    # Enhanced Jurisdiction Detection
     st.markdown("## Jurisdiction Identification")
     st.markdown(
         "The first step consists of identifying the precise jurisdiction and legal system type from the court decision."
@@ -40,24 +39,16 @@ def render_initial_input_phase():
 
     jurisdiction_confirmed = render_jurisdiction_detection(full_text)
 
-    # Automatically start COL extraction after jurisdiction confirmed
     if jurisdiction_confirmed:
-        # Check if we haven't already started extraction
         if not st.session_state.get("col_extraction_started", False):
             st.markdown("## Choice of Law Analysis")
-            st.markdown(
-                "The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review."
-            )
 
-            # Show progress banner while extracting
             from utils.progress_banner import hide_progress_banner, show_progress_banner
 
             show_progress_banner("Extracting Choice of Law section...")
 
-            # Get final jurisdiction data
             final_jurisdiction_data = get_final_jurisdiction_data()
 
-            # Create initial analysis state
             state = create_initial_analysis_state(
                 case_citation=st.session_state.get("case_citation"),
                 username=st.session_state.get("user"),
@@ -67,15 +58,12 @@ def render_initial_input_phase():
                 user_email=st.session_state.get("user_email"),
             )
 
-            # Extract COL section
             result = extract_col_section(state)
             state.update(result)
 
-            # Update session state
             st.session_state.col_state = state
             st.session_state["col_extraction_started"] = True
 
-            # Clear the progress banner
             hide_progress_banner()
             st.rerun()
 
@@ -86,13 +74,10 @@ def render_processing_phases():
     """Render the COL processing, theme classification, and analysis phases."""
     col_state = get_col_state()
 
-    # COL processing phase
     render_col_processing(col_state)
 
-    # Theme classification phase
     render_theme_classification(col_state)
 
-    # Analysis workflow phase
     render_analysis_workflow(col_state)
 
 

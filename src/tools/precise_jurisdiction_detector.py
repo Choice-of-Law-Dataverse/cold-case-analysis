@@ -23,16 +23,6 @@ from .jurisdiction_detector import (
 logger = logging.getLogger(__name__)
 
 
-def _run_agent_sync(agent: Agent, prompt: str):
-    """Helper function to run an agent synchronously in Streamlit context."""
-
-    async def run_agent_async():
-        result = await Runner.run(agent, prompt)
-        return result.final_output
-
-    return asyncio.run(run_agent_async())
-
-
 def _coerce_to_text(content: Any) -> str:
     if isinstance(content, str):
         return content

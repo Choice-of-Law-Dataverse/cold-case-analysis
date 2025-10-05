@@ -55,7 +55,9 @@ def handle_theme_editing(state, last_theme, valid_themes):
 
     # Get confidence and reasoning
     confidence = state.get("classification_confidence", [])[-1] if state.get("classification_confidence") else None
-    reasoning = state.get("classification_reasoning", [""])[-1] if state.get("classification_reasoning") else "No reasoning available"
+    reasoning = (
+        state.get("classification_reasoning", [""])[-1] if state.get("classification_reasoning") else "No reasoning available"
+    )
 
     # Display title with confidence chip
     col1, col2 = st.columns([0.85, 0.15])
@@ -63,7 +65,9 @@ def handle_theme_editing(state, last_theme, valid_themes):
         st.markdown("### Theme Classification")
     with col2:
         if confidence:
-            render_confidence_chip(confidence, reasoning, "theme_classification")
+            # Use a more unique key to avoid widget conflicts
+            chip_key = f"theme_classification_{hash(reasoning) % 10000}"
+            render_confidence_chip(confidence, reasoning, chip_key)
 
     # Parse default selection and filter to only include valid themes
     default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]
@@ -89,7 +93,7 @@ def handle_theme_editing(state, last_theme, valid_themes):
     )
 
     if not state.get("theme_done"):
-        if st.button("Submit Final Themes"):
+        if st.button("Submit Final Themes", key="submit_final_themes"):
             if selected:
                 new_sel = ", ".join(selected)
                 state.setdefault("classification", []).append(new_sel)
