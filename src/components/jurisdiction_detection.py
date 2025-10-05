@@ -1,11 +1,11 @@
-# components/jurisdiction_detection.py
 """
 Streamlit component for enhanced jurisdiction detection with precise jurisdiction identification.
 """
 import streamlit as st
 
+from components.confidence_display import add_confidence_chip_css, render_confidence_chip
 from tools.jurisdiction_detector import detect_legal_system_type
-from tools.precise_jurisdiction_detector import detect_precise_jurisdiction
+from tools.precise_jurisdiction_detector import detect_precise_jurisdiction_with_confidence
 
 
 def render_jurisdiction_detection(full_text: str):
@@ -32,6 +32,10 @@ def render_jurisdiction_detection(full_text: str):
         st.session_state["precise_jurisdiction_confirmed"] = False
     if "jurisdiction_manual_override" not in st.session_state:
         st.session_state["jurisdiction_manual_override"] = None
+    if "jurisdiction_confidence" not in st.session_state:
+        st.session_state["jurisdiction_confidence"] = None
+    if "jurisdiction_reasoning" not in st.session_state:
+        st.session_state["jurisdiction_reasoning"] = None
 
     # Phase 1: Detect Jurisdiction Button
     if not st.session_state["precise_jurisdiction_detected"]:
@@ -44,20 +48,14 @@ def render_jurisdiction_detection(full_text: str):
 
                 show_progress_banner("Identifying jurisdiction...")
 
-                # Detect precise jurisdiction (now returns just the jurisdiction name)
-                jurisdiction_name = detect_precise_jurisdiction(full_text)
+                # Detect precise jurisdiction with confidence
+                jurisdiction_data = detect_precise_jurisdiction_with_confidence(full_text)
 
-                st.session_state["precise_jurisdiction"] = jurisdiction_name
+                st.session_state["precise_jurisdiction"] = jurisdiction_data["jurisdiction_name"]
+                st.session_state["legal_system_type"] = jurisdiction_data["legal_system_type"]
+                st.session_state["jurisdiction_confidence"] = jurisdiction_data["confidence"]
+                st.session_state["jurisdiction_reasoning"] = jurisdiction_data["reasoning"]
                 st.session_state["precise_jurisdiction_detected"] = True
-
-                # Determine legal system type using the existing jurisdiction detection logic
-                legal_system = detect_legal_system_type(jurisdiction_name, full_text)
-
-                # Handle the case where the existing detector says "No court decision"
-                if legal_system == "No court decision":
-                    legal_system = "Unknown legal system"
-
-                st.session_state["legal_system_type"] = legal_system
 
                 # Clear the progress banner
                 hide_progress_banner()
@@ -69,11 +67,20 @@ def render_jurisdiction_detection(full_text: str):
 
     # Phase 2: Display Results and Override Options
     if st.session_state["precise_jurisdiction_detected"]:
+        # Add confidence chip CSS
+        add_confidence_chip_css()
+        
         jurisdiction_name = st.session_state["precise_jurisdiction"]  # Now this is just a string
         legal_system = st.session_state["legal_system_type"]
+        confidence = st.session_state.get("jurisdiction_confidence", 0.0)
+        reasoning = st.session_state.get("jurisdiction_reasoning", "No reasoning available")
 
         # Display results in an attractive format
         st.markdown("### Jurisdiction Detection Results")
+
+        # Display confidence chip if we have confidence data
+        if confidence > 0:
+            render_confidence_chip(confidence, reasoning, "jurisdiction_detection")
 
         # Load all jurisdictions for selection
         from tools.precise_jurisdiction_detector import load_jurisdictions

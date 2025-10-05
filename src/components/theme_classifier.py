@@ -48,6 +48,23 @@ def handle_theme_editing(state, last_theme, valid_themes):
         last_theme: The last classified theme
         valid_themes: List of valid theme options
     """
+    from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+
+    # Add CSS for confidence chips
+    add_confidence_chip_css()
+
+    # Get confidence and reasoning
+    confidence = state.get("classification_confidence", [0.0])[-1] if state.get("classification_confidence") else 0.0
+    reasoning = state.get("classification_reasoning", [""])[-1] if state.get("classification_reasoning") else "No reasoning available"
+
+    # Display title with confidence chip
+    col1, col2 = st.columns([0.85, 0.15])
+    with col1:
+        st.markdown("### Theme Classification")
+    with col2:
+        if confidence > 0:
+            render_confidence_chip(confidence, reasoning, "theme_classification")
+
     # Parse default selection and filter to only include valid themes
     default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]
 

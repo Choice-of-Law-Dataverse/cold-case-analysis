@@ -9,9 +9,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
-
 import config
+from models.classification_models import JurisdictionOutput
 from prompts.precise_jurisdiction_detection_prompt import PRECISE_JURISDICTION_DETECTION_PROMPT
 
 from .jurisdiction_detector import (
@@ -20,6 +19,20 @@ from .jurisdiction_detector import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
+    """Call OpenAI API with structured outputs using Pydantic models."""
+    client, selected_model = config.get_openai_client(model)
+    completion = client.beta.chat.completions.parse(
+        model=selected_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        response_format=response_format,
+    )
+    return completion.choices[0].message.parsed
 
 
 def _coerce_to_text(content: Any) -> str:
@@ -73,9 +86,26 @@ def detect_precise_jurisdiction(text: str) -> str:
     """
     Uses an LLM to identify the precise jurisdiction from court decision text.
     Returns the jurisdiction name as a string in the format "Jurisdiction".
+    
+    This is the legacy interface - calls detect_precise_jurisdiction_with_confidence internally.
+    """
+    result = detect_precise_jurisdiction_with_confidence(text)
+    return result["jurisdiction_name"]
+
+
+def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = None) -> dict:
+    """
+    Uses an LLM to identify the precise jurisdiction from court decision text with confidence.
+    Returns a dict with jurisdiction data including confidence and reasoning.
     """
     if not text or len(text.strip()) < 50:
-        return "Unknown"
+        return {
+            "jurisdiction_name": "Unknown",
+            "legal_system_type": "Unknown",
+            "jurisdiction_code": "UNK",
+            "confidence": 0.0,
+            "reasoning": "Text too short for analysis"
+        }
 
     jurisdiction_list = create_jurisdiction_list()
 
@@ -83,53 +113,74 @@ def detect_precise_jurisdiction(text: str) -> str:
         jurisdiction_list=jurisdiction_list,
         text=text[:5000],
     )
-    logger.debug("Prompting LLM with: %s", prompt)
+    logger.debug("Prompting LLM with structured output for jurisdiction detection")
 
     try:
-        response = config.llm.invoke(
-            [
-                SystemMessage(
-                    content="You are an expert in legal systems and court jurisdictions worldwide. Follow the format exactly as requested."
-                ),
-                HumanMessage(content=prompt),
-            ]
-        )
+        system_prompt = "You are an expert in legal systems and court jurisdictions worldwide. Analyze the court decision and identify the precise jurisdiction, legal system type, and provide your confidence level and reasoning."
+        
+        result = _call_openai_structured(prompt, system_prompt, JurisdictionOutput, model)
+        
+        jurisdiction_name = result.precise_jurisdiction
+        legal_system_type = result.legal_system_type
+        jurisdiction_code = result.jurisdiction_code
+        confidence = result.confidence
+        reasoning = result.reasoning
 
-        result_text = _coerce_to_text(getattr(response, "content", "")).strip()
-        logger.debug("LLM Response: %s", result_text)
+        logger.debug("Detected jurisdiction: %s (%s) with confidence %.2f", jurisdiction_name, legal_system_type, confidence)
 
-        jurisdiction_match = re.search(r"/\"([^\"]+)\"/", result_text)
-        if jurisdiction_match:
-            jurisdiction_name = jurisdiction_match.group(1)
-        else:
-            quote_match = re.search(r"\"([^\"]+)\"", result_text)
-            if quote_match:
-                jurisdiction_name = quote_match.group(1)
-            else:
-                if len(result_text) < 100 and result_text not in ["Unknown", "unknown"]:
-                    jurisdiction_name = result_text.strip()
-                else:
-                    jurisdiction_name = "Unknown"
-
+        # Validate against known jurisdictions
         jurisdictions = load_jurisdictions()
-
+        
         if jurisdiction_name and jurisdiction_name != "Unknown":
+            # Try exact match first
             for jurisdiction in jurisdictions:
                 if jurisdiction["name"].lower() == jurisdiction_name.lower():
-                    return jurisdiction["name"]
+                    return {
+                        "jurisdiction_name": jurisdiction["name"],
+                        "legal_system_type": legal_system_type,
+                        "jurisdiction_code": jurisdiction["code"],
+                        "confidence": confidence,
+                        "reasoning": reasoning
+                    }
 
+            # Try partial match
             for jurisdiction in jurisdictions:
                 if (
                     jurisdiction_name.lower() in jurisdiction["name"].lower()
                     or jurisdiction["name"].lower() in jurisdiction_name.lower()
                 ):
-                    return jurisdiction["name"]
+                    return {
+                        "jurisdiction_name": jurisdiction["name"],
+                        "legal_system_type": legal_system_type,
+                        "jurisdiction_code": jurisdiction["code"],
+                        "confidence": confidence * 0.9,  # Reduce confidence slightly for partial match
+                        "reasoning": reasoning + " (partial match)"
+                    }
 
+            # If we have a reasonable jurisdiction name but it's not in our list
             if len(jurisdiction_name) > 2 and jurisdiction_name not in ["Unknown", "unknown", "N/A", "None"]:
-                return jurisdiction_name
+                return {
+                    "jurisdiction_name": jurisdiction_name,
+                    "legal_system_type": legal_system_type,
+                    "jurisdiction_code": jurisdiction_code if jurisdiction_code != "UNK" else "N/A",
+                    "confidence": confidence * 0.8,  # Reduce confidence for unknown jurisdiction
+                    "reasoning": reasoning + " (not in standard jurisdiction list)"
+                }
 
-        return "Unknown"
+        return {
+            "jurisdiction_name": "Unknown",
+            "legal_system_type": "Unknown",
+            "jurisdiction_code": "UNK",
+            "confidence": 0.0,
+            "reasoning": "Could not identify jurisdiction from the text"
+        }
 
     except Exception as e:
         logger.error("Error in jurisdiction detection: %s", e)
-        return "Unknown"
+        return {
+            "jurisdiction_name": "Unknown",
+            "legal_system_type": "Unknown",
+            "jurisdiction_code": "UNK",
+            "confidence": 0.0,
+            "reasoning": f"Error during detection: {str(e)}"
+        }

@@ -127,7 +127,22 @@ def render_edit_section(col_state):
     Args:
         col_state: The current analysis state
     """
+    from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+
+    # Add CSS for confidence chips
+    add_confidence_chip_css()
+
     last_extraction = col_state.get("col_section", [""])[-1]
+    confidence = col_state.get("col_section_confidence", [0.0])[-1] if col_state.get("col_section_confidence") else 0.0
+    reasoning = col_state.get("col_section_reasoning", [""])[-1] if col_state.get("col_section_reasoning") else "No reasoning available"
+
+    # Display title with confidence chip
+    col1, col2 = st.columns([0.85, 0.15])
+    with col1:
+        st.markdown("### Edit extracted Choice of Law section")
+    with col2:
+        if confidence > 0:
+            render_confidence_chip(confidence, reasoning, "col_extraction")
 
     # Use custom CSS to set height with min and max
     st.markdown(
@@ -147,6 +162,7 @@ def render_edit_section(col_state):
         value=last_extraction,
         height=600,
         key="col_edit_section",
+        label_visibility="collapsed",
         help="Modify the extracted section before proceeding to theme classification",
         disabled=col_state.get("col_done", False),
     )
