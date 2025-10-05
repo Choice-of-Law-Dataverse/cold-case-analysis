@@ -5,13 +5,12 @@ Main workflow orchestrator for the CoLD Case Analyzer.
 
 import streamlit as st
 
-from components.agents_integration import execute_agents_workflow, render_agents_workflow_button
+from components.agents_integration import execute_agents_workflow
 from components.analysis_workflow import render_analysis_workflow
 from components.col_processor import render_col_processing
 from components.input_handler import render_input_phase
 from components.jurisdiction_detection import get_final_jurisdiction_data, render_jurisdiction_detection
 from components.theme_classifier import render_theme_classification
-from tools.col_extractor import extract_col_section
 from utils.state_manager import create_initial_analysis_state, get_col_state
 
 
@@ -41,7 +40,7 @@ def render_initial_input_phase():
 
     jurisdiction_confirmed = render_jurisdiction_detection(full_text)
 
-    # Automatically start COL extraction after jurisdiction confirmed
+    # Automatically start agents workflow after jurisdiction confirmed
     if jurisdiction_confirmed:
         # Get final jurisdiction data
         final_jurisdiction_data = get_final_jurisdiction_data()
@@ -61,45 +60,10 @@ def render_initial_input_phase():
             )
             st.session_state.col_state = state
 
-        # Check if user wants to use agents workflow
-        workflow_choice = render_agents_workflow_button(state)
-
-        if workflow_choice == "agents":
-            # User selected automated analysis
+        # Automatically run agents workflow if not already completed
+        if not state.get("agents_workflow_completed", False):
             execute_agents_workflow(state)
             return False
-        elif workflow_choice == "traditional":
-            # User selected traditional workflow - mark and start extraction
-            st.session_state["col_extraction_started"] = True
-            st.rerun()
-        elif workflow_choice == "waiting":
-            # Still showing the choice UI, don't proceed yet
-            return False
-
-        # Traditional workflow: Check if we haven't already started extraction
-        # Skip if agents workflow already completed
-        if not st.session_state.get("col_extraction_started", False) and not state.get("agents_workflow_completed", False):
-            st.markdown("## Choice of Law Analysis")
-            st.markdown(
-                "The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review."
-            )
-
-            # Show progress banner while extracting
-            from utils.progress_banner import hide_progress_banner, show_progress_banner
-
-            show_progress_banner("Extracting Choice of Law section...")
-
-            # Extract COL section
-            result = extract_col_section(state)
-            state.update(result)
-
-            # Update session state
-            st.session_state.col_state = state
-            st.session_state["col_extraction_started"] = True
-
-            # Clear the progress banner
-            hide_progress_banner()
-            st.rerun()
 
     return False
 
