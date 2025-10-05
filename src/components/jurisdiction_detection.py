@@ -45,13 +45,9 @@ def render_jurisdiction_detection(full_text: str):
         if not st.session_state["precise_jurisdiction_detected"]:
             detect_clicked = st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary")
 
-            if detect_clicked:
-                if full_text.strip():
-                    # Show progress banner while analyzing
-                    from utils.progress_banner import hide_progress_banner, show_progress_banner
-
-                    show_progress_banner("Identifying jurisdiction...")
-
+        if detect_clicked:
+            if full_text.strip():
+                with st.spinner("Analyzing jurisdiction..."):
                     # Detect precise jurisdiction with confidence
                     jurisdiction_data = detect_precise_jurisdiction_with_confidence(full_text)
 
@@ -61,11 +57,9 @@ def render_jurisdiction_detection(full_text: str):
                     st.session_state["jurisdiction_reasoning"] = jurisdiction_data["reasoning"]
                     st.session_state["precise_jurisdiction_detected"] = True
 
-                    # Clear the progress banner
-                    hide_progress_banner()
                     st.rerun()
-                else:
-                    st.warning("Please enter the court decision text before detecting jurisdiction.")
+            else:
+                st.warning("Please enter the court decision text before detecting jurisdiction.")
 
             return False
 
