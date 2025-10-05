@@ -121,93 +121,6 @@ def get_analysis_steps(state):
     return steps
 
 
-def execute_analysis_step(state, name, func):
-    """
-    Execute a single analysis step.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-        func: Function to execute for this step
-
-    Returns:
-        bool: True if step was executed, False if already completed
-    """
-    if not state.get(f"{name}_printed"):
-        result = func(state)
-        state.update(result)
-
-        # Get proper display name for the step
-        display_name = get_step_display_name(name, state)
-
-        # Display analysis step label
-        st.markdown(f"**{display_name}**")
-
-        # Special handling for PIL provisions
-        if name == "pil_provisions":
-            formatted_content = display_pil_provisions(state, name)
-            if formatted_content:
-                st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
-                # Store formatted content for chat history
-                state.setdefault("chat_history", []).append(("machine", f"{display_name}: {formatted_content}"))
-            else:
-                # Fallback to original format
-                out = state.get(name)
-                last = out[-1] if isinstance(out, list) else out
-                st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
-                state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
-        else:
-            # Standard handling for other steps
-            out = state.get(name)
-            last = out[-1] if isinstance(out, list) else out
-            st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
-            state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
-
-        state[f"{name}_printed"] = True
-        st.rerun()
-        return True
-    return False
-
-
-def handle_step_scoring(state, name):
-    """
-    Auto-approve analysis steps without scoring UI.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-
-    Returns:
-        bool: True (always complete)
-    """
-    score_key = f"{name}_score_submitted"
-
-    # Automatically mark as submitted without user interaction
-    if not state.get(score_key):
-        state[score_key] = True
-
-    return True
-
-
-def handle_step_editing(state, name, steps):
-    """
-    Store edited content without showing editing UI during processing.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-        steps: List of all analysis steps
-    """
-    # Automatically advance to next step without editing during processing
-    if state["analysis_step"] < len(steps) - 1:
-        state["analysis_step"] += 1
-    else:
-        state["analysis_done"] = True
-
-    print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
-    st.rerun()
-
-
 def execute_all_analysis_steps_parallel(state):
     """
     Execute all analysis steps in parallel where possible.
@@ -427,27 +340,6 @@ def render_final_editing_phase(state):
         st.rerun()
 
 
-def process_current_analysis_step(state):
-    """
-    Process the current analysis step.
-
-    Args:
-        state: The current analysis state
-    """
-    steps = get_analysis_steps(state)
-    name, func = steps[state["analysis_step"]]
-
-    # Execute the step if not already done
-    execute_analysis_step(state, name, func)
-
-    # Handle scoring
-    scoring_complete = handle_step_scoring(state, name)
-
-    # Handle editing after scoring
-    if scoring_complete:
-        handle_step_editing(state, name, steps)
-
-
 def render_analysis_workflow(state):
     """
     Render the complete analysis workflow with parallel execution and final editing.
@@ -464,9 +356,9 @@ def render_analysis_workflow(state):
         execute_all_analysis_steps_parallel(state)
         state["parallel_execution_started"] = True
         st.rerun()
-    elif not state.get("analysis_done"):
-        # Show final editing phase
-        render_final_editing_phase(state)
-    else:
+    elif state.get("analysis_done"):
         # Display completion message
         display_completion_message(state)
+    else:
+        # Show final editing phase
+        render_final_editing_phase(state)

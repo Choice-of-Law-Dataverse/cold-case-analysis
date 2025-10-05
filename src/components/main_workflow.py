@@ -7,7 +7,13 @@ import streamlit as st
 
 from components.analysis_workflow import render_analysis_workflow
 from components.col_processor import render_col_processing
-from components.input_handler import render_input_phase
+from components.input_handler import (
+    render_case_citation_input,
+    render_demo_button,
+    render_email_input,
+    render_pdf_uploader,
+    render_text_input,
+)
 from components.jurisdiction_detection import get_final_jurisdiction_data, render_jurisdiction_detection
 from components.theme_classifier import render_theme_classification
 from tools.col_extractor import extract_col_section
@@ -21,8 +27,12 @@ def render_initial_input_phase():
     Returns:
         bool: True if ready to proceed to COL extraction, False otherwise
     """
-    # Render input components
-    case_citation, full_text = render_input_phase()
+    # Render input components directly
+    render_email_input()
+    case_citation = render_case_citation_input()
+    render_pdf_uploader()
+    full_text = render_text_input()
+    render_demo_button(full_text)
 
     # Enforce mandatory case citation
     if not case_citation or not case_citation.strip():
@@ -82,23 +92,16 @@ def render_initial_input_phase():
     return False
 
 
-def render_processing_phases():
-    """Render the COL processing, theme classification, and analysis phases."""
-    col_state = get_col_state()
-
-    # COL processing phase
-    render_col_processing(col_state)
-
-    # Theme classification phase
-    render_theme_classification(col_state)
-
-    # Analysis workflow phase
-    render_analysis_workflow(col_state)
-
-
 def render_main_workflow():
     """Render the complete main workflow."""
-    if not get_col_state().get("full_text"):
+    col_state = get_col_state()
+    
+    if not col_state.get("full_text"):
         render_initial_input_phase()
     else:
-        render_processing_phases()
+        # COL processing phase
+        render_col_processing(col_state)
+        # Theme classification phase
+        render_theme_classification(col_state)
+        # Analysis workflow phase
+        render_analysis_workflow(col_state)

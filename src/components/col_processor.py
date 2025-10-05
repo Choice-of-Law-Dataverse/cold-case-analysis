@@ -52,74 +52,6 @@ def display_case_info(col_state):
     display_jurisdiction_info(col_state)
 
 
-def display_col_extractions(col_state):
-    """
-    Display the history of COL extractions and feedback.
-
-    Args:
-        col_state: The current analysis state
-    """
-    # Handle scoring for first extraction
-    handle_first_extraction_scoring(col_state)
-
-
-def handle_first_extraction_scoring(col_state):
-    """
-    Auto-approve the first COL extraction without scoring UI.
-
-    Args:
-        col_state: The current analysis state
-    """
-    # Automatically mark as submitted without user interaction
-    if not col_state.get("col_first_score_submitted"):
-        col_state["col_first_score_submitted"] = True
-
-
-def handle_col_feedback_phase(col_state):
-    """
-    Handle the COL feedback and editing phase.
-
-    Args:
-        col_state: The current analysis state
-    """
-    # Auto-approve first extraction, skip to editing
-    if not col_state.get("col_ready_edit"):
-        col_state["col_ready_edit"] = True
-
-    render_edit_section(col_state)
-
-
-def render_feedback_input(col_state):
-    """
-    Render the feedback input interface.
-
-    Args:
-        col_state: The current analysis state
-    """
-    feedback = st.text_area(
-        "Enter feedback to improve the Choice of Law Section:",
-        height=150,
-        key="col_feedback",
-        help="Provide feedback to refine the extracted Choice of Law Section.",
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Submit Feedback", key="submit_col_feedback"):
-            if feedback:
-                col_state["col_section_feedback"].append(feedback)
-                result = extract_col_section(col_state)
-                col_state.update(result)
-                st.rerun()
-            else:
-                st.warning("Please enter feedback to improve the extraction.")
-
-    with col2:
-        if st.button("Proceed to Edit Section", key="proceed_col_edit"):
-            col_state["col_ready_edit"] = True
-            st.rerun()
-
-
 def render_edit_section(col_state):
     """
     Render the edit section interface.
@@ -191,13 +123,17 @@ def render_col_processing(col_state):
     # Display case information
     display_case_info(col_state)
 
-    # Display extraction history
-    display_col_extractions(col_state)
+    # Auto-approve the first COL extraction without scoring UI
+    if not col_state.get("col_first_score_submitted"):
+        col_state["col_first_score_submitted"] = True
 
     # Always show the edit section (even after col_done) so user can see extracted text
     # Handle feedback and editing if COL not done
     if not col_state.get("col_done"):
-        handle_col_feedback_phase(col_state)
+        # Auto-approve first extraction, skip to editing
+        if not col_state.get("col_ready_edit"):
+            col_state["col_ready_edit"] = True
+        render_edit_section(col_state)
     else:
         # Show the textarea in read-only mode after classification
         render_edit_section(col_state)

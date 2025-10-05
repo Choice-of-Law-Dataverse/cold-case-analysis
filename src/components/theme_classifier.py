@@ -8,37 +8,6 @@ import streamlit as st
 from utils.data_loaders import load_valid_themes
 
 
-def display_theme_classification(state):
-    """
-    Display the theme classification results.
-
-    Args:
-        state: The current analysis state
-    """
-    # Don't display redundant theme output - just let the multiselect handle it
-    themes = state.get("classification", [])
-    if themes:
-        last_theme = themes[-1]
-        return last_theme
-    return None
-
-
-def handle_theme_scoring(state):
-    """
-    Auto-approve theme classification without scoring UI.
-
-    Args:
-        state: The current analysis state
-
-    Returns:
-        bool: True (always complete)
-    """
-    # Automatically mark as submitted without user interaction
-    if not state.get("theme_first_score_submitted"):
-        state["theme_first_score_submitted"] = True
-    return True
-
-
 def handle_theme_editing(state, last_theme, valid_themes):
     """
     Handle the theme editing interface.
@@ -84,17 +53,6 @@ def handle_theme_editing(state, last_theme, valid_themes):
                 st.warning("Select at least one theme before proceeding.")
 
 
-def display_final_themes(state):
-    """
-    Display the final edited themes - removed as redundant.
-
-    Args:
-        state: The current analysis state
-    """
-    # No longer display - multiselect shows the themes
-    pass
-
-
 def render_theme_classification(state):
     """
     Render the complete theme classification interface.
@@ -110,16 +68,16 @@ def render_theme_classification(state):
     # Add "NA" option to the list
     valid_themes.append("NA")
 
-    # Display classification results
-    last_theme = display_theme_classification(state)
+    # Get last theme from classification
+    themes = state.get("classification", [])
+    if not themes:
+        return
+    
+    last_theme = themes[-1]
 
-    if last_theme:
-        # Handle scoring
-        scoring_complete = handle_theme_scoring(state)
+    # Auto-approve theme classification without scoring UI
+    if not state.get("theme_first_score_submitted"):
+        state["theme_first_score_submitted"] = True
 
-        if scoring_complete:
-            # Handle theme editing
-            handle_theme_editing(state, last_theme, valid_themes)
-
-    # Display final themes if done
-    display_final_themes(state)
+    # Handle theme editing
+    handle_theme_editing(state, last_theme, valid_themes)

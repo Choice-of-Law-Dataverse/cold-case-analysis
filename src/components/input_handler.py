@@ -107,19 +107,3 @@ def render_demo_button(full_text):
         if st.button("Use Demo Case", on_click=load_demo_case, key="demo_button"):
             return True
     return False
-
-
-def render_input_phase():
-    """
-    Render the complete input phase (citation, PDF, text, demo).
-
-    Returns:
-        tuple: (case_citation, full_text) - the citation and decision text
-    """
-    render_email_input()
-    case_citation = render_case_citation_input()
-    render_pdf_uploader()
-    full_text = render_text_input()
-    render_demo_button(full_text)
-
-    return case_citation, full_text
