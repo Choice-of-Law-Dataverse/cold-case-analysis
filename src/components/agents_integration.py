@@ -233,6 +233,9 @@ def execute_agents_workflow(state):
         # Update state with results
         state.update(agents_result)
         state["agents_workflow_completed"] = True
+        
+        # Mark that we've done COL extraction (to prevent traditional workflow from running)
+        st.session_state["col_extraction_started"] = True
 
         # Update session state
         st.session_state.col_state = state

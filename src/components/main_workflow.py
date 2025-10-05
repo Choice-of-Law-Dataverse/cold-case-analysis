@@ -77,7 +77,8 @@ def render_initial_input_phase():
             return False
 
         # Traditional workflow: Check if we haven't already started extraction
-        if not st.session_state.get("col_extraction_started", False):
+        # Skip if agents workflow already completed
+        if not st.session_state.get("col_extraction_started", False) and not state.get("agents_workflow_completed", False):
             st.markdown("## Choice of Law Analysis")
             st.markdown(
                 "The Case Analyzer tends to over-extract. Please make sure only the relevant passages are left after your final review."
