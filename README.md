@@ -12,6 +12,7 @@ The CoLD Case Analyzer is a Streamlit-based web application that processes court
 - **User Feedback Integration**: Allows manual validation and editing at each analysis phase
 - **Database Persistence**: Stores analyses with user identification and timestamps
 - **Demo Case Support**: Includes BGE 132 III 285 Swiss court case for testing
+- **LLM Monitoring**: Integrated Logfire instrumentation for tracking AI model performance and costs
 
 ## System Architecture
 
@@ -302,6 +303,7 @@ python latam_case_analysis/txt_converter.py
 - **[Quick Start Guide](docs/QUICK_START.md)**: Quick setup instructions
 - **[Workflows](docs/WORKFLOWS.md)**: Detailed workflow diagrams
 - **[Agent Documentation](docs/agent.md)**: Agent implementation details
+- **[Logfire Monitoring](docs/LOGFIRE_MONITORING.md)**: LLM monitoring and observability setup
 - **[Prompts README](src/prompts/README.md)**: Comprehensive prompt documentation
 
 ## Contributing

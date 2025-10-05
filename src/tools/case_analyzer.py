@@ -4,6 +4,7 @@ import time
 from collections.abc import Sequence
 from typing import Any
 
+import logfire
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
@@ -51,94 +52,103 @@ def _get_classification_content_str(messages: Sequence[Any] | None) -> str:
 
 
 def relevant_facts(state):
-    text = state["full_text"]
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
-    FACTS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).FACTS_PROMPT
+    with logfire.span("extract_relevant_facts"):
+        text = state["full_text"]
+        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+        specific_jurisdiction = state.get("precise_jurisdiction")
+        FACTS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).FACTS_PROMPT
 
-    col_section = ""
-    sections = state.get("col_section", [])
-    if sections:
-        col_section = sections[-1]
-    prompt = FACTS_PROMPT.format(text=text, col_section=col_section)
-    logger.debug("Prompting LLM with: %s", prompt)
-    start_time = time.time()
+        col_section = ""
+        sections = state.get("col_section", [])
+        if sections:
+            col_section = sections[-1]
+        prompt = FACTS_PROMPT.format(text=text, col_section=col_section)
+        logger.debug("Prompting LLM with: %s", prompt)
+        start_time = time.time()
 
-    system_prompt = get_system_prompt_for_analysis(state)
+        system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
-    facts_time = time.time() - start_time
-    facts = _ensure_text(getattr(response, "content", ""))
-    logger.debug("Relevant Facts: %s", facts)
-    state.setdefault("relevant_facts", []).append(facts)
-    return {"relevant_facts": state["relevant_facts"], "relevant_facts_time": facts_time}
+        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        facts_time = time.time() - start_time
+        facts = _ensure_text(getattr(response, "content", ""))
+        logger.debug("Relevant Facts: %s", facts)
+        state.setdefault("relevant_facts", []).append(facts)
+
+        logfire.info("Extracted relevant facts", chars=len(facts), time_seconds=facts_time)
+        return {"relevant_facts": state["relevant_facts"], "relevant_facts_time": facts_time}
 
 
 def pil_provisions(state):
-    text = state["full_text"]
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
-    PIL_PROVISIONS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).PIL_PROVISIONS_PROMPT
+    with logfire.span("extract_pil_provisions"):
+        text = state["full_text"]
+        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+        specific_jurisdiction = state.get("precise_jurisdiction")
+        PIL_PROVISIONS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).PIL_PROVISIONS_PROMPT
 
-    col_section = ""
-    sections = state.get("col_section", [])
-    if sections:
-        col_section = sections[-1]
-    prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=col_section)
-    logger.debug("Prompting LLM with: %s", prompt)
-    start_time = time.time()
+        col_section = ""
+        sections = state.get("col_section", [])
+        if sections:
+            col_section = sections[-1]
+        prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=col_section)
+        logger.debug("Prompting LLM with: %s", prompt)
+        start_time = time.time()
 
-    system_prompt = get_system_prompt_for_analysis(state)
+        system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
-    provisions_time = time.time() - start_time
-    raw_content = getattr(response, "content", "")
-    content_str = _ensure_text(raw_content)
-    try:
-        pil_provisions = json.loads(content_str)
-    except json.JSONDecodeError:
-        logger.warning("Could not parse PIL provisions as JSON. Content: %s", content_str)
-        pil_provisions = [content_str.strip()]
-    logger.debug("PIL Provisions: %s", pil_provisions)
-    state.setdefault("pil_provisions", []).append(pil_provisions)
-    return {"pil_provisions": state["pil_provisions"], "pil_provisions_time": provisions_time}
+        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        provisions_time = time.time() - start_time
+        raw_content = getattr(response, "content", "")
+        content_str = _ensure_text(raw_content)
+        try:
+            pil_provisions = json.loads(content_str)
+        except json.JSONDecodeError:
+            logger.warning("Could not parse PIL provisions as JSON. Content: %s", content_str)
+            pil_provisions = [content_str.strip()]
+        logger.debug("PIL Provisions: %s", pil_provisions)
+        state.setdefault("pil_provisions", []).append(pil_provisions)
+
+        logfire.info("Extracted PIL provisions", count=len(pil_provisions), time_seconds=provisions_time)
+        return {"pil_provisions": state["pil_provisions"], "pil_provisions_time": provisions_time}
 
 
 def col_issue(state):
-    text = state["full_text"]
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
-    COL_ISSUE_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COL_ISSUE_PROMPT
+    with logfire.span("extract_col_issue"):
+        text = state["full_text"]
+        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+        specific_jurisdiction = state.get("precise_jurisdiction")
+        COL_ISSUE_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COL_ISSUE_PROMPT
 
-    col_section = ""
-    sections = state.get("col_section", [])
-    if sections:
-        col_section = sections[-1]
-    classification_messages = state.get("classification", [])
-    themes_list: list[str] = []
-    if classification_messages:
-        last_msg = classification_messages[-1]
-        if hasattr(last_msg, "content"):
-            content_value = last_msg.content
-            if isinstance(content_value, list):
-                themes_list = content_value
-            elif isinstance(content_value, str) and content_value:
-                themes_list = [content_value]
-    logger.debug("Themes list for classification: %s", themes_list)
-    classification_definitions = filter_themes_by_list(themes_list)
+        col_section = ""
+        sections = state.get("col_section", [])
+        if sections:
+            col_section = sections[-1]
+        classification_messages = state.get("classification", [])
+        themes_list: list[str] = []
+        if classification_messages:
+            last_msg = classification_messages[-1]
+            if hasattr(last_msg, "content"):
+                content_value = last_msg.content
+                if isinstance(content_value, list):
+                    themes_list = content_value
+                elif isinstance(content_value, str) and content_value:
+                    themes_list = [content_value]
+        logger.debug("Themes list for classification: %s", themes_list)
+        classification_definitions = filter_themes_by_list(themes_list)
 
-    prompt = COL_ISSUE_PROMPT.format(text=text, col_section=col_section, classification_definitions=classification_definitions)
-    logger.debug("Prompting LLM with: %s", prompt)
-    start_time = time.time()
+        prompt = COL_ISSUE_PROMPT.format(text=text, col_section=col_section, classification_definitions=classification_definitions)
+        logger.debug("Prompting LLM with: %s", prompt)
+        start_time = time.time()
 
-    system_prompt = get_system_prompt_for_analysis(state)
+        system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
-    issue_time = time.time() - start_time
-    col_issue = _ensure_text(getattr(response, "content", ""))
-    logger.debug("Choice of Law Issue: %s", col_issue)
-    state.setdefault("col_issue", []).append(col_issue)
-    return {"col_issue": state["col_issue"], "col_issue_time": issue_time}
+        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        issue_time = time.time() - start_time
+        col_issue = _ensure_text(getattr(response, "content", ""))
+        logger.debug("Choice of Law Issue: %s", col_issue)
+        state.setdefault("col_issue", []).append(col_issue)
+
+        logfire.info("Extracted CoL issue", chars=len(col_issue), time_seconds=issue_time)
+        return {"col_issue": state["col_issue"], "col_issue_time": issue_time}
 
 
 def courts_position(state):
@@ -221,40 +231,43 @@ def dissenting_opinions(state):
 
 
 def abstract(state):
-    text = state["full_text"]
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
-    ABSTRACT_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).ABSTRACT_PROMPT
+    with logfire.span("generate_abstract"):
+        text = state["full_text"]
+        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+        specific_jurisdiction = state.get("precise_jurisdiction")
+        ABSTRACT_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).ABSTRACT_PROMPT
 
-    classification = state.get("classification", [""])[-1] if state.get("classification") else ""
-    facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
-    pil_provisions = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
-    col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
-    court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
+        classification = state.get("classification", [""])[-1] if state.get("classification") else ""
+        facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
+        pil_provisions = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
+        col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+        court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
 
-    prompt_vars = {
-        "text": text,
-        "classification": classification,
-        "facts": facts,
-        "pil_provisions": pil_provisions,
-        "col_issue": col_issue,
-        "court_position": court_position,
-    }
+        prompt_vars = {
+            "text": text,
+            "classification": classification,
+            "facts": facts,
+            "pil_provisions": pil_provisions,
+            "col_issue": col_issue,
+            "court_position": court_position,
+        }
 
-    if jurisdiction == "Common-law jurisdiction" or (specific_jurisdiction and specific_jurisdiction.lower() == "india"):
-        obiter_dicta = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
-        dissenting_opinions = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
-        prompt_vars.update({"obiter_dicta": obiter_dicta, "dissenting_opinions": dissenting_opinions})
+        if jurisdiction == "Common-law jurisdiction" or (specific_jurisdiction and specific_jurisdiction.lower() == "india"):
+            obiter_dicta = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
+            dissenting_opinions = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
+            prompt_vars.update({"obiter_dicta": obiter_dicta, "dissenting_opinions": dissenting_opinions})
 
-    prompt = ABSTRACT_PROMPT.format(**prompt_vars)
-    logger.debug("Prompting LLM with: %s", prompt)
-    start_time = time.time()
+        prompt = ABSTRACT_PROMPT.format(**prompt_vars)
+        logger.debug("Prompting LLM with: %s", prompt)
+        start_time = time.time()
 
-    system_prompt = get_system_prompt_for_analysis(state)
+        system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
-    abstract_time = time.time() - start_time
-    abstract = _ensure_text(getattr(response, "content", ""))
-    logger.debug("Abstract: %s", abstract)
-    state.setdefault("abstract", []).append(abstract)
-    return {"abstract": state["abstract"], "abstract_time": abstract_time}
+        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        abstract_time = time.time() - start_time
+        abstract = _ensure_text(getattr(response, "content", ""))
+        logger.debug("Abstract: %s", abstract)
+        state.setdefault("abstract", []).append(abstract)
+
+        logfire.info("Generated abstract", chars=len(abstract), time_seconds=abstract_time)
+        return {"abstract": state["abstract"], "abstract_time": abstract_time}
