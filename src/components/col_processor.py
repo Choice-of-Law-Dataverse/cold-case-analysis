@@ -21,20 +21,17 @@ def display_jurisdiction_info(col_state):
     jurisdiction_code = col_state.get("jurisdiction_code")
 
     if precise_jurisdiction or jurisdiction:
-        st.markdown("### Jurisdiction")
-        col1, col2 = st.columns([2, 1])
+        st.subheader("Jurisdiction")
 
-        with col1:
-            if precise_jurisdiction and precise_jurisdiction != "Unknown":
-                jurisdiction_display = f"{precise_jurisdiction}"
-                if jurisdiction_code:
-                    jurisdiction_display += f" ({jurisdiction_code})"
-                st.markdown(f"**Specific Jurisdiction:** {jurisdiction_display}")
+        if precise_jurisdiction and precise_jurisdiction != "Unknown":
+            jurisdiction_display = f"{precise_jurisdiction}"
+            if jurisdiction_code:
+                jurisdiction_display += f" ({jurisdiction_code})"
 
-            if jurisdiction:
-                st.markdown(f"**Legal System:** {jurisdiction}")
+            st.badge(jurisdiction_display)
 
-        st.markdown("---")
+        if jurisdiction:
+            st.badge(jurisdiction)
 
 
 def display_case_info(col_state):
@@ -46,7 +43,7 @@ def display_case_info(col_state):
     """
     citation = col_state.get("case_citation")
     if citation:
-        st.markdown("**Case Citation:**")
+        st.subheader("Case Citation")
         st.markdown(f"<div class='user-message'>{citation}</div>", unsafe_allow_html=True)
 
     display_jurisdiction_info(col_state)
@@ -127,7 +124,23 @@ def render_edit_section(col_state):
     Args:
         col_state: The current analysis state
     """
+    from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+
+    # Add CSS for confidence chips
+    add_confidence_chip_css()
+
     last_extraction = col_state.get("col_section", [""])[-1]
+    confidence = col_state.get("col_section_confidence", [])[-1] if col_state.get("col_section_confidence") else None
+    reasoning = (
+        col_state.get("col_section_reasoning", [""])[-1] if col_state.get("col_section_reasoning") else "No reasoning available"
+    )
+
+    with st.container(horizontal=True):
+        st.markdown("### Edit extracted Choice of Law section")
+        if confidence:
+            # Use a more unique key to avoid widget conflicts
+            chip_key = f"col_extraction_{hash(reasoning) % 10000}"
+            render_confidence_chip(confidence, reasoning, chip_key)
 
     # Use custom CSS to set height with min and max
     st.markdown(
@@ -147,6 +160,7 @@ def render_edit_section(col_state):
         value=last_extraction,
         height=600,
         key="col_edit_section",
+        label_visibility="collapsed",
         help="Modify the extracted section before proceeding to theme classification",
         disabled=col_state.get("col_done", False),
     )
@@ -154,9 +168,8 @@ def render_edit_section(col_state):
     print_state("\n\n\nCurrent CoLD State\n\n", col_state)
 
     if not col_state.get("col_done"):
-        if st.button("Submit and Classify"):
+        if st.button("Submit and Classify", key="submit_and_classify_btn"):
             if edited_extraction:
-                # Save edited extraction and run classification
                 col_state["col_section"].append(edited_extraction)
                 col_state["col_done"] = True
                 col_state["classification"] = []
@@ -181,10 +194,9 @@ def render_col_processing(col_state):
     Args:
         col_state: The current analysis state
     """
-    # Display case information
+
     display_case_info(col_state)
 
-    # Display extraction history
     display_col_extractions(col_state)
 
     # Handle feedback and editing if COL not done

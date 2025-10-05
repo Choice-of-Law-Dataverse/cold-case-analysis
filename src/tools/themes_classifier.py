@@ -1,14 +1,15 @@
+import asyncio
 import csv
-import json
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any
 
 import logfire
-from langchain_core.messages import HumanMessage, SystemMessage
+from agents import Agent, Runner
 
-import config
+from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
 from utils.themes_extractor import THEMES_TABLE_STR
@@ -55,41 +56,59 @@ def theme_classification_node(state):
                 valid_themes.add(row["Theme"])
 
         max_attempts = 5
-        cls_list: list[Any] = []
+        cls_list: list[str] = []
+        confidence = "low"
+        reasoning = ""
         theme_time = 0.0
         attempt = 0
+
         for attempt in range(1, max_attempts + 1):
-            logger.debug("Prompting LLM (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
+            logger.debug("Prompting agent (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
             start_time = time.time()
 
             system_prompt = get_system_prompt_for_analysis(state)
 
-            response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+            # Create and run agent
+            selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+            agent = Agent(
+                name="ThemeClassifier",
+                instructions=system_prompt,
+                output_type=ThemeClassificationOutput,
+                model=selected_model,
+            )
+            result = asyncio.run(Runner.run(agent, prompt)).final_output
             theme_time = time.time() - start_time
 
-            raw_content = getattr(response, "content", "")
-            content_str = _coerce_to_text(raw_content)
-            try:
-                parsed = json.loads(content_str)
-                cls_list = parsed if isinstance(parsed, list) else [parsed]
-            except Exception:
-                cls_list = [content_str.strip()]
-            cls_list = [str(item) for item in cls_list if str(item).strip()]
+            cls_list = result.themes
+            confidence = result.confidence
+            reasoning = result.reasoning
 
             invalid = [item for item in cls_list if item not in valid_themes]
             if not invalid:
                 break
             logger.debug("Invalid themes returned: %s. Retrying...", invalid)
+            prompt += f"\n\nNote: These themes are invalid and should not be used: {invalid}. Please select only from the provided themes table."
         else:
             logger.debug("Max attempts reached. Proceeding with last classification: %s", cls_list)
 
         cls_str = ", ".join(str(item) for item in cls_list)
-        logger.debug("Classified theme(s): %s", cls_list)
+        logger.debug("Classified theme(s): %s (confidence: %s)", cls_list, confidence)
         state.setdefault("classification", []).append(cls_str)
+        state.setdefault("classification_confidence", []).append(confidence)
+        state.setdefault("classification_reasoning", []).append(reasoning)
 
-        logfire.info("Classified themes", themes=cls_list, count=len(cls_list), time_seconds=theme_time, attempts=attempt)
+        logfire.info(
+            "Classified themes",
+            themes=cls_list,
+            count=len(cls_list),
+            time_seconds=theme_time,
+            attempts=attempt,
+            confidence=confidence,
+        )
         return {
             "classification": state["classification"],
+            "classification_confidence": state["classification_confidence"],
+            "classification_reasoning": state["classification_reasoning"],
             "theme_feedback": state.get("theme_feedback", []),
             "theme_classification_time": theme_time,
         }

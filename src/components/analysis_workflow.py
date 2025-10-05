@@ -296,9 +296,10 @@ def render_final_editing_phase(state):
     Args:
         state: The current analysis state
     """
-    st.markdown("---")
-    st.markdown("## Review and Edit Analysis Results")
-    st.markdown("Review all analysis results below. You can edit any section before final submission.")
+    from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+
+    # Add CSS for confidence chips
+    add_confidence_chip_css()
 
     steps = get_analysis_steps(state)
     edited_values = {}
@@ -367,10 +368,22 @@ def render_final_editing_phase(state):
 
         current_value = content[-1] if isinstance(content, list) else content
 
+        # Get confidence and reasoning for this step
+        confidence_key = f"{name}_confidence"
+        reasoning_key = f"{name}_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        # Display title with confidence chip
+        with st.container(horizontal=True):
+            st.subheader(display_name)
+            if confidence:
+                render_confidence_chip(confidence, reasoning, f"analysis_{name}")
+
         # Special handling for PIL provisions display
         if name == "pil_provisions":
-            st.markdown(f"**{display_name}**")
-
             # Display as chips
             if isinstance(current_value, list):
                 chips_html = '<div class="pil-chips-container">'
@@ -381,16 +394,19 @@ def render_final_editing_phase(state):
                 st.markdown(chips_html, unsafe_allow_html=True)
 
                 # Provide text area with JSON for editing
-
                 edit_value = json.dumps(current_value, indent=2)
             else:
                 edit_value = str(current_value)
 
-            edited = st.text_area(f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}")
+            edited = st.text_area(
+                f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}", label_visibility="collapsed"
+            )
             edited_values[name] = edited
         else:
             # Standard text area for other steps - height controlled by CSS
-            edited = st.text_area(f"**{display_name}**", value=str(current_value), key=f"final_edit_{name}")
+            edited = st.text_area(
+                f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed"
+            )
             edited_values[name] = edited
 
     # Submit button

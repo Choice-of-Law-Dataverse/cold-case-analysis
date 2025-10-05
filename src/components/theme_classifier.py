@@ -48,6 +48,25 @@ def handle_theme_editing(state, last_theme, valid_themes):
         last_theme: The last classified theme
         valid_themes: List of valid theme options
     """
+    from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+
+    # Add CSS for confidence chips
+    add_confidence_chip_css()
+
+    # Get confidence and reasoning
+    confidence = state.get("classification_confidence", [])[-1] if state.get("classification_confidence") else None
+    reasoning = (
+        state.get("classification_reasoning", [""])[-1] if state.get("classification_reasoning") else "No reasoning available"
+    )
+
+    # Display title with confidence chip
+    with st.container(horizontal=True):
+        st.subheader("Themes")
+        if confidence:
+            # Use a more unique key to avoid widget conflicts
+            chip_key = f"theme_classification_{hash(reasoning) % 10000}"
+            render_confidence_chip(confidence, reasoning, chip_key)
+
     # Parse default selection and filter to only include valid themes
     default_sel = [t.strip() for t in last_theme.split(",") if t.strip()]
 
@@ -63,16 +82,19 @@ def handle_theme_editing(state, last_theme, valid_themes):
             # Use the correctly cased version from valid_themes
             filtered_defaults.append(theme_mapping[theme.lower()])
 
-    selected = st.multiselect(
-        "Themes:",
-        options=valid_themes,
-        default=filtered_defaults,
-        key="theme_select",
-        disabled=state.get("theme_done", False),
-    )
+    if "theme_done" in state and state["theme_done"]:
+        for theme in filtered_defaults:
+            st.badge(theme)
+    else:
+        selected = st.multiselect(
+            "",
+            options=valid_themes,
+            default=filtered_defaults,
+            key="theme_select",
+            disabled=state.get("theme_done", False),
+        )
 
-    if not state.get("theme_done"):
-        if st.button("Submit Final Themes"):
+        if st.button("Submit Final Themes", key="submit_final_themes"):
             if selected:
                 new_sel = ", ".join(selected)
                 state.setdefault("classification", []).append(new_sel)
