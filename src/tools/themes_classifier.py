@@ -88,7 +88,7 @@ def theme_classification_node(state):
             logger.debug("Max attempts reached. Proceeding with last classification: %s", cls_list)
 
         cls_str = ", ".join(str(item) for item in cls_list)
-        logger.debug("Classified theme(s): %s (confidence: %.2f)", cls_list, confidence)
+        logger.debug("Classified theme(s): %s (confidence: %s)", cls_list, confidence)
         state.setdefault("classification", []).append(cls_str)
         state.setdefault("classification_confidence", []).append(confidence)
         state.setdefault("classification_reasoning", []).append(reasoning)

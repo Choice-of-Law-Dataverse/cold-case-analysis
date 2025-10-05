@@ -118,7 +118,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
         confidence = result.confidence
         reasoning = result.reasoning
 
-        logger.debug("Detected jurisdiction: %s (%s) with confidence %.2f", jurisdiction_name, legal_system_type, confidence)
+        logger.debug("Detected jurisdiction: %s (%s) with confidence %s", jurisdiction_name, legal_system_type, confidence)
 
         # Validate against known jurisdictions
         jurisdictions = load_jurisdictions()
