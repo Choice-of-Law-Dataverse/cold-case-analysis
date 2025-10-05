@@ -82,17 +82,6 @@ def handle_theme_editing(state, last_theme, valid_themes):
                 st.warning("Select at least one theme before proceeding.")
 
 
-def display_final_themes(state):
-    """
-    Display the final edited themes - removed as redundant.
-
-    Args:
-        state: The current analysis state
-    """
-    # No longer display - multiselect shows the themes
-    pass
-
-
 def render_theme_classification(state):
     """
     Render the complete theme classification interface.
@@ -116,5 +105,3 @@ def render_theme_classification(state):
             state["theme_first_score_submitted"] = True
 
         handle_theme_editing(state, last_theme, valid_themes)
-
-    display_final_themes(state)
