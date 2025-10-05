@@ -4,11 +4,15 @@ on: [workflow_dispatch]
 permissions:
   id-token: write
   contents: read
+
 jobs:
   build-and-deploy:
     environment: production
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -16,18 +20,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push container image to registry
+      - name: Build, push, and deploy Container App
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
+
+          imageToBuild: choiceoflawdataverse/cold-case-analyzer:${{ github.sha }}
+
           registryUrl: docker.io
           registryUsername: ${{ secrets.REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
+
           containerAppName: cold-case-analyzer
           resourceGroup: cold
-          imageToBuild: choiceoflawdataverse/cold-case-analyzer:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
-
