@@ -47,17 +47,18 @@ def render_initial_input_phase():
         final_jurisdiction_data = get_final_jurisdiction_data()
 
         # Create initial analysis state
-        state = create_initial_analysis_state(
-            case_citation=st.session_state.get("case_citation"),
-            username=st.session_state.get("user"),
-            model=st.session_state.get("llm_model_select"),
-            full_text=full_text,
-            final_jurisdiction_data=final_jurisdiction_data,
-            user_email=st.session_state.get("user_email"),
-        )
-
-        # Update session state with initial state
-        if not st.session_state.get("col_state"):
+        # Use existing state if available, otherwise create new
+        if st.session_state.get("col_state"):
+            state = st.session_state.col_state
+        else:
+            state = create_initial_analysis_state(
+                case_citation=st.session_state.get("case_citation"),
+                username=st.session_state.get("user"),
+                model=st.session_state.get("llm_model_select"),
+                full_text=full_text,
+                final_jurisdiction_data=final_jurisdiction_data,
+                user_email=st.session_state.get("user_email"),
+            )
             st.session_state.col_state = state
 
         # Check if user wants to use agents workflow
