@@ -3,13 +3,27 @@ import time
 from typing import Any
 
 import logfire
-from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
+from models.analysis_models import ColSectionOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
 
 logger = logging.getLogger(__name__)
+
+
+def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
+    """Call OpenAI API with structured outputs using Pydantic models."""
+    client, selected_model = config.get_openai_client(model)
+    completion = client.beta.chat.completions.parse(
+        model=selected_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        response_format=response_format,
+    )
+    return completion.choices[0].message.parsed
 
 
 def _coerce_to_text(content: Any) -> str:
@@ -49,18 +63,22 @@ def extract_col_section(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        response = config.llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=prompt)
-        ])
+        result = _call_openai_structured(prompt, system_prompt, ColSectionOutput, state.get("model"))
         col_time = time.time() - start_time
-        col_section = _coerce_to_text(getattr(response, "content", "")).strip()
-        state.setdefault("col_section", []).append(col_section)
-        logger.debug("Extracted Choice of Law section: %s", col_section)
+        col_section = result.col_section.strip()
+        confidence = result.confidence
+        reasoning = result.reasoning
 
-        logfire.info("Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time)
+        state.setdefault("col_section", []).append(col_section)
+        state.setdefault("col_section_confidence", []).append(confidence)
+        state.setdefault("col_section_reasoning", []).append(reasoning)
+        logger.debug("Extracted Choice of Law section: %s (confidence: %.2f)", col_section, confidence)
+
+        logfire.info("Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time, confidence=confidence)
         return {
             "col_section": state["col_section"],
+            "col_section_confidence": state["col_section_confidence"],
+            "col_section_reasoning": state["col_section_reasoning"],
             "col_section_feedback": state.get("col_section_feedback", []),
-            "col_section_time": col_time
+            "col_section_time": col_time,
         }

@@ -8,11 +8,45 @@ import logfire
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
+from models.analysis_models import (
+    AbstractOutput,
+    ColIssueOutput,
+    CourtsPositionOutput,
+    DissentingOpinionsOutput,
+    ObiterDictaOutput,
+    PILProvisionsOutput,
+    RelevantFactsOutput,
+)
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import get_system_prompt_for_analysis
 from utils.themes_extractor import filter_themes_by_list
 
 logger = logging.getLogger(__name__)
+
+
+def _call_openai_structured(prompt: str, system_prompt: str, response_format: type, model: str | None = None) -> Any:
+    """
+    Call OpenAI API with structured outputs using Pydantic models.
+
+    Args:
+        prompt: The user prompt
+        system_prompt: The system prompt
+        response_format: Pydantic model class for structured output
+        model: Optional model override
+
+    Returns:
+        Parsed response object matching the response_format
+    """
+    client, selected_model = config.get_openai_client(model)
+    completion = client.beta.chat.completions.parse(
+        model=selected_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        response_format=response_format,
+    )
+    return completion.choices[0].message.parsed
 
 
 def _ensure_text(content: Any) -> str:
@@ -68,14 +102,24 @@ def relevant_facts(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        result = _call_openai_structured(prompt, system_prompt, RelevantFactsOutput, state.get("model"))
         facts_time = time.time() - start_time
-        facts = _ensure_text(getattr(response, "content", ""))
-        logger.debug("Relevant Facts: %s", facts)
+        facts = result.relevant_facts
+        confidence = result.confidence
+        reasoning = result.reasoning
+        
+        logger.debug("Relevant Facts: %s (confidence: %.2f)", facts, confidence)
         state.setdefault("relevant_facts", []).append(facts)
+        state.setdefault("relevant_facts_confidence", []).append(confidence)
+        state.setdefault("relevant_facts_reasoning", []).append(reasoning)
 
-        logfire.info("Extracted relevant facts", chars=len(facts), time_seconds=facts_time)
-        return {"relevant_facts": state["relevant_facts"], "relevant_facts_time": facts_time}
+        logfire.info("Extracted relevant facts", chars=len(facts), time_seconds=facts_time, confidence=confidence)
+        return {
+            "relevant_facts": state["relevant_facts"],
+            "relevant_facts_confidence": state["relevant_facts_confidence"],
+            "relevant_facts_reasoning": state["relevant_facts_reasoning"],
+            "relevant_facts_time": facts_time,
+        }
 
 
 def pil_provisions(state):
@@ -95,20 +139,24 @@ def pil_provisions(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        result = _call_openai_structured(prompt, system_prompt, PILProvisionsOutput, state.get("model"))
         provisions_time = time.time() - start_time
-        raw_content = getattr(response, "content", "")
-        content_str = _ensure_text(raw_content)
-        try:
-            pil_provisions = json.loads(content_str)
-        except json.JSONDecodeError:
-            logger.warning("Could not parse PIL provisions as JSON. Content: %s", content_str)
-            pil_provisions = [content_str.strip()]
-        logger.debug("PIL Provisions: %s", pil_provisions)
-        state.setdefault("pil_provisions", []).append(pil_provisions)
+        pil_provisions = result.pil_provisions
+        confidence = result.confidence
+        reasoning = result.reasoning
 
-        logfire.info("Extracted PIL provisions", count=len(pil_provisions), time_seconds=provisions_time)
-        return {"pil_provisions": state["pil_provisions"], "pil_provisions_time": provisions_time}
+        logger.debug("PIL Provisions: %s (confidence: %.2f)", pil_provisions, confidence)
+        state.setdefault("pil_provisions", []).append(pil_provisions)
+        state.setdefault("pil_provisions_confidence", []).append(confidence)
+        state.setdefault("pil_provisions_reasoning", []).append(reasoning)
+
+        logfire.info("Extracted PIL provisions", count=len(pil_provisions), time_seconds=provisions_time, confidence=confidence)
+        return {
+            "pil_provisions": state["pil_provisions"],
+            "pil_provisions_confidence": state["pil_provisions_confidence"],
+            "pil_provisions_reasoning": state["pil_provisions_reasoning"],
+            "pil_provisions_time": provisions_time,
+        }
 
 
 def col_issue(state):
@@ -141,14 +189,24 @@ def col_issue(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        result = _call_openai_structured(prompt, system_prompt, ColIssueOutput, state.get("model"))
         issue_time = time.time() - start_time
-        col_issue = _ensure_text(getattr(response, "content", ""))
-        logger.debug("Choice of Law Issue: %s", col_issue)
-        state.setdefault("col_issue", []).append(col_issue)
+        col_issue_text = result.col_issue
+        confidence = result.confidence
+        reasoning = result.reasoning
 
-        logfire.info("Extracted CoL issue", chars=len(col_issue), time_seconds=issue_time)
-        return {"col_issue": state["col_issue"], "col_issue_time": issue_time}
+        logger.debug("Choice of Law Issue: %s (confidence: %.2f)", col_issue_text, confidence)
+        state.setdefault("col_issue", []).append(col_issue_text)
+        state.setdefault("col_issue_confidence", []).append(confidence)
+        state.setdefault("col_issue_reasoning", []).append(reasoning)
+
+        logfire.info("Extracted CoL issue", chars=len(col_issue_text), time_seconds=issue_time, confidence=confidence)
+        return {
+            "col_issue": state["col_issue"],
+            "col_issue_confidence": state["col_issue_confidence"],
+            "col_issue_reasoning": state["col_issue_reasoning"],
+            "col_issue_time": issue_time,
+        }
 
 
 def courts_position(state):
@@ -180,12 +238,23 @@ def courts_position(state):
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+    result = _call_openai_structured(prompt, system_prompt, CourtsPositionOutput, state.get("model"))
     position_time = time.time() - start_time
-    courts_position = _ensure_text(getattr(response, "content", ""))
-    logger.debug("Court's Position: %s", courts_position)
-    state.setdefault("courts_position", []).append(courts_position)
-    return {"courts_position": state["courts_position"], "courts_position_time": position_time}
+    courts_position_text = result.courts_position
+    confidence = result.confidence
+    reasoning = result.reasoning
+
+    logger.debug("Court's Position: %s (confidence: %.2f)", courts_position_text, confidence)
+    state.setdefault("courts_position", []).append(courts_position_text)
+    state.setdefault("courts_position_confidence", []).append(confidence)
+    state.setdefault("courts_position_reasoning", []).append(reasoning)
+
+    return {
+        "courts_position": state["courts_position"],
+        "courts_position_confidence": state["courts_position_confidence"],
+        "courts_position_reasoning": state["courts_position_reasoning"],
+        "courts_position_time": position_time,
+    }
 
 
 def obiter_dicta(state):
@@ -202,11 +271,21 @@ def obiter_dicta(state):
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
-    obiter = _ensure_text(getattr(response, "content", ""))
-    logger.debug("Obiter Dicta: %s", obiter)
+    result = _call_openai_structured(prompt, system_prompt, ObiterDictaOutput, state.get("model"))
+    obiter = result.obiter_dicta
+    confidence = result.confidence
+    reasoning = result.reasoning
+
+    logger.debug("Obiter Dicta: %s (confidence: %.2f)", obiter, confidence)
     state.setdefault("obiter_dicta", []).append(obiter)
-    return {"obiter_dicta": state["obiter_dicta"]}
+    state.setdefault("obiter_dicta_confidence", []).append(confidence)
+    state.setdefault("obiter_dicta_reasoning", []).append(reasoning)
+
+    return {
+        "obiter_dicta": state["obiter_dicta"],
+        "obiter_dicta_confidence": state["obiter_dicta_confidence"],
+        "obiter_dicta_reasoning": state["obiter_dicta_reasoning"],
+    }
 
 
 def dissenting_opinions(state):
@@ -223,11 +302,21 @@ def dissenting_opinions(state):
 
     system_prompt = get_system_prompt_for_analysis(state)
 
-    response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
-    dissent = _ensure_text(getattr(response, "content", ""))
-    logger.debug("Dissenting Opinions: %s", dissent)
+    result = _call_openai_structured(prompt, system_prompt, DissentingOpinionsOutput, state.get("model"))
+    dissent = result.dissenting_opinions
+    confidence = result.confidence
+    reasoning = result.reasoning
+
+    logger.debug("Dissenting Opinions: %s (confidence: %.2f)", dissent, confidence)
     state.setdefault("dissenting_opinions", []).append(dissent)
-    return {"dissenting_opinions": state["dissenting_opinions"]}
+    state.setdefault("dissenting_opinions_confidence", []).append(confidence)
+    state.setdefault("dissenting_opinions_reasoning", []).append(reasoning)
+
+    return {
+        "dissenting_opinions": state["dissenting_opinions"],
+        "dissenting_opinions_confidence": state["dissenting_opinions_confidence"],
+        "dissenting_opinions_reasoning": state["dissenting_opinions_reasoning"],
+    }
 
 
 def abstract(state):
@@ -263,11 +352,21 @@ def abstract(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        response = config.llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
+        result = _call_openai_structured(prompt, system_prompt, AbstractOutput, state.get("model"))
         abstract_time = time.time() - start_time
-        abstract = _ensure_text(getattr(response, "content", ""))
-        logger.debug("Abstract: %s", abstract)
-        state.setdefault("abstract", []).append(abstract)
+        abstract_text = result.abstract
+        confidence = result.confidence
+        reasoning = result.reasoning
 
-        logfire.info("Generated abstract", chars=len(abstract), time_seconds=abstract_time)
-        return {"abstract": state["abstract"], "abstract_time": abstract_time}
+        logger.debug("Abstract: %s (confidence: %.2f)", abstract_text, confidence)
+        state.setdefault("abstract", []).append(abstract_text)
+        state.setdefault("abstract_confidence", []).append(confidence)
+        state.setdefault("abstract_reasoning", []).append(reasoning)
+
+        logfire.info("Generated abstract", chars=len(abstract_text), time_seconds=abstract_time, confidence=confidence)
+        return {
+            "abstract": state["abstract"],
+            "abstract_confidence": state["abstract_confidence"],
+            "abstract_reasoning": state["abstract_reasoning"],
+            "abstract_time": abstract_time,
+        }

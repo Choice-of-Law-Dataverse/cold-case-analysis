@@ -6,6 +6,7 @@ import uuid
 import logfire
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from openai import OpenAI
 
 load_dotenv()
 
@@ -40,8 +41,19 @@ def get_llm(model: str | None = None):
     return ChatOpenAI(model=selected)
 
 
-# default llm instance
+def get_openai_client(model: str | None = None):
+    """
+    Return an OpenAI client instance with the specified model.
+    """
+    selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+    return OpenAI(), selected
+
+
+# default llm instance (legacy)
 llm = get_llm()
+
+# default OpenAI client
+openai_client, default_model = get_openai_client()
 
 AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
