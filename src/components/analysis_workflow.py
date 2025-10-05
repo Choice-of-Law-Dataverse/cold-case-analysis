@@ -301,10 +301,6 @@ def render_final_editing_phase(state):
     # Add CSS for confidence chips
     add_confidence_chip_css()
 
-    st.markdown("---")
-    st.markdown("## Review and Edit Analysis Results")
-    st.markdown("Review all analysis results below. You can edit any section before final submission.")
-
     steps = get_analysis_steps(state)
     edited_values = {}
 
@@ -381,10 +377,8 @@ def render_final_editing_phase(state):
         reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
 
         # Display title with confidence chip
-        col1, col2 = st.columns([0.85, 0.15])
-        with col1:
-            st.markdown(f"**{display_name}**")
-        with col2:
+        with st.container(horizontal=True):
+            st.subheader(display_name)
             if confidence:
                 render_confidence_chip(confidence, reasoning, f"analysis_{name}")
 

@@ -18,15 +18,15 @@ def render_confidence_chip(confidence: Literal["low", "medium", "high"], reasoni
     modal_key = f"confidence_modal_{key_suffix}"
 
     # Create the chip as a button with custom styling
-    col1, col2 = st.columns([0.15, 0.85])
-    with col1:
-        # Use a button that looks like a chip with confidence level text
-        chip_clicked = st.button(
-            f"🔍 {confidence.upper()}",
-            key=f"confidence_chip_{key_suffix}",
-            help="Click to see reasoning",
-            use_container_width=True
-        )
+
+    chip_clicked = st.button(
+        f" {confidence.upper()}",
+        key=f"confidence_chip_{key_suffix}",
+        help="Click to see reasoning",
+        use_container_width=False,
+        type="tertiary",
+        icon="🔍",
+    )
 
     # Store modal state
     if chip_clicked:
@@ -53,10 +53,7 @@ def render_confidence_modal(confidence: Literal["low", "medium", "high"], reason
     # Create modal using st.dialog (Streamlit 1.50+)
     @st.dialog(f"Confidence Level: {confidence.upper()}")
     def show_modal():
-        st.markdown(f"**Confidence Level:** {confidence.upper()}")
         st.progress(progress_value)
-        st.markdown("---")
-        st.markdown("**Reasoning:**")
         st.markdown(reasoning)
 
         if st.button("Close", key=f"close_modal_{modal_key}"):

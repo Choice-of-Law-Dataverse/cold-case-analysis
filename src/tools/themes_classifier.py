@@ -111,5 +111,4 @@ def theme_classification_node(state):
             "classification_reasoning": state["classification_reasoning"],
             "theme_feedback": state.get("theme_feedback", []),
             "theme_classification_time": theme_time,
-            "theme_classification_time": theme_time,
         }

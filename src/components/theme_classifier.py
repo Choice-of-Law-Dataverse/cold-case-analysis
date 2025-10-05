@@ -60,10 +60,8 @@ def handle_theme_editing(state, last_theme, valid_themes):
     )
 
     # Display title with confidence chip
-    col1, col2 = st.columns([0.85, 0.15])
-    with col1:
-        st.markdown("### Theme Classification")
-    with col2:
+    with st.container(horizontal=True):
+        st.subheader("Themes")
         if confidence:
             # Use a more unique key to avoid widget conflicts
             chip_key = f"theme_classification_{hash(reasoning) % 10000}"
@@ -84,15 +82,18 @@ def handle_theme_editing(state, last_theme, valid_themes):
             # Use the correctly cased version from valid_themes
             filtered_defaults.append(theme_mapping[theme.lower()])
 
-    selected = st.multiselect(
-        "Themes:",
-        options=valid_themes,
-        default=filtered_defaults,
-        key="theme_select",
-        disabled=state.get("theme_done", False),
-    )
+    if "theme_done" in state and state["theme_done"]:
+        for theme in filtered_defaults:
+            st.badge(theme)
+    else:
+        selected = st.multiselect(
+            "",
+            options=valid_themes,
+            default=filtered_defaults,
+            key="theme_select",
+            disabled=state.get("theme_done", False),
+        )
 
-    if not state.get("theme_done"):
         if st.button("Submit Final Themes", key="submit_final_themes"):
             if selected:
                 new_sel = ", ".join(selected)

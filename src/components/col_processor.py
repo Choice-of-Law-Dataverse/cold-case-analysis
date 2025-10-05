@@ -21,20 +21,17 @@ def display_jurisdiction_info(col_state):
     jurisdiction_code = col_state.get("jurisdiction_code")
 
     if precise_jurisdiction or jurisdiction:
-        st.markdown("### Jurisdiction")
-        col1, col2 = st.columns([2, 1])
+        st.subheader("Jurisdiction")
 
-        with col1:
-            if precise_jurisdiction and precise_jurisdiction != "Unknown":
-                jurisdiction_display = f"{precise_jurisdiction}"
-                if jurisdiction_code:
-                    jurisdiction_display += f" ({jurisdiction_code})"
-                st.markdown(f"**Specific Jurisdiction:** {jurisdiction_display}")
+        if precise_jurisdiction and precise_jurisdiction != "Unknown":
+            jurisdiction_display = f"{precise_jurisdiction}"
+            if jurisdiction_code:
+                jurisdiction_display += f" ({jurisdiction_code})"
 
-            if jurisdiction:
-                st.markdown(f"**Legal System:** {jurisdiction}")
+            st.badge(jurisdiction_display)
 
-        st.markdown("---")
+        if jurisdiction:
+            st.badge(jurisdiction)
 
 
 def display_case_info(col_state):
@@ -46,7 +43,7 @@ def display_case_info(col_state):
     """
     citation = col_state.get("case_citation")
     if citation:
-        st.markdown("**Case Citation:**")
+        st.subheader("Case Citation")
         st.markdown(f"<div class='user-message'>{citation}</div>", unsafe_allow_html=True)
 
     display_jurisdiction_info(col_state)
@@ -138,11 +135,8 @@ def render_edit_section(col_state):
         col_state.get("col_section_reasoning", [""])[-1] if col_state.get("col_section_reasoning") else "No reasoning available"
     )
 
-    # Display title with confidence chip
-    col1, col2 = st.columns([0.85, 0.15])
-    with col1:
+    with st.container(horizontal=True):
         st.markdown("### Edit extracted Choice of Law section")
-    with col2:
         if confidence:
             # Use a more unique key to avoid widget conflicts
             chip_key = f"col_extraction_{hash(reasoning) % 10000}"

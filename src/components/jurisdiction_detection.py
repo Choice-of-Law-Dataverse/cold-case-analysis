@@ -42,6 +42,7 @@ def render_jurisdiction_detection(full_text: str):
 
     with main_container:
         # Phase 1: Detect Jurisdiction Button
+        detect_clicked = False  # Initialize to prevent UnboundLocalError
         if not st.session_state["precise_jurisdiction_detected"]:
             detect_clicked = st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary")
 

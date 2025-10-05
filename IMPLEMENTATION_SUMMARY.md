@@ -1,6 +1,7 @@
 # Implementation Summary: Agentic Workflow with Structured Outputs
 
 ## Overview
+
 This implementation replaces LangChain-based LLM calls with OpenAI's structured outputs using Pydantic models, adds confidence tracking, and implements a UI for displaying confidence levels.
 
 ## Key Changes
@@ -10,10 +11,12 @@ This implementation replaces LangChain-based LLM calls with OpenAI's structured 
 Created comprehensive Pydantic models in `src/models/` for all LLM outputs:
 
 **Classification Models** (`src/models/classification_models.py`):
+
 - `JurisdictionOutput`: Legal system type, precise jurisdiction, country code, confidence, reasoning
 - `ThemeClassificationOutput`: List of themes, confidence, reasoning
 
 **Analysis Models** (`src/models/analysis_models.py`):
+
 - `ColSectionOutput`: Choice of Law section text, confidence, reasoning
 - `RelevantFactsOutput`: Relevant facts, confidence, reasoning
 - `PILProvisionsOutput`: List of PIL provisions, confidence, reasoning
@@ -24,6 +27,7 @@ Created comprehensive Pydantic models in `src/models/` for all LLM outputs:
 - `AbstractOutput`: Abstract text, confidence, reasoning
 
 All models follow this pattern:
+
 ```python
 class OutputModel(BaseModel):
     primary_field: str  # or list[str]
@@ -34,12 +38,14 @@ class OutputModel(BaseModel):
 ### 2. Backend Updates
 
 **Config** (`src/config.py`):
+
 - Added `get_openai_client()` function to create OpenAI client instances
 - Kept existing `get_llm()` for backward compatibility
 
 **Analysis Tools** - Replaced LangChain calls with structured outputs:
 
 `src/tools/case_analyzer.py`:
+
 - Added `_call_openai_structured()` helper function
 - Updated all 7 analysis functions:
   - `relevant_facts()`
@@ -52,14 +58,17 @@ class OutputModel(BaseModel):
 - Each function now stores `{name}_confidence` and `{name}_reasoning` in state
 
 `src/tools/col_extractor.py`:
+
 - Updated `extract_col_section()` to use `ColSectionOutput`
 - Stores confidence and reasoning
 
 `src/tools/themes_classifier.py`:
+
 - Updated `theme_classification_node()` to use `ThemeClassificationOutput`
 - Stores confidence and reasoning
 
 `src/tools/precise_jurisdiction_detector.py`:
+
 - Added new `detect_precise_jurisdiction_with_confidence()` function
 - Returns dict with jurisdiction data including confidence/reasoning
 - Kept legacy `detect_precise_jurisdiction()` for backward compatibility
@@ -67,6 +76,7 @@ class OutputModel(BaseModel):
 ### 3. UI Components for Confidence Display
 
 **Confidence Display Component** (`src/components/confidence_display.py` - NEW):
+
 - `render_confidence_chip()`: Displays purple chip button with confidence percentage
 - `render_confidence_modal()`: Modal dialog showing confidence and reasoning
 - `add_confidence_chip_css()`: Custom CSS for purple chip styling (#9b4dca)
@@ -74,30 +84,36 @@ class OutputModel(BaseModel):
 **Updated UI Components**:
 
 `src/components/jurisdiction_detection.py`:
+
 - Displays confidence chip for jurisdiction detection results
 - Uses new `detect_precise_jurisdiction_with_confidence()` function
 - Stores confidence and reasoning in session state
 
 `src/components/col_processor.py`:
+
 - Shows confidence chip next to "Edit extracted Choice of Law section" title
 - Retrieves confidence/reasoning from state
 
 `src/components/theme_classifier.py`:
+
 - Shows confidence chip next to "Theme Classification" title
 - Retrieves confidence/reasoning from state
 
 `src/components/analysis_workflow.py`:
+
 - Updated `render_final_editing_phase()` to show confidence chips for all analysis steps
 - Each textarea has a confidence chip displayed in a column layout
 
 ### 4. State Structure Changes
 
 For each analysis step, the state now includes three lists:
+
 - `{step_name}`: List of outputs (existing)
 - `{step_name}_confidence`: List of confidence values (new)
 - `{step_name}_reasoning`: List of reasoning explanations (new)
 
 Example:
+
 ```python
 state = {
     "relevant_facts": ["The case involves..."],
@@ -135,7 +151,7 @@ state = {
    ```
 3. Component displays title and confidence chip in columns:
    ```python
-   col1, col2 = st.columns([0.85, 0.15])
+   col1, col2 = st.columns([0.7, 0.3])
    with col1:
        st.markdown("**Step Title**")
    with col2:
@@ -156,12 +172,14 @@ state = {
 ## Testing
 
 All imports validated:
+
 ```bash
 python -c "from models import *; from tools import *; from components import *"
 # ✓ All imports successful
 ```
 
 Pydantic models validated:
+
 ```bash
 python -c "from models.classification_models import JurisdictionOutput; print(JurisdictionOutput.model_json_schema())"
 # ✓ Schema valid with fields: legal_system_type, precise_jurisdiction, jurisdiction_code, confidence, reasoning
