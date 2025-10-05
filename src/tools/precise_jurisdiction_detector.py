@@ -5,7 +5,6 @@ Identifies the precise jurisdiction from court decision text using the jurisdict
 
 import csv
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
@@ -86,7 +85,7 @@ def detect_precise_jurisdiction(text: str) -> str:
     """
     Uses an LLM to identify the precise jurisdiction from court decision text.
     Returns the jurisdiction name as a string in the format "Jurisdiction".
-    
+
     This is the legacy interface - calls detect_precise_jurisdiction_with_confidence internally.
     """
     result = detect_precise_jurisdiction_with_confidence(text)
@@ -117,9 +116,9 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
 
     try:
         system_prompt = "You are an expert in legal systems and court jurisdictions worldwide. Analyze the court decision and identify the precise jurisdiction, legal system type, and provide your confidence level and reasoning."
-        
+
         result = _call_openai_structured(prompt, system_prompt, JurisdictionOutput, model)
-        
+
         jurisdiction_name = result.precise_jurisdiction
         legal_system_type = result.legal_system_type
         jurisdiction_code = result.jurisdiction_code
@@ -130,7 +129,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
 
         # Validate against known jurisdictions
         jurisdictions = load_jurisdictions()
-        
+
         if jurisdiction_name and jurisdiction_name != "Unknown":
             # Try exact match first
             for jurisdiction in jurisdictions:

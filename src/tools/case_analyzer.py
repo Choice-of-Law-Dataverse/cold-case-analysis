@@ -5,7 +5,6 @@ from collections.abc import Sequence
 from typing import Any
 
 import logfire
-from langchain_core.messages import HumanMessage, SystemMessage
 
 import config
 from models.analysis_models import (
@@ -107,7 +106,7 @@ def relevant_facts(state):
         facts = result.relevant_facts
         confidence = result.confidence
         reasoning = result.reasoning
-        
+
         logger.debug("Relevant Facts: %s (confidence: %.2f)", facts, confidence)
         state.setdefault("relevant_facts", []).append(facts)
         state.setdefault("relevant_facts_confidence", []).append(confidence)

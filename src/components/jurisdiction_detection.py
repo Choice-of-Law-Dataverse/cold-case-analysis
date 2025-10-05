@@ -4,7 +4,6 @@ Streamlit component for enhanced jurisdiction detection with precise jurisdictio
 import streamlit as st
 
 from components.confidence_display import add_confidence_chip_css, render_confidence_chip
-from tools.jurisdiction_detector import detect_legal_system_type
 from tools.precise_jurisdiction_detector import detect_precise_jurisdiction_with_confidence
 
 
@@ -69,7 +68,7 @@ def render_jurisdiction_detection(full_text: str):
     if st.session_state["precise_jurisdiction_detected"]:
         # Add confidence chip CSS
         add_confidence_chip_css()
-        
+
         jurisdiction_name = st.session_state["precise_jurisdiction"]  # Now this is just a string
         legal_system = st.session_state["legal_system_type"]
         confidence = st.session_state.get("jurisdiction_confidence", 0.0)

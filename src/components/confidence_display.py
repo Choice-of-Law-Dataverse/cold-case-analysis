@@ -81,7 +81,7 @@ def add_confidence_chip_css():
             font-weight: 500 !important;
             cursor: pointer !important;
         }
-        
+
         div[data-testid="column"] button[kind="secondary"]:hover {
             background-color: #7d3ca8 !important;
         }
