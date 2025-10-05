@@ -161,26 +161,6 @@ def execute_analysis_step(state, name, func):
     return False
 
 
-def handle_step_scoring(state, name):
-    """
-    Auto-approve analysis steps without scoring UI.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-
-    Returns:
-        bool: True (always complete)
-    """
-    score_key = f"{name}_score_submitted"
-
-    # Automatically mark as submitted without user interaction
-    if not state.get(score_key):
-        state[score_key] = True
-
-    return True
-
-
 def handle_step_editing(state, name, steps):
     """
     Store edited content without showing editing UI during processing.
@@ -274,7 +254,6 @@ def execute_all_analysis_steps_parallel(state):
     # Mark all steps as printed and scored
     for name, _ in parallel_steps + sequential_steps:
         state[f"{name}_printed"] = True
-        state[f"{name}_score_submitted"] = True
 
 
 def render_final_editing_phase(state):
@@ -404,23 +383,6 @@ def render_final_editing_phase(state):
         state["analysis_done"] = True
         print_state("\n\n\nFinal CoLD State after editing\n\n", state)
         st.rerun()
-
-
-def process_current_analysis_step(state):
-    """
-    Process the current analysis step.
-
-    Args:
-        state: The current analysis state
-    """
-    steps = get_analysis_steps(state)
-    name, func = steps[state["analysis_step"]]
-
-    execute_analysis_step(state, name, func)
-
-    scoring_complete = handle_step_scoring(state, name)
-    if scoring_complete:
-        handle_step_editing(state, name, steps)
 
 
 def render_analysis_workflow(state):

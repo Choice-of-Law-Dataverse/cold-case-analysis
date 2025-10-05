@@ -56,16 +56,6 @@ def display_col_extractions(col_state):
     Args:
         col_state: The current analysis state
     """
-    handle_first_extraction_scoring(col_state)
-
-
-def handle_first_extraction_scoring(col_state):
-    """
-    Auto-approve the first COL extraction without scoring UI.
-
-    Args:
-        col_state: The current analysis state
-    """
     if not col_state.get("col_first_score_submitted"):
         col_state["col_first_score_submitted"] = True
 

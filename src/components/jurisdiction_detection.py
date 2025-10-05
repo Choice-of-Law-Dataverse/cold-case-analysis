@@ -26,8 +26,6 @@ def render_jurisdiction_detection(full_text: str):
         st.session_state["precise_jurisdiction_detected"] = False
     if "legal_system_type" not in st.session_state:
         st.session_state["legal_system_type"] = None
-    if "precise_jurisdiction_eval_score" not in st.session_state:
-        st.session_state["precise_jurisdiction_eval_score"] = None
     if "precise_jurisdiction_confirmed" not in st.session_state:
         st.session_state["precise_jurisdiction_confirmed"] = False
     if "jurisdiction_manual_override" not in st.session_state:
@@ -161,7 +159,6 @@ def get_final_jurisdiction_data():
             "jurisdiction_name": override_data["jurisdiction_name"],
             "legal_system_type": st.session_state.get("legal_system_type"),
             "confidence": "manual_override",
-            "evaluation_score": st.session_state.get("precise_jurisdiction_eval_score"),
         }
     else:
         # Use detected data (now just a string)
@@ -170,5 +167,4 @@ def get_final_jurisdiction_data():
             "jurisdiction_name": jurisdiction_name,
             "legal_system_type": st.session_state.get("legal_system_type"),
             "confidence": "auto_detected",
-            "evaluation_score": st.session_state.get("precise_jurisdiction_eval_score"),
         }
