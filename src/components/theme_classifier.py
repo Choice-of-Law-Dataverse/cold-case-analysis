@@ -60,11 +60,12 @@ def handle_theme_editing(last_theme, valid_themes):
             st.badge(theme)
     else:
         selected = st.multiselect(
-            "",
+            "Select themes:",
             options=valid_themes,
             default=filtered_defaults,
             key="theme_select",
             disabled=state.get("theme_done", False),
+            label_visibility="collapsed",
         )
 
         if st.button("Submit Final Themes", key="submit_final_themes"):

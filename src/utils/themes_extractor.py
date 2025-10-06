@@ -117,7 +117,7 @@ def process_list_like_values(df: pd.DataFrame) -> pd.DataFrame:
 
 def fetch_themes_dataframe() -> pd.DataFrame:
     csv_path = os.path.join(os.path.dirname(__file__), "../data/themes.csv")
-    
+
     if not NOCODB_BASE_URL:
         try:
             return pd.read_csv(csv_path)
@@ -166,7 +166,7 @@ def fetch_themes_dataframe() -> pd.DataFrame:
             return processed
     except Exception as fallback_error:
         logger.error("Fallback also failed: %s", fallback_error)
-    
+
     try:
         logger.info("Falling back to CSV file for themes...")
         return pd.read_csv(csv_path)
@@ -190,7 +190,7 @@ def filter_themes_by_list(themes_list: list[str]) -> str:
 def fetch_themes_list() -> list[str]:
     """
     Get the list of theme names from the cached dataframe.
-    
+
     Returns:
         list[str]: List of theme names
     """
@@ -200,7 +200,7 @@ def fetch_themes_list() -> list[str]:
 def get_valid_themes_set() -> set[str]:
     """
     Get a set of valid theme names for validation purposes.
-    
+
     Returns:
         set[str]: Set of theme names
     """

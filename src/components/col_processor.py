@@ -44,7 +44,7 @@ def display_case_info():
         st.subheader("Case Citation")
         st.markdown(f"<div class='user-message'>{citation}</div>", unsafe_allow_html=True)
 
-    display_jurisdiction_info(col_state)
+    display_jurisdiction_info()
 
 
 def display_col_extractions():
