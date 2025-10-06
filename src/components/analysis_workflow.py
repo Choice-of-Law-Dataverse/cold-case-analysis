@@ -43,7 +43,9 @@ class WorkflowStateUpdater:
             str: The step name for this result type
         """
         if isinstance(result, ColSectionOutput):
-            state.setdefault("col_section", []).append(result.col_section.strip())
+            # Join multiple sections with newlines
+            col_section_text = "\n\n".join(result.col_sections) if result.col_sections else ""
+            state.setdefault("col_section", []).append(col_section_text)
             state.setdefault("col_section_confidence", []).append(result.confidence)
             state.setdefault("col_section_reasoning", []).append(result.reasoning)
             return "col_section"
@@ -182,9 +184,15 @@ def execute_all_analysis_steps_with_generator(state):
         state: The current analysis state
     """
     text = state["full_text"]
-    col_section = state.get("col_section", [""])[-1] if state.get("col_section") else None
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
+    col_sections = None
+    col_section_data = state.get("col_section", [])
+    if col_section_data:
+        col_section_text = col_section_data[-1] if isinstance(col_section_data, list) else col_section_data
+        # Convert back to list for generator
+        col_sections = [col_section_text] if col_section_text else None
+    
+    legal_system = state.get("jurisdiction", "Civil-law jurisdiction")
+    jurisdiction = state.get("precise_jurisdiction")
     model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
     # Get themes if already classified
@@ -207,7 +215,7 @@ def execute_all_analysis_steps_with_generator(state):
 
     # Calculate total steps
     total_steps = 8  # col_section, themes, relevant_facts, pil_provisions, col_issue, courts_position, abstract
-    if jurisdiction == "Common-law jurisdiction":
+    if legal_system == "Common-law jurisdiction":
         total_steps += 2  # obiter_dicta, dissenting_opinions
 
     completed = 0
@@ -216,10 +224,10 @@ def execute_all_analysis_steps_with_generator(state):
         # Use the generator to orchestrate the workflow
         for result in analyze_case_workflow(
             text=text,
+            legal_system=legal_system,
             jurisdiction=jurisdiction,
-            specific_jurisdiction=specific_jurisdiction,
             model=model,
-            col_section=col_section,
+            col_sections=col_sections,
             themes=themes,
         ):
             # Update state using helper class

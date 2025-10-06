@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 def extract_courts_position(
     text: str,
     col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
-    classification: str,
+    themes: str,
     col_issue: str,
 ):
     """
@@ -26,22 +26,22 @@ def extract_courts_position(
     Args:
         text: Full court decision text
         col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for extraction
-        classification: Classified themes
+        themes: Classified themes
         col_issue: Choice of Law issue
 
     Returns:
         CourtsPositionOutput: Extracted position with confidence and reasoning
     """
     with logfire.span("extract_courts_position"):
-        COURTS_POSITION_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COURTS_POSITION_PROMPT
+        COURTS_POSITION_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).COURTS_POSITION_PROMPT
 
         prompt = COURTS_POSITION_PROMPT.format(
-            col_issue=col_issue, text=text, col_section=col_section, classification=classification
+            col_issue=col_issue, text=text, col_section=col_section, classification=themes
         )
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(
             name="CourtsPositionAnalyzer",

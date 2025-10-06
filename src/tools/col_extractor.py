@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 def extract_col_section(
     text: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
 ):
     """
@@ -22,20 +22,20 @@ def extract_col_section(
 
     Args:
         text: Full court decision text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for extraction
 
 
     Returns:
-        ColSectionOutput: Extracted section with confidence and reasoning
+        ColSectionOutput: Extracted sections with confidence and reasoning
     """
     with logfire.span("extract_col_section"):
-        COL_SECTION_PROMPT = get_prompt_module(jurisdiction, "col_section", specific_jurisdiction).COL_SECTION_PROMPT
+        COL_SECTION_PROMPT = get_prompt_module(legal_system, "col_section", jurisdiction).COL_SECTION_PROMPT
 
         prompt = COL_SECTION_PROMPT.format(text=text)
 
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "col_section")
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "col_section")
 
         agent = Agent(
             name="ColSectionExtractor",
@@ -46,9 +46,9 @@ def extract_col_section(
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColSectionOutput)
 
         logfire.info(
-            "Extracted CoL section",
+            "Extracted CoL sections",
             text_length=len(text),
-            result_length=len(result.col_section),
+            sections_count=len(result.col_sections),
             confidence=result.confidence,
         )
         return result

@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 def extract_abstract(
     text: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
-    classification: str,
+    themes: str,
     facts: str,
     pil_provisions: str,
     col_issue: str,
@@ -29,10 +29,10 @@ def extract_abstract(
 
     Args:
         text: Full court decision text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for generation
-        classification: Classified themes
+        themes: Classified themes
         facts: Relevant facts
         pil_provisions: PIL provisions
         col_issue: Choice of Law issue
@@ -44,22 +44,22 @@ def extract_abstract(
         AbstractOutput: Generated abstract with confidence and reasoning
     """
     with logfire.span("generate_abstract"):
-        ABSTRACT_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).ABSTRACT_PROMPT
+        ABSTRACT_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).ABSTRACT_PROMPT
 
         prompt_vars = {
             "text": text,
-            "classification": classification,
+            "classification": themes,
             "facts": facts,
             "pil_provisions": pil_provisions,
             "col_issue": col_issue,
             "court_position": court_position,
         }
 
-        if jurisdiction == "Common-law jurisdiction" or (specific_jurisdiction and specific_jurisdiction.lower() == "india"):
+        if legal_system == "Common-law jurisdiction" or (jurisdiction and jurisdiction.lower() == "india"):
             prompt_vars.update({"obiter_dicta": obiter_dicta, "dissenting_opinions": dissenting_opinions})
 
         prompt = ABSTRACT_PROMPT.format(**prompt_vars)
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(
             name="AbstractGenerator",

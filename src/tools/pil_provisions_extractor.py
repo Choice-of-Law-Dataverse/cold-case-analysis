@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 def extract_pil_provisions(
     text: str,
     col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
 ):
     """
@@ -24,18 +24,18 @@ def extract_pil_provisions(
     Args:
         text: Full court decision text
         col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for extraction
 
     Returns:
         PILProvisionsOutput: Extracted provisions with confidence and reasoning
     """
     with logfire.span("extract_pil_provisions"):
-        PIL_PROVISIONS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).PIL_PROVISIONS_PROMPT
+        PIL_PROVISIONS_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).PIL_PROVISIONS_PROMPT
 
         prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=col_section)
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(
             name="PILProvisionsExtractor",

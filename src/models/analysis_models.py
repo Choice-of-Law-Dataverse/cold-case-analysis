@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field
 class ColSectionOutput(BaseModel):
     """Output model for Choice of Law section extraction."""
 
-    col_section: str = Field(description="The extracted Choice of Law section text")
+    col_sections: list[str] = Field(description="List of extracted Choice of Law section texts")
     confidence: Literal["low", "medium", "high"] = Field(
         description="Confidence level in the extraction: 'low', 'medium', or 'high'"
     )
-    reasoning: str = Field(description="Explanation of why this section was extracted")
+    reasoning: str = Field(description="Explanation of why these sections were extracted")
 
 
 class RelevantFactsOutput(BaseModel):

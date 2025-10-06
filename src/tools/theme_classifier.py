@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 def theme_classification_node(
     text: str,
     col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
 ):
     """
@@ -25,15 +25,15 @@ def theme_classification_node(
     Args:
         text: Full court decision text
         col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for classification
 
     Returns:
         ThemeClassificationOutput: Classified themes with confidence and reasoning
     """
     with logfire.span("classify_themes"):
-        PIL_THEME_PROMPT = get_prompt_module(jurisdiction, "theme", specific_jurisdiction).PIL_THEME_PROMPT
+        PIL_THEME_PROMPT = get_prompt_module(legal_system, "theme", jurisdiction).PIL_THEME_PROMPT
 
         base_prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
 
@@ -44,7 +44,7 @@ def theme_classification_node(
 
         for attempt in range(1, max_attempts + 1):
             try:
-                system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "theme")
+                system_prompt = generate_system_prompt(legal_system, jurisdiction, "theme")
 
                 agent = Agent(
                     name="ThemeClassifier",

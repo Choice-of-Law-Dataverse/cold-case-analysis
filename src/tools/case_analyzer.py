@@ -27,10 +27,10 @@ logger = logging.getLogger(__name__)
 
 def analyze_case_workflow(
     text: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
-    col_section: str | None = None,
+    col_sections: list[str] | None = None,
     themes: list[str] | None = None,
 ) -> Generator[Any, None, None]:
     """
@@ -45,10 +45,10 @@ def analyze_case_workflow(
 
     Args:
         text: Full court decision text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for analysis
-        col_section: Pre-extracted Choice of Law section (optional)
+        col_sections: Pre-extracted Choice of Law sections (optional)
         themes: Pre-classified themes (optional)
 
     Yields:
@@ -64,24 +64,28 @@ def analyze_case_workflow(
             - AbstractOutput
     """
     with logfire.span("analyze_case_workflow"):
-        # Step 1: Extract CoL section if not provided
-        if not col_section:
+        # Step 1: Extract CoL sections if not provided
+        col_section_text = ""
+        if not col_sections:
             result = extract_col_section(
                 text=text,
+                legal_system=legal_system,
                 jurisdiction=jurisdiction,
-                specific_jurisdiction=specific_jurisdiction,
                 model=model,
             )
-            col_section = result.col_section
+            col_sections = result.col_sections
+            col_section_text = "\n\n".join(col_sections)
             yield result
+        else:
+            col_section_text = "\n\n".join(col_sections) if isinstance(col_sections, list) else str(col_sections)
 
         # Step 2: Classify themes if not provided
         if not themes:
             result = theme_classification_node(
                 text=text,
-                col_section=col_section,
+                col_section=col_section_text,
+                legal_system=legal_system,
                 jurisdiction=jurisdiction,
-                specific_jurisdiction=specific_jurisdiction,
                 model=model,
             )
             themes = [str(theme) for theme in result.themes]
@@ -94,17 +98,17 @@ def analyze_case_workflow(
                 executor.submit(
                     extract_relevant_facts,
                     text,
-                    col_section,
+                    col_section_text,
+                    legal_system,
                     jurisdiction,
-                    specific_jurisdiction,
                     model,
                 ): "relevant_facts",
                 executor.submit(
                     extract_pil_provisions,
                     text,
-                    col_section,
+                    col_section_text,
+                    legal_system,
                     jurisdiction,
-                    specific_jurisdiction,
                     model,
                 ): "pil_provisions",
             }
@@ -123,17 +127,17 @@ def analyze_case_workflow(
         themes_list = themes if isinstance(themes, list) else [t.strip() for t in str(themes).split(",")]
         result = extract_col_issue(
             text=text,
-            col_section=col_section,
+            col_section=col_section_text,
+            legal_system=legal_system,
             jurisdiction=jurisdiction,
-            specific_jurisdiction=specific_jurisdiction,
             model=model,
-            classification_themes=themes_list,
+            themes=themes_list,
         )
         col_issue_text = result.col_issue
         yield result
 
         # Step 5: Run parallel analysis (court's position + common law specific steps)
-        classification_str = ", ".join(themes_list) if isinstance(themes_list, list) else str(themes_list)
+        themes_str = ", ".join(themes_list) if isinstance(themes_list, list) else str(themes_list)
         courts_position_text = ""
         obiter_dicta_text = ""
         dissenting_opinions_text = ""
@@ -145,25 +149,25 @@ def analyze_case_workflow(
             courts_future = executor.submit(
                 extract_courts_position,
                 text,
-                col_section,
+                col_section_text,
+                legal_system,
                 jurisdiction,
-                specific_jurisdiction,
                 model,
-                classification_str,
+                themes_str,
                 col_issue_text,
             )
             futures.append(courts_future)
 
             # Add Common Law specific extractions if applicable
-            if jurisdiction == "Common-law jurisdiction":
+            if legal_system == "Common-law jurisdiction":
                 obiter_future = executor.submit(
                     extract_obiter_dicta,
                     text,
-                    col_section,
+                    col_section_text,
+                    legal_system,
                     jurisdiction,
-                    specific_jurisdiction,
                     model,
-                    classification_str,
+                    themes_str,
                     col_issue_text,
                 )
                 futures.append(obiter_future)
@@ -171,11 +175,11 @@ def analyze_case_workflow(
                 dissent_future = executor.submit(
                     extract_dissenting_opinions,
                     text,
-                    col_section,
+                    col_section_text,
+                    legal_system,
                     jurisdiction,
-                    specific_jurisdiction,
                     model,
-                    classification_str,
+                    themes_str,
                     col_issue_text,
                 )
                 futures.append(dissent_future)
@@ -191,7 +195,7 @@ def analyze_case_workflow(
                     dissenting_opinions_text = result.dissenting_opinions
                 yield result
 
-        # Step 7: Generate abstract (final step, depends on all previous steps)
+        # Step 6: Generate abstract (final step, depends on all previous steps)
         facts = parallel_results.get("relevant_facts", "")
         if isinstance(facts, RelevantFactsOutput):
             facts = facts.relevant_facts
@@ -202,10 +206,10 @@ def analyze_case_workflow(
 
         result = extract_abstract(
             text=text,
+            legal_system=legal_system,
             jurisdiction=jurisdiction,
-            specific_jurisdiction=specific_jurisdiction,
             model=model,
-            classification=classification_str,
+            themes=themes_str,
             facts=str(facts),
             pil_provisions=str(pil_provisions_data),
             col_issue=col_issue_text,

@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 def extract_col_issue(
     text: str,
     col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
-    classification_themes: list[str],
+    themes: list[str],
 ):
     """
     Extract Choice of Law issue from court decision.
@@ -26,23 +26,23 @@ def extract_col_issue(
     Args:
         text: Full court decision text
         col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for extraction
-        classification_themes: List of classified themes
+        themes: List of classified themes
 
     Returns:
         ColIssueOutput: Extracted issue with confidence and reasoning
     """
     with logfire.span("extract_col_issue"):
-        COL_ISSUE_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COL_ISSUE_PROMPT
+        COL_ISSUE_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).COL_ISSUE_PROMPT
 
-        classification_definitions = filter_themes_by_list(classification_themes)
+        themes_definitions = filter_themes_by_list(themes)
 
         prompt = COL_ISSUE_PROMPT.format(
-            text=text, col_section=col_section, classification_definitions=classification_definitions
+            text=text, col_section=col_section, classification_definitions=themes_definitions
         )
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(
             name="ColIssueExtractor",
@@ -56,7 +56,7 @@ def extract_col_issue(
             "Extracted CoL issue",
             text_length=len(text),
             col_section_length=len(col_section),
-            themes_count=len(classification_themes),
+            themes_count=len(themes),
             result_length=len(result.col_issue),
             confidence=result.confidence,
         )
