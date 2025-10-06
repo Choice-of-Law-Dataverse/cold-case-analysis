@@ -60,6 +60,7 @@ def theme_classification_node(
                     model=model,
                 )
                 result = asyncio.run(Runner.run(agent, current_prompt)).final_output_as(ThemeClassificationOutput)
+                break
             except Exception as e:
                 logger.error("Error during theme classification attempt %d: %s", attempt, e)
                 if attempt == max_attempts:
