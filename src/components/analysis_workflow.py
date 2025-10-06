@@ -5,6 +5,7 @@ Analysis workflow components for the CoLD Case Analyzer.
 
 import json
 import logging
+import os
 
 import streamlit as st
 
@@ -132,15 +133,12 @@ def execute_analysis_step(state, name, func):
         bool: True if step was executed, False if already completed
     """
     if not state.get(f"{name}_printed"):
-        # Extract parameters from state
-        import os
         text = state["full_text"]
         col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
         jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
         specific_jurisdiction = state.get("precise_jurisdiction")
         model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
-        # Call function with explicit parameters
         if name == "relevant_facts":
             result = func(text, col_section, jurisdiction, specific_jurisdiction, model)
             state.setdefault("relevant_facts", []).append(result.relevant_facts)
@@ -152,7 +150,6 @@ def execute_analysis_step(state, name, func):
             state.setdefault("pil_provisions_confidence", []).append(result.confidence)
             state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
         elif name == "col_issue":
-            # Get classification themes
             classification_messages = state.get("classification", [])
             themes_list: list[str] = []
             if classification_messages:
@@ -256,8 +253,6 @@ def execute_all_analysis_steps_parallel(state):
     Args:
         state: The current analysis state
     """
-    # Extract common parameters from state
-    import os
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     from tools.case_analyzer import (
@@ -269,13 +264,13 @@ def execute_all_analysis_steps_parallel(state):
         pil_provisions,
         relevant_facts,
     )
+
     text = state["full_text"]
     col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
     specific_jurisdiction = state.get("precise_jurisdiction")
     model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
-    # Steps that can run in parallel (don't depend on each other)
     parallel_steps = [
         ("relevant_facts", lambda: relevant_facts(text, col_section, jurisdiction, specific_jurisdiction, model)),
         ("pil_provisions", lambda: pil_provisions(text, col_section, jurisdiction, specific_jurisdiction, model)),
@@ -285,7 +280,6 @@ def execute_all_analysis_steps_parallel(state):
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    # Execute parallel steps
     completed = 0
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(func): name for name, func in parallel_steps}
@@ -294,7 +288,6 @@ def execute_all_analysis_steps_parallel(state):
             name = futures[future]
             try:
                 result = future.result()
-                # Update state with results
                 if name == "relevant_facts":
                     state.setdefault("relevant_facts", []).append(result.relevant_facts)
                     state.setdefault("relevant_facts_confidence", []).append(result.confidence)
@@ -312,7 +305,6 @@ def execute_all_analysis_steps_parallel(state):
             except Exception as e:
                 st.error(f"Error processing {name}: {str(e)}")
 
-    # Get classification themes for col_issue
     classification_messages = state.get("classification", [])
     themes_list: list[str] = []
     if classification_messages:
@@ -326,7 +318,6 @@ def execute_all_analysis_steps_parallel(state):
         elif isinstance(last_msg, str):
             themes_list = [t.strip() for t in last_msg.split(",")]
 
-    # Execute col_issue (depends on classification)
     try:
         result = col_issue(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
         state.setdefault("col_issue", []).append(result.col_issue)
@@ -339,7 +330,6 @@ def execute_all_analysis_steps_parallel(state):
     except Exception as e:
         st.error(f"Error processing col_issue: {str(e)}")
 
-    # Execute sequential steps that depend on col_issue
     classification = state.get("classification", [""])[-1] if state.get("classification") else ""
     col_issue_text = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
 
@@ -356,7 +346,6 @@ def execute_all_analysis_steps_parallel(state):
     for name, func in sequential_steps:
         try:
             result = func()
-            # Update state with results
             if name == "courts_position":
                 state.setdefault("courts_position", []).append(result.courts_position)
                 state.setdefault("courts_position_confidence", []).append(result.confidence)
@@ -378,7 +367,6 @@ def execute_all_analysis_steps_parallel(state):
         except Exception as e:
             st.error(f"Error processing {name}: {str(e)}")
 
-    # Finally, execute abstract
     try:
         facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
         pil_provisions_data = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
@@ -400,7 +388,6 @@ def execute_all_analysis_steps_parallel(state):
     progress_bar.progress(1.0)
     status_text.text("✓ Analysis complete!")
 
-    # Mark all steps as printed
     for name, _ in parallel_steps:
         state[f"{name}_printed"] = True
     state["col_issue_printed"] = True

@@ -3,6 +3,8 @@
 Choice of Law section processing components.
 """
 
+import os
+
 import streamlit as st
 
 from tools.col_extractor import extract_col_section
@@ -93,8 +95,6 @@ def render_feedback_input(col_state):
             if feedback:
                 col_state["col_section_feedback"].append(feedback)
 
-                # Extract with explicit parameters
-                import os
                 model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
                 existing_sections = col_state.get("col_section", [])
                 previous_section = existing_sections[-1] if existing_sections else None
@@ -110,7 +110,6 @@ def render_feedback_input(col_state):
                     iteration=iter_count,
                 )
 
-                # Update state with results
                 col_state.setdefault("col_section", []).append(result.col_section.strip())
                 col_state.setdefault("col_section_confidence", []).append(result.confidence)
                 col_state.setdefault("col_section_reasoning", []).append(result.reasoning)
@@ -185,10 +184,8 @@ def render_edit_section(col_state):
                 col_state["theme_feedback"] = []
                 col_state["theme_eval_iter"] = 0
 
-                # Call with explicit parameters
-                import os
-
                 from tools.themes_classifier import theme_classification_node
+
                 model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
                 existing = col_state.get("classification", [])
                 previous_classification = existing[-1] if existing else None
@@ -204,7 +201,6 @@ def render_edit_section(col_state):
                     iteration=iter_count,
                 )
 
-                # Update state with results
                 cls_str = ", ".join(str(item) for item in result.themes)
                 col_state.setdefault("classification", []).append(cls_str)
                 col_state.setdefault("classification_confidence", []).append(result.confidence)

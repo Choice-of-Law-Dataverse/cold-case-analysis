@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import time
 from collections.abc import Sequence
 from typing import Any
 
@@ -18,6 +17,7 @@ from models.analysis_models import (
     RelevantFactsOutput,
 )
 from prompts.prompt_selector import get_prompt_module
+from utils.system_prompt_generator import generate_system_prompt
 from utils.themes_extractor import filter_themes_by_list
 
 logger = logging.getLogger(__name__)
@@ -83,11 +83,6 @@ def relevant_facts(
         FACTS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).FACTS_PROMPT
 
         prompt = FACTS_PROMPT.format(text=text, col_section=col_section)
-        logger.debug("Prompting agent with: %s", prompt)
-        start_time = time.time()
-
-        # Create system prompt from parameters
-        from utils.system_prompt_generator import generate_system_prompt
         system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
         agent = Agent(
@@ -97,13 +92,8 @@ def relevant_facts(
             model=model,
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
-        facts_time = time.time() - start_time
-        facts = result.relevant_facts
-        confidence = result.confidence
 
-        logger.debug("Relevant Facts: %s (confidence: %s)", facts, confidence)
-
-        logfire.info("Extracted relevant facts", chars=len(facts), time_seconds=facts_time, confidence=confidence)
+        logfire.info("Extracted relevant facts", chars=len(result.relevant_facts), confidence=result.confidence)
         return result
 
 
@@ -131,11 +121,6 @@ def pil_provisions(
         PIL_PROVISIONS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).PIL_PROVISIONS_PROMPT
 
         prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=col_section)
-        logger.debug("Prompting agent with: %s", prompt)
-        start_time = time.time()
-
-        # Create system prompt from parameters
-        from utils.system_prompt_generator import generate_system_prompt
         system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
         agent = Agent(
@@ -145,13 +130,8 @@ def pil_provisions(
             model=model,
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
-        provisions_time = time.time() - start_time
-        pil_provisions = result.pil_provisions
-        confidence = result.confidence
 
-        logger.debug("PIL Provisions: %s (confidence: %s)", pil_provisions, confidence)
-
-        logfire.info("Extracted PIL provisions", count=len(pil_provisions), time_seconds=provisions_time, confidence=confidence)
+        logfire.info("Extracted PIL provisions", count=len(result.pil_provisions), confidence=result.confidence)
         return result
 
 
@@ -185,11 +165,6 @@ def col_issue(
         prompt = COL_ISSUE_PROMPT.format(
             text=text, col_section=col_section, classification_definitions=classification_definitions
         )
-        logger.debug("Prompting agent with: %s", prompt)
-        start_time = time.time()
-
-        # Create system prompt from parameters
-        from utils.system_prompt_generator import generate_system_prompt
         system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
         agent = Agent(
@@ -199,13 +174,8 @@ def col_issue(
             model=model,
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
-        issue_time = time.time() - start_time
-        col_issue_text = result.col_issue
-        confidence = result.confidence
 
-        logger.debug("Choice of Law Issue: %s (confidence: %s)", col_issue_text, confidence)
-
-        logfire.info("Extracted CoL issue", chars=len(col_issue_text), time_seconds=issue_time, confidence=confidence)
+        logfire.info("Extracted CoL issue", chars=len(result.col_issue), confidence=result.confidence)
         return result
 
 
@@ -238,10 +208,6 @@ def courts_position(
     prompt = COURTS_POSITION_PROMPT.format(
         col_issue=col_issue, text=text, col_section=col_section, classification=classification
     )
-    logger.debug("Prompting agent with: %s", prompt)
-
-    # Create system prompt from parameters
-    from utils.system_prompt_generator import generate_system_prompt
     system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
     agent = Agent(
@@ -251,10 +217,6 @@ def courts_position(
         model=model,
     )
     result = asyncio.run(Runner.run(agent, prompt)).final_output
-    courts_position_text = result.courts_position
-    confidence = result.confidence
-
-    logger.debug("Court's Position: %s (confidence: %s)", courts_position_text, confidence)
 
     return result
 
@@ -286,10 +248,6 @@ def obiter_dicta(
     prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
     OBITER_PROMPT = prompt_module.COURTS_POSITION_OBITER_DICTA_PROMPT
     prompt = OBITER_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    logger.debug("Prompting agent for obiter dicta with: %s", prompt)
-
-    # Create system prompt from parameters
-    from utils.system_prompt_generator import generate_system_prompt
     system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
     agent = Agent(
@@ -299,10 +257,6 @@ def obiter_dicta(
         model=model,
     )
     result = asyncio.run(Runner.run(agent, prompt)).final_output
-    obiter = result.obiter_dicta
-    confidence = result.confidence
-
-    logger.debug("Obiter Dicta: %s (confidence: %s)", obiter, confidence)
 
     return result
 
@@ -334,10 +288,6 @@ def dissenting_opinions(
     prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
     DISSENT_PROMPT = prompt_module.COURTS_POSITION_DISSENTING_OPINIONS_PROMPT
     prompt = DISSENT_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    logger.debug("Prompting agent for dissenting opinions with: %s", prompt)
-
-    # Create system prompt from parameters
-    from utils.system_prompt_generator import generate_system_prompt
     system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
     agent = Agent(
@@ -347,10 +297,6 @@ def dissenting_opinions(
         model=model,
     )
     result = asyncio.run(Runner.run(agent, prompt)).final_output
-    dissent = result.dissenting_opinions
-    confidence = result.confidence
-
-    logger.debug("Dissenting Opinions: %s (confidence: %s)", dissent, confidence)
 
     return result
 
@@ -403,11 +349,6 @@ def abstract(
             prompt_vars.update({"obiter_dicta": obiter_dicta, "dissenting_opinions": dissenting_opinions})
 
         prompt = ABSTRACT_PROMPT.format(**prompt_vars)
-        logger.debug("Prompting agent with: %s", prompt)
-        start_time = time.time()
-
-        # Create system prompt from parameters
-        from utils.system_prompt_generator import generate_system_prompt
         system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
         agent = Agent(
@@ -417,11 +358,6 @@ def abstract(
             model=model,
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
-        abstract_time = time.time() - start_time
-        abstract_text = result.abstract
-        confidence = result.confidence
 
-        logger.debug("Abstract: %s (confidence: %s)", abstract_text, confidence)
-
-        logfire.info("Generated abstract", chars=len(abstract_text), time_seconds=abstract_time, confidence=confidence)
+        logfire.info("Generated abstract", chars=len(result.abstract), confidence=result.confidence)
         return result
