@@ -100,7 +100,6 @@ def relevant_facts(
         facts_time = time.time() - start_time
         facts = result.relevant_facts
         confidence = result.confidence
-        reasoning = result.reasoning
 
         logger.debug("Relevant Facts: %s (confidence: %s)", facts, confidence)
 
@@ -149,7 +148,6 @@ def pil_provisions(
         provisions_time = time.time() - start_time
         pil_provisions = result.pil_provisions
         confidence = result.confidence
-        reasoning = result.reasoning
 
         logger.debug("PIL Provisions: %s (confidence: %s)", pil_provisions, confidence)
 
@@ -204,7 +202,6 @@ def col_issue(
         issue_time = time.time() - start_time
         col_issue_text = result.col_issue
         confidence = result.confidence
-        reasoning = result.reasoning
 
         logger.debug("Choice of Law Issue: %s (confidence: %s)", col_issue_text, confidence)
 
@@ -256,7 +253,6 @@ def courts_position(
     result = asyncio.run(Runner.run(agent, prompt)).final_output
     courts_position_text = result.courts_position
     confidence = result.confidence
-    reasoning = result.reasoning
 
     logger.debug("Court's Position: %s (confidence: %s)", courts_position_text, confidence)
 
@@ -305,7 +301,6 @@ def obiter_dicta(
     result = asyncio.run(Runner.run(agent, prompt)).final_output
     obiter = result.obiter_dicta
     confidence = result.confidence
-    reasoning = result.reasoning
 
     logger.debug("Obiter Dicta: %s (confidence: %s)", obiter, confidence)
 
@@ -354,7 +349,6 @@ def dissenting_opinions(
     result = asyncio.run(Runner.run(agent, prompt)).final_output
     dissent = result.dissenting_opinions
     confidence = result.confidence
-    reasoning = result.reasoning
 
     logger.debug("Dissenting Opinions: %s (confidence: %s)", dissent, confidence)
 
@@ -426,7 +420,6 @@ def abstract(
         abstract_time = time.time() - start_time
         abstract_text = result.abstract
         confidence = result.confidence
-        reasoning = result.reasoning
 
         logger.debug("Abstract: %s (confidence: %s)", abstract_text, confidence)
 

@@ -90,7 +90,6 @@ def theme_classification_node(
         else:
             logger.debug("Max attempts reached. Proceeding with last classification: %s", cls_list)
 
-        cls_str = ", ".join(str(item) for item in cls_list)
         logger.debug("Classified theme(s): %s (confidence: %s)", cls_list, confidence)
 
         logfire.info(

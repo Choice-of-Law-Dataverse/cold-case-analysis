@@ -139,7 +139,7 @@ def execute_analysis_step(state, name, func):
         jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
         specific_jurisdiction = state.get("precise_jurisdiction")
         model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-        
+
         # Call function with explicit parameters
         if name == "relevant_facts":
             result = func(text, col_section, jurisdiction, specific_jurisdiction, model)
@@ -256,6 +256,8 @@ def execute_all_analysis_steps_parallel(state):
     Args:
         state: The current analysis state
     """
+    # Extract common parameters from state
+    import os
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     from tools.case_analyzer import (
@@ -267,9 +269,6 @@ def execute_all_analysis_steps_parallel(state):
         pil_provisions,
         relevant_facts,
     )
-
-    # Extract common parameters from state
-    import os
     text = state["full_text"]
     col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
     jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
@@ -290,7 +289,7 @@ def execute_all_analysis_steps_parallel(state):
     completed = 0
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(func): name for name, func in parallel_steps}
-        
+
         for future in as_completed(futures):
             name = futures[future]
             try:
@@ -304,7 +303,7 @@ def execute_all_analysis_steps_parallel(state):
                     state.setdefault("pil_provisions", []).append(result.pil_provisions)
                     state.setdefault("pil_provisions_confidence", []).append(result.confidence)
                     state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
-                
+
                 completed += 1
                 total_steps = 2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2
                 progress = completed / total_steps
@@ -370,7 +369,7 @@ def execute_all_analysis_steps_parallel(state):
                 state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
                 state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
                 state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
-            
+
             completed += 1
             total_steps = 2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2
             progress = completed / total_steps
@@ -386,12 +385,12 @@ def execute_all_analysis_steps_parallel(state):
         court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
         obiter_dicta_text = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
         dissenting_opinions_text = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
-        
+
         result = abstract(text, jurisdiction, specific_jurisdiction, model, classification, facts, pil_provisions_data, col_issue_text, court_position, obiter_dicta_text, dissenting_opinions_text)
         state.setdefault("abstract", []).append(result.abstract)
         state.setdefault("abstract_confidence", []).append(result.confidence)
         state.setdefault("abstract_reasoning", []).append(result.reasoning)
-        
+
         completed += 1
         progress_bar.progress(1.0)
         status_text.text(f"Completed: {get_step_display_name('abstract', state)}")

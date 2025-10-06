@@ -65,7 +65,6 @@ def extract_col_section(
         col_time = time.time() - start_time
         col_section = result.col_section.strip()
         confidence = result.confidence
-        reasoning = result.reasoning
 
         logger.debug("Extracted Choice of Law section: %s (confidence: %s)", col_section, confidence)
 
