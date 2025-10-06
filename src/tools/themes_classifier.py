@@ -1,52 +1,50 @@
 import asyncio
 import csv
 import logging
-import os
 import time
 from pathlib import Path
-from typing import Any
 
 import logfire
 from agents import Agent, Runner
 
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
-from utils.system_prompt_generator import get_system_prompt_for_analysis
 from utils.themes_extractor import THEMES_TABLE_STR
 
 logger = logging.getLogger(__name__)
 
 
-def _coerce_to_text(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "\n".join(str(item) for item in content if item is not None)
-    return str(content) if content is not None else ""
+def theme_classification_node(
+    text: str,
+    col_section: str,
+    jurisdiction: str,
+    specific_jurisdiction: str | None,
+    model: str,
+    previous_classification: str | None = None,
+    iteration: int = 1,
+):
+    """
+    Classify themes for a court decision.
 
+    Args:
+        text: Full court decision text
+        col_section: Choice of Law section text
+        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
+        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        model: Model to use for classification
+        previous_classification: Previously classified themes
+        iteration: Iteration count for this classification
 
-def theme_classification_node(state):
+    Returns:
+        ThemeClassificationOutput: Classified themes with confidence and reasoning
+    """
     with logfire.span("classify_themes"):
-        text = state["full_text"]
-        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-        specific_jurisdiction = state.get("precise_jurisdiction")
         PIL_THEME_PROMPT = get_prompt_module(jurisdiction, "theme", specific_jurisdiction).PIL_THEME_PROMPT
-
-        col_section = ""
-        sections = state.get("col_section", [])
-        if sections:
-            col_section = sections[-1]
-
-        iter_count = state.get("theme_eval_iter", 0) + 1
-        state["theme_eval_iter"] = iter_count
 
         prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
 
-        existing = state.get("classification", [])
-        if existing:
-            prev = existing[-1]
-            if prev:
-                prompt += f"\n\nPrevious classification: {prev}\n"
+        if previous_classification:
+            prompt += f"\n\nPrevious classification: {previous_classification}\n"
 
         themes_path = Path(__file__).parents[1] / "data" / "themes.csv"
         valid_themes = set()
@@ -61,20 +59,21 @@ def theme_classification_node(state):
         reasoning = ""
         theme_time = 0.0
         attempt = 0
-        result = None  # Initialize result to avoid unbound variable error
+        result = None
 
         for attempt in range(1, max_attempts + 1):
             logger.debug("Prompting agent (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
             start_time = time.time()
 
-            system_prompt = get_system_prompt_for_analysis(state)
+            # Create system prompt from parameters
+            from utils.system_prompt_generator import generate_system_prompt
+            system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "theme")
 
-            selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
             agent = Agent(
                 name="ThemeClassifier",
                 instructions=system_prompt,
                 output_type=ThemeClassificationOutput,
-                model=selected_model,
+                model=model,
             )
             result = asyncio.run(Runner.run(agent, prompt)).final_output
             theme_time = time.time() - start_time
@@ -93,9 +92,6 @@ def theme_classification_node(state):
 
         cls_str = ", ".join(str(item) for item in cls_list)
         logger.debug("Classified theme(s): %s (confidence: %s)", cls_list, confidence)
-        state.setdefault("classification", []).append(cls_str)
-        state.setdefault("classification_confidence", []).append(confidence)
-        state.setdefault("classification_reasoning", []).append(reasoning)
 
         logfire.info(
             "Classified themes",

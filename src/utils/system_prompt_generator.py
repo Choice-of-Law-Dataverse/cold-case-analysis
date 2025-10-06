@@ -147,6 +147,21 @@ def get_system_prompt_for_analysis(state):
     return generate_jurisdiction_specific_prompt(jurisdiction_name, legal_system_type)
 
 
+def generate_system_prompt(legal_system_type, specific_jurisdiction, phase):
+    """
+    Generate system prompt based on explicit parameters.
+
+    Args:
+        legal_system_type (str): Legal system type (e.g., "Civil-law jurisdiction")
+        specific_jurisdiction (str): Specific jurisdiction (e.g., "Switzerland")
+        phase (str): Analysis phase (e.g., "col_section", "theme", "analysis")
+
+    Returns:
+        str: Appropriate system prompt for the analysis
+    """
+    return generate_jurisdiction_specific_prompt(specific_jurisdiction, legal_system_type)
+
+
 # Convenience function for backward compatibility
 def get_default_system_prompt():
     """

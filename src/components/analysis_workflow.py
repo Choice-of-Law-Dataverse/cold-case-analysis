@@ -132,7 +132,76 @@ def execute_analysis_step(state, name, func):
         bool: True if step was executed, False if already completed
     """
     if not state.get(f"{name}_printed"):
-        func(state)
+        # Extract parameters from state
+        import os
+        text = state["full_text"]
+        col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
+        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+        specific_jurisdiction = state.get("precise_jurisdiction")
+        model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+        
+        # Call function with explicit parameters
+        if name == "relevant_facts":
+            result = func(text, col_section, jurisdiction, specific_jurisdiction, model)
+            state.setdefault("relevant_facts", []).append(result.relevant_facts)
+            state.setdefault("relevant_facts_confidence", []).append(result.confidence)
+            state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
+        elif name == "pil_provisions":
+            result = func(text, col_section, jurisdiction, specific_jurisdiction, model)
+            state.setdefault("pil_provisions", []).append(result.pil_provisions)
+            state.setdefault("pil_provisions_confidence", []).append(result.confidence)
+            state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
+        elif name == "col_issue":
+            # Get classification themes
+            classification_messages = state.get("classification", [])
+            themes_list: list[str] = []
+            if classification_messages:
+                last_msg = classification_messages[-1]
+                if hasattr(last_msg, "content"):
+                    content_value = last_msg.content
+                    if isinstance(content_value, list):
+                        themes_list = content_value
+                    elif isinstance(content_value, str) and content_value:
+                        themes_list = [t.strip() for t in last_msg.split(",")]
+                elif isinstance(last_msg, str):
+                    themes_list = [t.strip() for t in last_msg.split(",")]
+            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
+            state.setdefault("col_issue", []).append(result.col_issue)
+            state.setdefault("col_issue_confidence", []).append(result.confidence)
+            state.setdefault("col_issue_reasoning", []).append(result.reasoning)
+        elif name == "courts_position":
+            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
+            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue)
+            state.setdefault("courts_position", []).append(result.courts_position)
+            state.setdefault("courts_position_confidence", []).append(result.confidence)
+            state.setdefault("courts_position_reasoning", []).append(result.reasoning)
+        elif name == "obiter_dicta":
+            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
+            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue)
+            state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
+            state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
+            state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
+        elif name == "dissenting_opinions":
+            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
+            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue)
+            state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
+            state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
+            state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
+        elif name == "abstract":
+            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
+            facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
+            pil_provisions = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
+            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+            court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
+            obiter_dicta = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
+            dissenting_opinions = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
+            result = func(text, jurisdiction, specific_jurisdiction, model, classification, facts, pil_provisions, col_issue, court_position, obiter_dicta, dissenting_opinions)
+            state.setdefault("abstract", []).append(result.abstract)
+            state.setdefault("abstract_confidence", []).append(result.confidence)
+            state.setdefault("abstract_reasoning", []).append(result.reasoning)
 
         display_name = get_step_display_name(name, state)
 
@@ -199,58 +268,146 @@ def execute_all_analysis_steps_parallel(state):
         relevant_facts,
     )
 
+    # Extract common parameters from state
+    import os
+    text = state["full_text"]
+    col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
+    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
+    specific_jurisdiction = state.get("precise_jurisdiction")
+    model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+
     # Steps that can run in parallel (don't depend on each other)
     parallel_steps = [
-        ("relevant_facts", relevant_facts),
-        ("pil_provisions", pil_provisions),
-        ("col_issue", col_issue),
+        ("relevant_facts", lambda: relevant_facts(text, col_section, jurisdiction, specific_jurisdiction, model)),
+        ("pil_provisions", lambda: pil_provisions(text, col_section, jurisdiction, specific_jurisdiction, model)),
     ]
-
-    sequential_steps = [("courts_position", courts_position)]
-
-    if state.get("jurisdiction") == "Common-law jurisdiction":
-        sequential_steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
-
-    sequential_steps.append(("abstract", abstract))
 
     st.markdown("**Analyzing case...**")
     progress_bar = st.progress(0)
     status_text = st.empty()
 
     # Execute parallel steps
+    completed = 0
     with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {executor.submit(func, state): name for name, func in parallel_steps}
-        completed = 0
-        total_steps = len(parallel_steps) + len(sequential_steps)
-
+        futures = {executor.submit(func): name for name, func in parallel_steps}
+        
         for future in as_completed(futures):
             name = futures[future]
             try:
                 result = future.result()
+                # Update state with results
+                if name == "relevant_facts":
+                    state.setdefault("relevant_facts", []).append(result.relevant_facts)
+                    state.setdefault("relevant_facts_confidence", []).append(result.confidence)
+                    state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
+                elif name == "pil_provisions":
+                    state.setdefault("pil_provisions", []).append(result.pil_provisions)
+                    state.setdefault("pil_provisions_confidence", []).append(result.confidence)
+                    state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
+                
                 completed += 1
+                total_steps = 2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2
                 progress = completed / total_steps
                 progress_bar.progress(progress)
                 status_text.text(f"Completed: {get_step_display_name(name, state)}")
             except Exception as e:
                 st.error(f"Error processing {name}: {str(e)}")
 
-    # Execute sequential steps
+    # Get classification themes for col_issue
+    classification_messages = state.get("classification", [])
+    themes_list: list[str] = []
+    if classification_messages:
+        last_msg = classification_messages[-1]
+        if hasattr(last_msg, "content"):
+            content_value = last_msg.content
+            if isinstance(content_value, list):
+                themes_list = content_value
+            elif isinstance(content_value, str) and content_value:
+                themes_list = [t.strip() for t in last_msg.split(",")]
+        elif isinstance(last_msg, str):
+            themes_list = [t.strip() for t in last_msg.split(",")]
+
+    # Execute col_issue (depends on classification)
+    try:
+        result = col_issue(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
+        state.setdefault("col_issue", []).append(result.col_issue)
+        state.setdefault("col_issue_confidence", []).append(result.confidence)
+        state.setdefault("col_issue_reasoning", []).append(result.reasoning)
+        completed += 1
+        progress = completed / (2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2)
+        progress_bar.progress(progress)
+        status_text.text(f"Completed: {get_step_display_name('col_issue', state)}")
+    except Exception as e:
+        st.error(f"Error processing col_issue: {str(e)}")
+
+    # Execute sequential steps that depend on col_issue
+    classification = state.get("classification", [""])[-1] if state.get("classification") else ""
+    col_issue_text = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+
+    sequential_steps = [
+        ("courts_position", lambda: courts_position(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text)),
+    ]
+
+    if state.get("jurisdiction") == "Common-law jurisdiction":
+        sequential_steps.extend([
+            ("obiter_dicta", lambda: obiter_dicta(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text)),
+            ("dissenting_opinions", lambda: dissenting_opinions(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text)),
+        ])
+
     for name, func in sequential_steps:
         try:
-            result = func(state)
+            result = func()
+            # Update state with results
+            if name == "courts_position":
+                state.setdefault("courts_position", []).append(result.courts_position)
+                state.setdefault("courts_position_confidence", []).append(result.confidence)
+                state.setdefault("courts_position_reasoning", []).append(result.reasoning)
+            elif name == "obiter_dicta":
+                state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
+                state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
+                state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
+            elif name == "dissenting_opinions":
+                state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
+                state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
+                state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
+            
             completed += 1
+            total_steps = 2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2
             progress = completed / total_steps
             progress_bar.progress(progress)
             status_text.text(f"Completed: {get_step_display_name(name, state)}")
         except Exception as e:
             st.error(f"Error processing {name}: {str(e)}")
 
+    # Finally, execute abstract
+    try:
+        facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
+        pil_provisions_data = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
+        court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
+        obiter_dicta_text = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
+        dissenting_opinions_text = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
+        
+        result = abstract(text, jurisdiction, specific_jurisdiction, model, classification, facts, pil_provisions_data, col_issue_text, court_position, obiter_dicta_text, dissenting_opinions_text)
+        state.setdefault("abstract", []).append(result.abstract)
+        state.setdefault("abstract_confidence", []).append(result.confidence)
+        state.setdefault("abstract_reasoning", []).append(result.reasoning)
+        
+        completed += 1
+        progress_bar.progress(1.0)
+        status_text.text(f"Completed: {get_step_display_name('abstract', state)}")
+    except Exception as e:
+        st.error(f"Error processing abstract: {str(e)}")
+
     progress_bar.progress(1.0)
     status_text.text("✓ Analysis complete!")
 
-    # Mark all steps as printed and scored
-    for name, _ in parallel_steps + sequential_steps:
+    # Mark all steps as printed
+    for name, _ in parallel_steps:
         state[f"{name}_printed"] = True
+    state["col_issue_printed"] = True
+    for name, _ in sequential_steps:
+        state[f"{name}_printed"] = True
+    state["abstract_printed"] = True
 
 
 def render_final_editing_phase(state):

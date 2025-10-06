@@ -57,8 +57,24 @@ def render_initial_input_phase():
                     user_email=st.session_state.get("user_email"),
                 )
 
-                # Extract COL section
-                extract_col_section(state)
+                # Extract COL section with explicit parameters
+                import os
+                model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+                result = extract_col_section(
+                    text=state["full_text"],
+                    jurisdiction=state.get("jurisdiction", "Civil-law jurisdiction"),
+                    specific_jurisdiction=state.get("precise_jurisdiction"),
+                    model=model,
+                    feedback=state.get("col_section_feedback", []),
+                    previous_section=None,
+                    iteration=1,
+                )
+
+                # Update state with results
+                state.setdefault("col_section", []).append(result.col_section.strip())
+                state.setdefault("col_section_confidence", []).append(result.confidence)
+                state.setdefault("col_section_reasoning", []).append(result.reasoning)
+                state["col_section_eval_iter"] = 1
 
                 # Update session state
                 st.session_state.col_state = state
