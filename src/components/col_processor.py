@@ -86,24 +86,17 @@ def render_feedback_input():
                 col_state["col_section_feedback"].append(feedback)
 
                 model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-                existing_sections = col_state.get("col_section", [])
-                previous_section = existing_sections[-1] if existing_sections else None
-                iter_count = col_state.get("col_section_eval_iter", 0) + 1
 
                 result = extract_col_section(
                     text=col_state["full_text"],
                     jurisdiction=col_state.get("jurisdiction", "Civil-law jurisdiction"),
                     specific_jurisdiction=col_state.get("precise_jurisdiction"),
                     model=model,
-                    feedback=col_state.get("col_section_feedback", []),
-                    previous_section=previous_section,
-                    iteration=iter_count,
                 )
 
                 col_state.setdefault("col_section", []).append(result.col_section.strip())
                 col_state.setdefault("col_section_confidence", []).append(result.confidence)
                 col_state.setdefault("col_section_reasoning", []).append(result.reasoning)
-                col_state["col_section_eval_iter"] = iter_count
 
                 st.rerun()
             else:
@@ -169,15 +162,10 @@ def render_edit_section():
                 col_state["col_section"].append(edited_extraction)
                 col_state["col_done"] = True
                 col_state["classification"] = []
-                col_state["theme_feedback"] = []
-                col_state["theme_eval_iter"] = 0
 
-                from tools.themes_classifier import theme_classification_node
+                from tools.theme_classifier import theme_classification_node
 
                 model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-                existing = col_state.get("classification", [])
-                previous_classification = existing[-1] if existing else None
-                iter_count = col_state.get("theme_eval_iter", 0) + 1
 
                 result = theme_classification_node(
                     text=col_state["full_text"],
@@ -185,15 +173,12 @@ def render_edit_section():
                     jurisdiction=col_state.get("jurisdiction", "Civil-law jurisdiction"),
                     specific_jurisdiction=col_state.get("precise_jurisdiction"),
                     model=model,
-                    previous_classification=previous_classification,
-                    iteration=iter_count,
                 )
 
                 cls_str = ", ".join(str(item) for item in result.themes)
                 col_state.setdefault("classification", []).append(cls_str)
                 col_state.setdefault("classification_confidence", []).append(result.confidence)
                 col_state.setdefault("classification_reasoning", []).append(result.reasoning)
-                col_state["theme_eval_iter"] = iter_count
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
                 st.rerun()

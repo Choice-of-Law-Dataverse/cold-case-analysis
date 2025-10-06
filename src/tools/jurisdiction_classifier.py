@@ -8,7 +8,6 @@ import csv
 import logging
 import os
 from pathlib import Path
-from typing import Any
 
 from agents import Agent, Runner
 
@@ -21,14 +20,6 @@ from .jurisdiction_detector import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _coerce_to_text(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "\n".join(str(item) for item in content if item is not None)
-    return str(content) if content is not None else ""
 
 
 def determine_legal_system_type(jurisdiction_name: str, text: str | None = None) -> str:

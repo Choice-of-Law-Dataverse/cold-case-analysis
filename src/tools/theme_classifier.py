@@ -18,8 +18,6 @@ def theme_classification_node(
     jurisdiction: str,
     specific_jurisdiction: str | None,
     model: str,
-    previous_classification: str | None = None,
-    iteration: int = 1,
 ):
     """
     Classify themes for a court decision.
@@ -30,8 +28,6 @@ def theme_classification_node(
         jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
         specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for classification
-        previous_classification: Previously classified themes
-        iteration: Iteration count for this classification
 
     Returns:
         ThemeClassificationOutput: Classified themes with confidence and reasoning
@@ -40,9 +36,6 @@ def theme_classification_node(
         PIL_THEME_PROMPT = get_prompt_module(jurisdiction, "theme", specific_jurisdiction).PIL_THEME_PROMPT
 
         base_prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
-
-        if previous_classification:
-            base_prompt += f"\n\nPrevious classification: {previous_classification}\n"
 
         max_attempts = 5
         attempt = 0

@@ -7,7 +7,7 @@ import streamlit as st
 
 from components.analysis_workflow import render_analysis_workflow
 from components.input_handler import render_input_phase
-from components.jurisdiction_detection import get_final_jurisdiction_data, render_jurisdiction_detection
+from components.jurisdiction import get_final_jurisdiction_data, render_jurisdiction_detection
 from utils.state_manager import create_initial_analysis_state, get_col_state
 
 

@@ -70,18 +70,16 @@ def add_confidence_chip_css():
         <style>
         /* Confidence chip styling */
         div[data-testid="column"] button[kind="secondary"] {
-            background-color: #9b4dca !important;
-            color: white !important;
+            color: #7d3ca8 !important;
             border: none !important;
-            border-radius: 16px !important;
+            border-radius: 32px !important;
             padding: 4px 12px !important;
             font-size: 0.85em !important;
-            font-weight: 500 !important;
             cursor: pointer !important;
         }
 
         div[data-testid="column"] button[kind="secondary"]:hover {
-            background-color: #7d3ca8 !important;
+            border: 1px solid #7d3ca8 !important;
         }
         </style>
         """,

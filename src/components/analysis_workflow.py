@@ -128,28 +128,6 @@ def get_step_display_name(step_name, state):
     return step_names.get(step_name, step_name.replace("_", " ").title())
 
 
-def display_analysis_history(state):
-    """
-    Display chronological chat history of analysis.
-
-    Args:
-        state: The current analysis state
-    """
-    for speaker, msg in state.get("chat_history", []):
-        if speaker == "machine":
-            # Separate step label and content if formatted as 'Step: content'
-            if ": " in msg:
-                step_label, content = msg.split(": ", 1)
-                # Display step label in bold
-                st.markdown(f"**{step_label}**")
-                # Display content as machine message
-                st.markdown(f"<div class='machine-message'>{content}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='machine-message'>{msg}</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='user-message'>{msg}</div>", unsafe_allow_html=True)
-
-
 def display_completion_message(state):
     """
     Display the completion message and save to database.
@@ -335,7 +313,7 @@ def render_final_editing_phase():
     st.markdown("Review all extracted information below. You can edit any field before final submission.")
 
     # Section 1: Themes
-    st.subheader("Themes")
+
     classification = state.get("classification", [])
     if classification:
         current_themes = classification[-1] if isinstance(classification, list) else classification
@@ -346,8 +324,11 @@ def render_final_editing_phase():
         confidence = confidence_list[-1] if confidence_list else None
         reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
 
-        if confidence:
-            render_confidence_chip(confidence, reasoning, "final_edit_themes")
+        with st.container(horizontal=True):
+            st.subheader("Themes")
+
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "final_edit_themes")
 
         valid_themes = load_valid_themes()
         valid_themes.append("NA")
@@ -371,7 +352,7 @@ def render_final_editing_phase():
         edited_values["themes"] = selected_themes
 
     # Section 2: Choice of Law Section
-    st.subheader("Choice of Law Section")
+
     col_section = state.get("col_section", [])
     if col_section:
         current_col = col_section[-1] if isinstance(col_section, list) else col_section
@@ -382,8 +363,10 @@ def render_final_editing_phase():
         confidence = confidence_list[-1] if confidence_list else None
         reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
 
-        if confidence:
-            render_confidence_chip(confidence, reasoning, "final_edit_col_section")
+        with st.container(horizontal=True):
+            st.subheader("Choice of Law Section")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "final_edit_col_section")
 
         edited_col = st.text_area(
             "Edit Choice of Law Section:",

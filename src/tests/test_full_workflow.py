@@ -9,7 +9,7 @@ import sys
 sys.path.append("/home/simon/dev/cold-case-analysis/cold_case_analyzer_agent/streamlit")
 
 from prompts.prompt_selector import get_prompt_module
-from tools.precise_jurisdiction_detector import detect_precise_jurisdiction, determine_legal_system_type
+from tools.jurisdiction_classifier import detect_precise_jurisdiction, determine_legal_system_type
 
 
 def test_full_workflow():
@@ -81,7 +81,9 @@ def test_full_workflow():
     except Exception as e:
         print(f"❌ Error in workflow: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     test_full_workflow()
