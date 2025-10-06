@@ -55,7 +55,7 @@ def extract_col_section(
             output_type=ColSectionOutput,
             model=model,
         )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColSectionOutput)
 
         logfire.info(
             "Extracted CoL section",

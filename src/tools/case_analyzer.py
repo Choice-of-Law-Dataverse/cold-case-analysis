@@ -91,7 +91,7 @@ def relevant_facts(
             output_type=RelevantFactsOutput,
             model=model,
         )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(RelevantFactsOutput)
 
         logfire.info(
             "Extracted relevant facts",
@@ -135,7 +135,7 @@ def pil_provisions(
             output_type=PILProvisionsOutput,
             model=model,
         )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(PILProvisionsOutput)
 
         logfire.info(
             "Extracted PIL provisions",
@@ -185,7 +185,7 @@ def col_issue(
             output_type=ColIssueOutput,
             model=model,
         )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColIssueOutput)
 
         logfire.info(
             "Extracted CoL issue",
@@ -235,7 +235,7 @@ def courts_position(
         output_type=CourtsPositionOutput,
         model=model,
     )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output
+    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(CourtsPositionOutput)
 
     return result
 
@@ -275,7 +275,7 @@ def obiter_dicta(
         output_type=ObiterDictaOutput,
         model=model,
     )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output
+    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ObiterDictaOutput)
 
     return result
 
@@ -315,7 +315,7 @@ def dissenting_opinions(
         output_type=DissentingOpinionsOutput,
         model=model,
     )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output
+    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(DissentingOpinionsOutput)
 
     return result
 
@@ -376,7 +376,7 @@ def abstract(
             output_type=AbstractOutput,
             model=model,
         )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(AbstractOutput)
 
         logfire.info(
             "Generated abstract",
