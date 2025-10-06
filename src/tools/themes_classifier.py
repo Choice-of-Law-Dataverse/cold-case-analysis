@@ -1,7 +1,5 @@
 import asyncio
-import csv
 import logging
-from pathlib import Path
 
 import logfire
 from agents import Agent, Runner
@@ -9,7 +7,7 @@ from agents import Agent, Runner
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import generate_system_prompt
-from utils.themes_extractor import THEMES_TABLE_STR
+from utils.themes_extractor import THEMES_TABLE_STR, get_valid_themes_set
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +44,7 @@ def theme_classification_node(
         if previous_classification:
             base_prompt += f"\n\nPrevious classification: {previous_classification}\n"
 
-        themes_path = Path(__file__).parents[1] / "data" / "themes.csv"
-        valid_themes = set()
-        with open(themes_path, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                valid_themes.add(row["Theme"])
+        valid_themes = get_valid_themes_set()
 
         max_attempts = 5
         cls_list: list[str] = []

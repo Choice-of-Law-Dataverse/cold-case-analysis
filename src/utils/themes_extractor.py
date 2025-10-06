@@ -188,8 +188,23 @@ def filter_themes_by_list(themes_list: list[str]) -> str:
 
 
 def fetch_themes_list() -> list[str]:
-    # just return the cached list
+    """
+    Get the list of theme names from the cached dataframe.
+    
+    Returns:
+        list[str]: List of theme names
+    """
     return THEMES_TABLE_DF["Theme"].dropna().tolist()
+
+
+def get_valid_themes_set() -> set[str]:
+    """
+    Get a set of valid theme names for validation purposes.
+    
+    Returns:
+        set[str]: Set of theme names
+    """
+    return set(THEMES_TABLE_DF["Theme"].dropna().tolist())
 
 
 def format_themes_table(df: pd.DataFrame) -> str:
