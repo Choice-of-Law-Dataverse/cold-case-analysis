@@ -116,8 +116,14 @@ def process_list_like_values(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fetch_themes_dataframe() -> pd.DataFrame:
+    csv_path = os.path.join(os.path.dirname(__file__), "../data/themes.csv")
+
     if not NOCODB_BASE_URL:
-        return pd.DataFrame({"Theme": [], "Definition": []})
+        try:
+            return pd.read_csv(csv_path)
+        except Exception as e:
+            logger.error("Failed to read themes from CSV: %s", e)
+            return pd.DataFrame({"Theme": [], "Definition": []})
 
     filters = [FilterCondition("Relevant for Case Analysis", 1)]
 
@@ -155,9 +161,17 @@ def fetch_themes_dataframe() -> pd.DataFrame:
     try:
         logger.debug("Trying without API filters...")
         fallback_records = nocodb_service.list_rows("Glossary", filters=None)
-        return _records_to_dataframe(fallback_records)
+        processed = _records_to_dataframe(fallback_records)
+        if not processed.empty:
+            return processed
     except Exception as fallback_error:
         logger.error("Fallback also failed: %s", fallback_error)
+
+    try:
+        logger.info("Falling back to CSV file for themes...")
+        return pd.read_csv(csv_path)
+    except Exception as csv_error:
+        logger.error("Failed to read themes from CSV: %s", csv_error)
         return pd.DataFrame({"Theme": [], "Definition": []})
 
 
@@ -174,8 +188,23 @@ def filter_themes_by_list(themes_list: list[str]) -> str:
 
 
 def fetch_themes_list() -> list[str]:
-    # just return the cached list
+    """
+    Get the list of theme names from the cached dataframe.
+
+    Returns:
+        list[str]: List of theme names
+    """
     return THEMES_TABLE_DF["Theme"].dropna().tolist()
+
+
+def get_valid_themes_set() -> set[str]:
+    """
+    Get a set of valid theme names for validation purposes.
+
+    Returns:
+        set[str]: Set of theme names
+    """
+    return set(THEMES_TABLE_DF["Theme"].dropna().tolist())
 
 
 def format_themes_table(df: pd.DataFrame) -> str:

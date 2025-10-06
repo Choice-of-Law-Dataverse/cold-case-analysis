@@ -32,6 +32,12 @@ logfire.instrument_openai()
 logfire.instrument_openai_agents()
 logger.info("OpenAI instrumentation enabled")
 
+# Instrument requests library for tracing HTTP calls
+logfire.instrument_requests()
+
+# Instrument psycopg2 if using PostgreSQL for tracing DB calls
+logfire.instrument_psycopg()
+
 
 def get_llm(model: str | None = None):
     """

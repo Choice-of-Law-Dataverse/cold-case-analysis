@@ -3,19 +3,19 @@
 Choice of Law section processing components.
 """
 
+import os
+
 import streamlit as st
 
 from tools.col_extractor import extract_col_section
 from utils.debug_print_state import print_state
 
 
-def display_jurisdiction_info(col_state):
+def display_jurisdiction_info():
     """
     Display jurisdiction information if available.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
     precise_jurisdiction = col_state.get("precise_jurisdiction")
     jurisdiction = col_state.get("jurisdiction")
     jurisdiction_code = col_state.get("jurisdiction_code")
@@ -34,52 +34,44 @@ def display_jurisdiction_info(col_state):
             st.badge(jurisdiction)
 
 
-def display_case_info(col_state):
+def display_case_info():
     """
     Display case citation without the full text.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
     citation = col_state.get("case_citation")
     if citation:
         st.subheader("Case Citation")
         st.markdown(f"<div class='user-message'>{citation}</div>", unsafe_allow_html=True)
 
-    display_jurisdiction_info(col_state)
+    display_jurisdiction_info()
 
 
-def display_col_extractions(col_state):
+def display_col_extractions():
     """
     Display the history of COL extractions and feedback.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
     if not col_state.get("col_first_score_submitted"):
         col_state["col_first_score_submitted"] = True
 
 
-def handle_col_feedback_phase(col_state):
+def handle_col_feedback_phase():
     """
     Handle the COL feedback and editing phase.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
     if not col_state.get("col_ready_edit"):
         col_state["col_ready_edit"] = True
 
-    render_edit_section(col_state)
+    render_edit_section()
 
 
-def render_feedback_input(col_state):
+def render_feedback_input():
     """
     Render the feedback input interface.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
     feedback = st.text_area(
         "Enter feedback to improve the Choice of Law Section:",
         height=150,
@@ -92,7 +84,27 @@ def render_feedback_input(col_state):
         if st.button("Submit Feedback", key="submit_col_feedback"):
             if feedback:
                 col_state["col_section_feedback"].append(feedback)
-                extract_col_section(col_state)
+
+                model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+                existing_sections = col_state.get("col_section", [])
+                previous_section = existing_sections[-1] if existing_sections else None
+                iter_count = col_state.get("col_section_eval_iter", 0) + 1
+
+                result = extract_col_section(
+                    text=col_state["full_text"],
+                    jurisdiction=col_state.get("jurisdiction", "Civil-law jurisdiction"),
+                    specific_jurisdiction=col_state.get("precise_jurisdiction"),
+                    model=model,
+                    feedback=col_state.get("col_section_feedback", []),
+                    previous_section=previous_section,
+                    iteration=iter_count,
+                )
+
+                col_state.setdefault("col_section", []).append(result.col_section.strip())
+                col_state.setdefault("col_section_confidence", []).append(result.confidence)
+                col_state.setdefault("col_section_reasoning", []).append(result.reasoning)
+                col_state["col_section_eval_iter"] = iter_count
+
                 st.rerun()
             else:
                 st.warning("Please enter feedback to improve the extraction.")
@@ -103,13 +115,11 @@ def render_feedback_input(col_state):
             st.rerun()
 
 
-def render_edit_section(col_state):
+def render_edit_section():
     """
     Render the edit section interface.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
     from components.confidence_display import add_confidence_chip_css, render_confidence_chip
 
     # Add CSS for confidence chips
@@ -164,7 +174,26 @@ def render_edit_section(col_state):
 
                 from tools.themes_classifier import theme_classification_node
 
-                theme_classification_node(col_state)
+                model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+                existing = col_state.get("classification", [])
+                previous_classification = existing[-1] if existing else None
+                iter_count = col_state.get("theme_eval_iter", 0) + 1
+
+                result = theme_classification_node(
+                    text=col_state["full_text"],
+                    col_section=edited_extraction,
+                    jurisdiction=col_state.get("jurisdiction", "Civil-law jurisdiction"),
+                    specific_jurisdiction=col_state.get("precise_jurisdiction"),
+                    model=model,
+                    previous_classification=previous_classification,
+                    iteration=iter_count,
+                )
+
+                cls_str = ", ".join(str(item) for item in result.themes)
+                col_state.setdefault("classification", []).append(cls_str)
+                col_state.setdefault("classification_confidence", []).append(result.confidence)
+                col_state.setdefault("classification_reasoning", []).append(result.reasoning)
+                col_state["theme_eval_iter"] = iter_count
 
                 print_state("\n\n\nUpdated CoLD State after classification\n\n", col_state)
                 st.rerun()
@@ -172,18 +201,15 @@ def render_edit_section(col_state):
                 st.warning("Please edit the extracted section before proceeding.")
 
 
-def render_col_processing(col_state):
+def render_col_processing():
     """
     Render the complete COL processing interface.
-
-    Args:
-        col_state: The current analysis state
     """
+    col_state = st.session_state.col_state
 
-    display_case_info(col_state)
+    display_case_info()
 
-    display_col_extractions(col_state)
+    display_col_extractions()
 
-    # Handle feedback and editing if COL not done
     if not col_state.get("col_done"):
-        handle_col_feedback_phase(col_state)
+        handle_col_feedback_phase()

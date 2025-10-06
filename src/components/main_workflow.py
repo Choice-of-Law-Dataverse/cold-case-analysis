@@ -3,6 +3,8 @@
 Main workflow orchestrator for the CoLD Case Analyzer.
 """
 
+import os
+
 import streamlit as st
 
 from components.analysis_workflow import render_analysis_workflow
@@ -44,10 +46,8 @@ def render_initial_input_phase():
             st.markdown("## Choice of Law Analysis")
 
             with st.spinner("Extracting Choice of Law section..."):
-                # Get final jurisdiction data
                 final_jurisdiction_data = get_final_jurisdiction_data()
 
-                # Create initial analysis state
                 state = create_initial_analysis_state(
                     case_citation=st.session_state.get("case_citation"),
                     username=st.session_state.get("user"),
@@ -57,10 +57,22 @@ def render_initial_input_phase():
                     user_email=st.session_state.get("user_email"),
                 )
 
-                # Extract COL section
-                extract_col_section(state)
+                model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
+                result = extract_col_section(
+                    text=state["full_text"],
+                    jurisdiction=state.get("jurisdiction", "Civil-law jurisdiction"),
+                    specific_jurisdiction=state.get("precise_jurisdiction"),
+                    model=model,
+                    feedback=state.get("col_section_feedback", []),
+                    previous_section=None,
+                    iteration=1,
+                )
 
-                # Update session state
+                state.setdefault("col_section", []).append(result.col_section.strip())
+                state.setdefault("col_section_confidence", []).append(result.confidence)
+                state.setdefault("col_section_reasoning", []).append(result.reasoning)
+                state["col_section_eval_iter"] = 1
+
                 st.session_state.col_state = state
                 st.session_state["col_extraction_started"] = True
                 st.rerun()
@@ -70,13 +82,11 @@ def render_initial_input_phase():
 
 def render_processing_phases():
     """Render the COL processing, theme classification, and analysis phases."""
-    col_state = get_col_state()
+    render_col_processing()
 
-    render_col_processing(col_state)
+    render_theme_classification()
 
-    render_theme_classification(col_state)
-
-    render_analysis_workflow(col_state)
+    render_analysis_workflow()
 
 
 def render_main_workflow():
