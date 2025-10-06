@@ -1,5 +1,8 @@
 import asyncio
 import logging
+from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 import logfire
 from agents import Agent, Runner
@@ -346,3 +349,182 @@ def extract_abstract(
             confidence=result.confidence,
         )
         return result
+
+
+def analyze_case_workflow(
+    text: str,
+    jurisdiction: str,
+    specific_jurisdiction: str | None,
+    model: str,
+    col_section: str | None = None,
+    themes: list[str] | None = None,
+) -> Generator[tuple[str, Any], None, None]:
+    """
+    Execute complete case analysis workflow with parallel execution where possible.
+
+    This generator orchestrates all analysis steps and yields intermediate results.
+    The component should consume these yields and update the UI/state accordingly.
+
+    Args:
+        text: Full court decision text
+        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
+        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        model: Model to use for analysis
+        col_section: Pre-extracted Choice of Law section (optional)
+        themes: Pre-classified themes (optional)
+
+    Yields:
+        tuple[str, Any]: (step_name, result_object) pairs for each completed step
+            - ("col_section", ColSectionOutput)
+            - ("themes", ThemeClassificationOutput)
+            - ("relevant_facts", RelevantFactsOutput)
+            - ("pil_provisions", PILProvisionsOutput)
+            - ("col_issue", ColIssueOutput)
+            - ("courts_position", CourtsPositionOutput)
+            - ("obiter_dicta", ObiterDictaOutput) - Common Law only
+            - ("dissenting_opinions", DissentingOpinionsOutput) - Common Law only
+            - ("abstract", AbstractOutput)
+    """
+    with logfire.span("analyze_case_workflow"):
+        # Step 1: Extract CoL section if not provided
+        if not col_section:
+            from tools.col_extractor import extract_col_section
+
+            result = extract_col_section(
+                text=text,
+                jurisdiction=jurisdiction,
+                specific_jurisdiction=specific_jurisdiction,
+                model=model,
+                feedback=None,
+                previous_section=None,
+                iteration=1,
+            )
+            col_section = result.col_section
+            yield ("col_section", result)
+
+        # Step 2: Classify themes if not provided
+        if not themes:
+            from tools.themes_classifier import theme_classification_node
+
+            result = theme_classification_node(
+                text=text,
+                col_section=col_section,
+                jurisdiction=jurisdiction,
+                specific_jurisdiction=specific_jurisdiction,
+                model=model,
+                previous_classification=None,
+                iteration=1,
+            )
+            themes = result.themes
+            yield ("themes", result)
+
+        # Step 3: Run parallel analysis (relevant facts + PIL provisions)
+        parallel_results = {}
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(
+                    extract_relevant_facts,
+                    text,
+                    col_section,
+                    jurisdiction,
+                    specific_jurisdiction,
+                    model,
+                ): "relevant_facts",
+                executor.submit(
+                    extract_pil_provisions,
+                    text,
+                    col_section,
+                    jurisdiction,
+                    specific_jurisdiction,
+                    model,
+                ): "pil_provisions",
+            }
+
+            for future in as_completed(futures):
+                step_name = futures[future]
+                try:
+                    result = future.result()
+                    parallel_results[step_name] = result
+                    yield (step_name, result)
+                except Exception as e:
+                    logger.error(f"Error in parallel step {step_name}: {e}")
+                    raise
+
+        # Step 4: Extract CoL issue (depends on themes)
+        themes_list = themes if isinstance(themes, list) else [t.strip() for t in str(themes).split(",")]
+        result = extract_col_issue(
+            text=text,
+            col_section=col_section,
+            jurisdiction=jurisdiction,
+            specific_jurisdiction=specific_jurisdiction,
+            model=model,
+            classification_themes=themes_list,
+        )
+        col_issue_text = result.col_issue
+        yield ("col_issue", result)
+
+        # Step 5: Extract court's position (sequential, depends on col_issue)
+        classification_str = ", ".join(themes_list) if isinstance(themes_list, list) else str(themes_list)
+        result = extract_courts_position(
+            text=text,
+            col_section=col_section,
+            jurisdiction=jurisdiction,
+            specific_jurisdiction=specific_jurisdiction,
+            model=model,
+            classification=classification_str,
+            col_issue=col_issue_text,
+        )
+        courts_position_text = result.courts_position
+        yield ("courts_position", result)
+
+        # Step 6: Common Law specific steps (obiter dicta + dissenting opinions)
+        obiter_dicta_text = ""
+        dissenting_opinions_text = ""
+        if jurisdiction == "Common-law jurisdiction":
+            result = extract_obiter_dicta(
+                text=text,
+                col_section=col_section,
+                jurisdiction=jurisdiction,
+                specific_jurisdiction=specific_jurisdiction,
+                model=model,
+                classification=classification_str,
+                col_issue=col_issue_text,
+            )
+            obiter_dicta_text = result.obiter_dicta
+            yield ("obiter_dicta", result)
+
+            result = extract_dissenting_opinions(
+                text=text,
+                col_section=col_section,
+                jurisdiction=jurisdiction,
+                specific_jurisdiction=specific_jurisdiction,
+                model=model,
+                classification=classification_str,
+                col_issue=col_issue_text,
+            )
+            dissenting_opinions_text = result.dissenting_opinions
+            yield ("dissenting_opinions", result)
+
+        # Step 7: Generate abstract (final step, depends on all previous steps)
+        facts = parallel_results.get("relevant_facts", "")
+        if hasattr(facts, "relevant_facts"):
+            facts = facts.relevant_facts
+
+        pil_provisions_data = parallel_results.get("pil_provisions", "")
+        if hasattr(pil_provisions_data, "pil_provisions"):
+            pil_provisions_data = pil_provisions_data.pil_provisions
+
+        result = extract_abstract(
+            text=text,
+            jurisdiction=jurisdiction,
+            specific_jurisdiction=specific_jurisdiction,
+            model=model,
+            classification=classification_str,
+            facts=str(facts),
+            pil_provisions=str(pil_provisions_data),
+            col_issue=col_issue_text,
+            court_position=courts_position_text,
+            obiter_dicta=obiter_dicta_text,
+            dissenting_opinions=dissenting_opinions_text,
+        )
+        yield ("abstract", result)
