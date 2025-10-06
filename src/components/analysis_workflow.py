@@ -227,7 +227,6 @@ def execute_all_analysis_steps_parallel(state):
             name = futures[future]
             try:
                 result = future.result()
-                state.update(result)
                 completed += 1
                 progress = completed / total_steps
                 progress_bar.progress(progress)
