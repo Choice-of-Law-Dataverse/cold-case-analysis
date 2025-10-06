@@ -358,7 +358,7 @@ def analyze_case_workflow(
     model: str,
     col_section: str | None = None,
     themes: list[str] | None = None,
-) -> Generator[tuple[str, Any], None, None]:
+) -> Generator[Any, None, None]:
     """
     Execute complete case analysis workflow with parallel execution where possible.
 
@@ -374,16 +374,16 @@ def analyze_case_workflow(
         themes: Pre-classified themes (optional)
 
     Yields:
-        tuple[str, Any]: (step_name, result_object) pairs for each completed step
-            - ("col_section", ColSectionOutput)
-            - ("themes", ThemeClassificationOutput)
-            - ("relevant_facts", RelevantFactsOutput)
-            - ("pil_provisions", PILProvisionsOutput)
-            - ("col_issue", ColIssueOutput)
-            - ("courts_position", CourtsPositionOutput)
-            - ("obiter_dicta", ObiterDictaOutput) - Common Law only
-            - ("dissenting_opinions", DissentingOpinionsOutput) - Common Law only
-            - ("abstract", AbstractOutput)
+        Output objects for each completed step:
+            - ColSectionOutput
+            - ThemeClassificationOutput
+            - RelevantFactsOutput
+            - PILProvisionsOutput
+            - ColIssueOutput
+            - CourtsPositionOutput
+            - ObiterDictaOutput (Common Law only)
+            - DissentingOpinionsOutput (Common Law only)
+            - AbstractOutput
     """
     with logfire.span("analyze_case_workflow"):
         # Step 1: Extract CoL section if not provided
@@ -400,7 +400,7 @@ def analyze_case_workflow(
                 iteration=1,
             )
             col_section = result.col_section
-            yield ("col_section", result)
+            yield result
 
         # Step 2: Classify themes if not provided
         if not themes:
@@ -416,7 +416,7 @@ def analyze_case_workflow(
                 iteration=1,
             )
             themes = result.themes
-            yield ("themes", result)
+            yield result
 
         # Step 3: Run parallel analysis (relevant facts + PIL provisions)
         parallel_results = {}
@@ -445,7 +445,7 @@ def analyze_case_workflow(
                 try:
                     result = future.result()
                     parallel_results[step_name] = result
-                    yield (step_name, result)
+                    yield result
                 except Exception as e:
                     logger.error(f"Error in parallel step {step_name}: {e}")
                     raise
@@ -461,7 +461,7 @@ def analyze_case_workflow(
             classification_themes=themes_list,
         )
         col_issue_text = result.col_issue
-        yield ("col_issue", result)
+        yield result
 
         # Step 5: Extract court's position (sequential, depends on col_issue)
         classification_str = ", ".join(themes_list) if isinstance(themes_list, list) else str(themes_list)
@@ -475,7 +475,7 @@ def analyze_case_workflow(
             col_issue=col_issue_text,
         )
         courts_position_text = result.courts_position
-        yield ("courts_position", result)
+        yield result
 
         # Step 6: Common Law specific steps (obiter dicta + dissenting opinions)
         obiter_dicta_text = ""
@@ -491,7 +491,7 @@ def analyze_case_workflow(
                 col_issue=col_issue_text,
             )
             obiter_dicta_text = result.obiter_dicta
-            yield ("obiter_dicta", result)
+            yield result
 
             result = extract_dissenting_opinions(
                 text=text,
@@ -503,7 +503,7 @@ def analyze_case_workflow(
                 col_issue=col_issue_text,
             )
             dissenting_opinions_text = result.dissenting_opinions
-            yield ("dissenting_opinions", result)
+            yield result
 
         # Step 7: Generate abstract (final step, depends on all previous steps)
         facts = parallel_results.get("relevant_facts", "")
@@ -527,4 +527,4 @@ def analyze_case_workflow(
             obiter_dicta=obiter_dicta_text,
             dissenting_opinions=dissenting_opinions_text,
         )
-        yield ("abstract", result)
+        yield result

@@ -65,14 +65,9 @@ def render_initial_input_phase():
     return False
 
 
-def render_processing_phases():
-    """Render the analysis workflow directly - no manual CoL or theme steps."""
-    render_analysis_workflow()
-
-
 def render_main_workflow():
     """Render the complete main workflow."""
     if not get_col_state().get("full_text"):
         render_initial_input_phase()
     else:
-        render_processing_phases()
+        render_analysis_workflow()

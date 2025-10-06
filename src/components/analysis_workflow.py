@@ -10,10 +10,95 @@ import os
 import streamlit as st
 
 from components.database import save_to_db
+from models.analysis_models import (
+    AbstractOutput,
+    ColIssueOutput,
+    ColSectionOutput,
+    CourtsPositionOutput,
+    DissentingOpinionsOutput,
+    ObiterDictaOutput,
+    PILProvisionsOutput,
+    RelevantFactsOutput,
+)
+from models.classification_models import ThemeClassificationOutput
 from tools.case_analyzer import analyze_case_workflow
 from utils.debug_print_state import print_state
 
 logger = logging.getLogger(__name__)
+
+
+class WorkflowStateUpdater:
+    """Helper class to update state based on output type."""
+
+    @staticmethod
+    def update_state(state: dict, result: object) -> str:
+        """
+        Update state based on the result type.
+
+        Args:
+            state: The current analysis state dictionary
+            result: The output object from analysis
+
+        Returns:
+            str: The step name for this result type
+        """
+        if isinstance(result, ColSectionOutput):
+            state.setdefault("col_section", []).append(result.col_section.strip())
+            state.setdefault("col_section_confidence", []).append(result.confidence)
+            state.setdefault("col_section_reasoning", []).append(result.reasoning)
+            return "col_section"
+
+        elif isinstance(result, ThemeClassificationOutput):
+            themes_str = ", ".join(result.themes) if isinstance(result.themes, list) else str(result.themes)
+            state.setdefault("classification", []).append(themes_str)
+            state.setdefault("classification_confidence", []).append(result.confidence)
+            state.setdefault("classification_reasoning", []).append(result.reasoning)
+            return "themes"
+
+        elif isinstance(result, RelevantFactsOutput):
+            state.setdefault("relevant_facts", []).append(result.relevant_facts)
+            state.setdefault("relevant_facts_confidence", []).append(result.confidence)
+            state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
+            return "relevant_facts"
+
+        elif isinstance(result, PILProvisionsOutput):
+            state.setdefault("pil_provisions", []).append(result.pil_provisions)
+            state.setdefault("pil_provisions_confidence", []).append(result.confidence)
+            state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
+            return "pil_provisions"
+
+        elif isinstance(result, ColIssueOutput):
+            state.setdefault("col_issue", []).append(result.col_issue)
+            state.setdefault("col_issue_confidence", []).append(result.confidence)
+            state.setdefault("col_issue_reasoning", []).append(result.reasoning)
+            return "col_issue"
+
+        elif isinstance(result, CourtsPositionOutput):
+            state.setdefault("courts_position", []).append(result.courts_position)
+            state.setdefault("courts_position_confidence", []).append(result.confidence)
+            state.setdefault("courts_position_reasoning", []).append(result.reasoning)
+            return "courts_position"
+
+        elif isinstance(result, ObiterDictaOutput):
+            state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
+            state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
+            state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
+            return "obiter_dicta"
+
+        elif isinstance(result, DissentingOpinionsOutput):
+            state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
+            state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
+            state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
+            return "dissenting_opinions"
+
+        elif isinstance(result, AbstractOutput):
+            state.setdefault("abstract", []).append(result.abstract)
+            state.setdefault("abstract_confidence", []).append(result.confidence)
+            state.setdefault("abstract_reasoning", []).append(result.reasoning)
+            return "abstract"
+
+        else:
+            raise ValueError(f"Unknown result type: {type(result)}")
 
 
 def get_step_display_name(step_name, state):
@@ -151,7 +236,7 @@ def execute_all_analysis_steps_with_generator(state):
 
     try:
         # Use the generator to orchestrate the workflow
-        for step_name, result in analyze_case_workflow(
+        for result in analyze_case_workflow(
             text=text,
             jurisdiction=jurisdiction,
             specific_jurisdiction=specific_jurisdiction,
@@ -159,47 +244,8 @@ def execute_all_analysis_steps_with_generator(state):
             col_section=col_section,
             themes=themes,
         ):
-            # Update state based on step type
-            if step_name == "col_section":
-                # CoL section is already extracted, but update if yielded
-                if not col_section:
-                    state.setdefault("col_section", []).append(result.col_section.strip())
-                    state.setdefault("col_section_confidence", []).append(result.confidence)
-                    state.setdefault("col_section_reasoning", []).append(result.reasoning)
-            elif step_name == "themes":
-                # Themes classification
-                themes_str = ", ".join(result.themes) if isinstance(result.themes, list) else str(result.themes)
-                state.setdefault("classification", []).append(themes_str)
-                state.setdefault("classification_confidence", []).append(result.confidence)
-                state.setdefault("classification_reasoning", []).append(result.reasoning)
-            elif step_name == "relevant_facts":
-                state.setdefault("relevant_facts", []).append(result.relevant_facts)
-                state.setdefault("relevant_facts_confidence", []).append(result.confidence)
-                state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
-            elif step_name == "pil_provisions":
-                state.setdefault("pil_provisions", []).append(result.pil_provisions)
-                state.setdefault("pil_provisions_confidence", []).append(result.confidence)
-                state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
-            elif step_name == "col_issue":
-                state.setdefault("col_issue", []).append(result.col_issue)
-                state.setdefault("col_issue_confidence", []).append(result.confidence)
-                state.setdefault("col_issue_reasoning", []).append(result.reasoning)
-            elif step_name == "courts_position":
-                state.setdefault("courts_position", []).append(result.courts_position)
-                state.setdefault("courts_position_confidence", []).append(result.confidence)
-                state.setdefault("courts_position_reasoning", []).append(result.reasoning)
-            elif step_name == "obiter_dicta":
-                state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
-                state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
-                state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
-            elif step_name == "dissenting_opinions":
-                state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
-                state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
-                state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
-            elif step_name == "abstract":
-                state.setdefault("abstract", []).append(result.abstract)
-                state.setdefault("abstract_confidence", []).append(result.confidence)
-                state.setdefault("abstract_reasoning", []).append(result.reasoning)
+            # Update state using helper class
+            step_name = WorkflowStateUpdater.update_state(state, result)
 
             # Mark step as printed
             state[f"{step_name}_printed"] = True
