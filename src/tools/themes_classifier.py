@@ -62,24 +62,34 @@ def theme_classification_node(
         current_prompt = base_prompt
 
         for attempt in range(1, max_attempts + 1):
-            system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "theme")
+            try:
+                system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "theme")
 
-            agent = Agent(
-                name="ThemeClassifier",
-                instructions=system_prompt,
-                output_type=ThemeClassificationOutput,
-                model=model,
-            )
-            result = asyncio.run(Runner.run(agent, current_prompt)).final_output
+                agent = Agent(
+                    name="ThemeClassifier",
+                    instructions=system_prompt,
+                    output_type=ThemeClassificationOutput,
+                    model=model,
+                )
+                result = asyncio.run(Runner.run(agent, current_prompt)).final_output
 
-            cls_list = result.themes
-            confidence = result.confidence
-            reasoning = result.reasoning
+                cls_list = result.themes
+                confidence = result.confidence
+                reasoning = result.reasoning
 
-            invalid = [item for item in cls_list if item not in valid_themes]
-            if not invalid:
-                break
-            current_prompt += f"\n\nNote: These themes are invalid and should not be used: {invalid}. Please select only from the provided themes table."
+                invalid = [item for item in cls_list if item not in valid_themes]
+                if not invalid:
+                    break
+                current_prompt += f"\n\nNote: These themes are invalid and should not be used: {invalid}. Please select only from the provided themes table."
+            except Exception as e:
+                logger.error("Error during theme classification attempt %d: %s", attempt, e)
+                if attempt == max_attempts:
+                    logger.error("Max attempts reached. Returning fallback result.")
+                    if result is None:
+                        result = ThemeClassificationOutput(
+                            themes=["NA"], confidence="low", reasoning=f"Classification failed after {max_attempts} attempts: {str(e)}"
+                        )
+                continue
 
         logfire.info(
             "Classified themes",

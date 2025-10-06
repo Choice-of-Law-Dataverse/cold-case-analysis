@@ -396,15 +396,13 @@ def execute_all_analysis_steps_parallel(state):
     state["abstract_printed"] = True
 
 
-def render_final_editing_phase(state):
+def render_final_editing_phase():
     """
     Render the final editing phase where all results are shown as editable text areas.
-
-    Args:
-        state: The current analysis state
     """
     from components.confidence_display import add_confidence_chip_css, render_confidence_chip
 
+    state = st.session_state.col_state
     add_confidence_chip_css()
 
     steps = get_analysis_steps(state)
@@ -525,13 +523,11 @@ def render_final_editing_phase(state):
         st.rerun()
 
 
-def render_analysis_workflow(state):
+def render_analysis_workflow():
     """
     Render the complete analysis workflow with parallel execution and final editing.
-
-    Args:
-        state: The current analysis state
     """
+    state = st.session_state.col_state
     if not state.get("analysis_ready"):
         return
 
@@ -540,6 +536,6 @@ def render_analysis_workflow(state):
         state["parallel_execution_started"] = True
         st.rerun()
     elif not state.get("analysis_done"):
-        render_final_editing_phase(state)
+        render_final_editing_phase()
     else:
         display_completion_message(state)

@@ -82,13 +82,11 @@ def render_initial_input_phase():
 
 def render_processing_phases():
     """Render the COL processing, theme classification, and analysis phases."""
-    col_state = get_col_state()
+    render_col_processing()
 
-    render_col_processing(col_state)
+    render_theme_classification()
 
-    render_theme_classification(col_state)
-
-    render_analysis_workflow(col_state)
+    render_analysis_workflow()
 
 
 def render_main_workflow():

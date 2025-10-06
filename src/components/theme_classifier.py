@@ -8,14 +8,11 @@ import streamlit as st
 from utils.data_loaders import load_valid_themes
 
 
-def display_theme_classification(state):
+def display_theme_classification():
     """
     Display the theme classification results.
-
-    Args:
-        state: The current analysis state
     """
-    # Don't display redundant theme output - just let the multiselect handle it
+    state = st.session_state.col_state
     themes = state.get("classification", [])
     if themes:
         last_theme = themes[-1]
@@ -23,17 +20,17 @@ def display_theme_classification(state):
     return None
 
 
-def handle_theme_editing(state, last_theme, valid_themes):
+def handle_theme_editing(last_theme, valid_themes):
     """
     Handle the theme editing interface.
 
     Args:
-        state: The current analysis state
         last_theme: The last classified theme
         valid_themes: List of valid theme options
     """
     from components.confidence_display import add_confidence_chip_css, render_confidence_chip
 
+    state = st.session_state.col_state
     add_confidence_chip_css()
 
     confidence = state.get("classification_confidence", [])[-1] if state.get("classification_confidence") else None
@@ -82,26 +79,21 @@ def handle_theme_editing(state, last_theme, valid_themes):
                 st.warning("Select at least one theme before proceeding.")
 
 
-def render_theme_classification(state):
+def render_theme_classification():
     """
     Render the complete theme classification interface.
-
-    Args:
-        state: The current analysis state
     """
+    state = st.session_state.col_state
     if not state.get("col_done"):
         return
 
-    # Load valid themes
     valid_themes = load_valid_themes()
-    # Add "NA" option to the list
     valid_themes.append("NA")
 
-    # Display classification results
-    last_theme = display_theme_classification(state)
+    last_theme = display_theme_classification()
 
     if last_theme:
         if not state.get("theme_first_score_submitted"):
             state["theme_first_score_submitted"] = True
 
-        handle_theme_editing(state, last_theme, valid_themes)
+        handle_theme_editing(last_theme, valid_themes)
