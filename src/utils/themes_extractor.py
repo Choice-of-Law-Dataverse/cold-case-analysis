@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import logfire
 import pandas as pd
 import requests
 
@@ -40,16 +41,18 @@ class NocoDBService:
         """
         Fetch full record data and metadata for a specific row from NocoDB.
         """
-        logger.debug("Fetching row %s from table %s in NocoDB", record_id, table)
-        url = f"{self.base_url}/{table}/{record_id}"
-        logger.debug("NocoDBService.get_row: GET %s", url)
-        logger.debug("NocoDBService headers: %s", self.headers)
-        resp = requests.get(url, headers=self.headers)
-        logger.debug("Response from nocoDB: %d %s", resp.status_code, resp.text)
-        resp.raise_for_status()
-        payload = resp.json()
-        logger.debug("NocoDBService.get_row response payload: %s", payload)
-        return payload
+        with logfire.span("nocodb_get_row", table=table, record_id=record_id):
+            logger.debug("Fetching row %s from table %s in NocoDB", record_id, table)
+            url = f"{self.base_url}/{table}/{record_id}"
+            logger.debug("NocoDBService.get_row: GET %s", url)
+            logger.debug("NocoDBService headers: %s", self.headers)
+            resp = requests.get(url, headers=self.headers)
+            logger.debug("Response from nocoDB: %d %s", resp.status_code, resp.text)
+            resp.raise_for_status()
+            payload = resp.json()
+            logger.debug("NocoDBService.get_row response payload: %s", payload)
+            logfire.info("Fetched row from NocoDB", table=table, record_id=record_id, status_code=resp.status_code)
+            return payload
 
     def list_rows(
         self,
@@ -60,46 +63,48 @@ class NocoDBService:
         """
         Fetch records for a given table via NocoDB API, applying optional filters and paging through all pages.
         """
-        records: list[dict[str, Any]] = []
-        offset = 0
-        where_clauses = []
-        if filters:
-            for filter_condition in filters:
-                col = filter_condition.column
-                val = filter_condition.value
-                if "Relevant for Case Analysis" in col and val in ["true", "false", True, False]:
-                    op = "eq"
-                elif isinstance(val, str) and val not in ["true", "false"]:
-                    op = "ct"
+        with logfire.span("nocodb_list_rows", table=table, has_filters=bool(filters), limit=limit):
+            records: list[dict[str, Any]] = []
+            offset = 0
+            where_clauses = []
+            if filters:
+                for filter_condition in filters:
+                    col = filter_condition.column
+                    val = filter_condition.value
+                    if "Relevant for Case Analysis" in col and val in ["true", "false", True, False]:
+                        op = "eq"
+                    elif isinstance(val, str) and val not in ["true", "false"]:
+                        op = "ct"
+                    else:
+                        op = "eq"
+                    where_clauses.append(f"({col},{op},{val})")
+            where_param = "~and".join(where_clauses) if where_clauses else None
+            while True:
+                url = f"{self.base_url}/{table}"
+                params: dict[str, Any] = {"limit": limit, "offset": offset}
+                if where_param:
+                    params["where"] = where_param
+                logger.debug("NocoDBService.list_rows: GET %s with params %s", url, params)
+                resp = requests.get(url, headers=self.headers, params=params)
+                resp.raise_for_status()
+                payload = resp.json()
+                if isinstance(payload, dict):
+                    batch = payload.get("list") or payload.get("data") or []
+                    page_info = payload.get("pageInfo", {})
+                    is_last = page_info.get("isLastPage", False)
+                elif isinstance(payload, list):
+                    batch = payload
+                    is_last = True
                 else:
-                    op = "eq"
-                where_clauses.append(f"({col},{op},{val})")
-        where_param = "~and".join(where_clauses) if where_clauses else None
-        while True:
-            url = f"{self.base_url}/{table}"
-            params: dict[str, Any] = {"limit": limit, "offset": offset}
-            if where_param:
-                params["where"] = where_param
-            logger.debug("NocoDBService.list_rows: GET %s with params %s", url, params)
-            resp = requests.get(url, headers=self.headers, params=params)
-            resp.raise_for_status()
-            payload = resp.json()
-            if isinstance(payload, dict):
-                batch = payload.get("list") or payload.get("data") or []
-                page_info = payload.get("pageInfo", {})
-                is_last = page_info.get("isLastPage", False)
-            elif isinstance(payload, list):
-                batch = payload
-                is_last = True
-            else:
-                break
-            if not batch:
-                break
-            records.extend(batch)
-            if is_last or len(batch) < limit:
-                break
-            offset += limit
-        return records
+                    break
+                if not batch:
+                    break
+                records.extend(batch)
+                if is_last or len(batch) < limit:
+                    break
+                offset += limit
+            logfire.info("Listed rows from NocoDB", table=table, total_records=len(records), filters_applied=bool(filters))
+            return records
 
 
 def remove_fields_prefix(df: pd.DataFrame) -> pd.DataFrame:

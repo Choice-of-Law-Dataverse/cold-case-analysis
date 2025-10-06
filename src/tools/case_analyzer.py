@@ -183,22 +183,30 @@ def extract_courts_position(
     Returns:
         CourtsPositionOutput: Extracted position with confidence and reasoning
     """
-    COURTS_POSITION_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COURTS_POSITION_PROMPT
+    with logfire.span("extract_courts_position"):
+        COURTS_POSITION_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COURTS_POSITION_PROMPT
 
-    prompt = COURTS_POSITION_PROMPT.format(
-        col_issue=col_issue, text=text, col_section=col_section, classification=classification
-    )
-    system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+        prompt = COURTS_POSITION_PROMPT.format(
+            col_issue=col_issue, text=text, col_section=col_section, classification=classification
+        )
+        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
-    agent = Agent(
-        name="CourtsPositionAnalyzer",
-        instructions=system_prompt,
-        output_type=CourtsPositionOutput,
-        model=model,
-    )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(CourtsPositionOutput)
+        agent = Agent(
+            name="CourtsPositionAnalyzer",
+            instructions=system_prompt,
+            output_type=CourtsPositionOutput,
+            model=model,
+        )
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(CourtsPositionOutput)
 
-    return result
+        logfire.info(
+            "Extracted court's position",
+            text_length=len(text),
+            col_section_length=len(col_section),
+            result_length=len(result.court_position),
+            confidence=result.confidence,
+        )
+        return result
 
 
 def extract_obiter_dicta(
@@ -225,20 +233,28 @@ def extract_obiter_dicta(
     Returns:
         ObiterDictaOutput: Extracted obiter dicta with confidence and reasoning
     """
-    prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
-    OBITER_PROMPT = prompt_module.COURTS_POSITION_OBITER_DICTA_PROMPT
-    prompt = OBITER_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+    with logfire.span("extract_obiter_dicta"):
+        prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
+        OBITER_PROMPT = prompt_module.COURTS_POSITION_OBITER_DICTA_PROMPT
+        prompt = OBITER_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
+        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
-    agent = Agent(
-        name="ObiterDictaExtractor",
-        instructions=system_prompt,
-        output_type=ObiterDictaOutput,
-        model=model,
-    )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ObiterDictaOutput)
+        agent = Agent(
+            name="ObiterDictaExtractor",
+            instructions=system_prompt,
+            output_type=ObiterDictaOutput,
+            model=model,
+        )
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ObiterDictaOutput)
 
-    return result
+        logfire.info(
+            "Extracted obiter dicta",
+            text_length=len(text),
+            col_section_length=len(col_section),
+            result_length=len(result.obiter_dicta),
+            confidence=result.confidence,
+        )
+        return result
 
 
 def extract_dissenting_opinions(
@@ -265,20 +281,28 @@ def extract_dissenting_opinions(
     Returns:
         DissentingOpinionsOutput: Extracted opinions with confidence and reasoning
     """
-    prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
-    DISSENT_PROMPT = prompt_module.COURTS_POSITION_DISSENTING_OPINIONS_PROMPT
-    prompt = DISSENT_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+    with logfire.span("extract_dissenting_opinions"):
+        prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
+        DISSENT_PROMPT = prompt_module.COURTS_POSITION_DISSENTING_OPINIONS_PROMPT
+        prompt = DISSENT_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
+        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
 
-    agent = Agent(
-        name="DissentingOpinionsExtractor",
-        instructions=system_prompt,
-        output_type=DissentingOpinionsOutput,
-        model=model,
-    )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(DissentingOpinionsOutput)
+        agent = Agent(
+            name="DissentingOpinionsExtractor",
+            instructions=system_prompt,
+            output_type=DissentingOpinionsOutput,
+            model=model,
+        )
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(DissentingOpinionsOutput)
 
-    return result
+        logfire.info(
+            "Extracted dissenting opinions",
+            text_length=len(text),
+            col_section_length=len(col_section),
+            result_length=len(result.dissenting_opinions),
+            confidence=result.confidence,
+        )
+        return result
 
 
 def extract_abstract(
