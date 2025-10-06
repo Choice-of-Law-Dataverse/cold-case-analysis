@@ -41,10 +41,10 @@ def theme_classification_node(
     with logfire.span("classify_themes"):
         PIL_THEME_PROMPT = get_prompt_module(jurisdiction, "theme", specific_jurisdiction).PIL_THEME_PROMPT
 
-        prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
+        base_prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
 
         if previous_classification:
-            prompt += f"\n\nPrevious classification: {previous_classification}\n"
+            base_prompt += f"\n\nPrevious classification: {previous_classification}\n"
 
         themes_path = Path(__file__).parents[1] / "data" / "themes.csv"
         valid_themes = set()
@@ -59,6 +59,7 @@ def theme_classification_node(
         reasoning = ""
         attempt = 0
         result = None
+        current_prompt = base_prompt
 
         for attempt in range(1, max_attempts + 1):
             system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "theme")
@@ -69,7 +70,7 @@ def theme_classification_node(
                 output_type=ThemeClassificationOutput,
                 model=model,
             )
-            result = asyncio.run(Runner.run(agent, prompt)).final_output
+            result = asyncio.run(Runner.run(agent, current_prompt)).final_output
 
             cls_list = result.themes
             confidence = result.confidence
@@ -78,12 +79,14 @@ def theme_classification_node(
             invalid = [item for item in cls_list if item not in valid_themes]
             if not invalid:
                 break
-            prompt += f"\n\nNote: These themes are invalid and should not be used: {invalid}. Please select only from the provided themes table."
+            current_prompt += f"\n\nNote: These themes are invalid and should not be used: {invalid}. Please select only from the provided themes table."
 
         logfire.info(
             "Classified themes",
-            themes=cls_list,
-            count=len(cls_list),
+            text_length=len(text),
+            col_section_length=len(col_section),
+            themes_table_length=len(THEMES_TABLE_STR),
+            themes_count=len(cls_list),
             attempts=attempt,
             confidence=confidence,
         )

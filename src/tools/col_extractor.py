@@ -58,6 +58,11 @@ def extract_col_section(
         result = asyncio.run(Runner.run(agent, prompt)).final_output
 
         logfire.info(
-            "Extracted CoL section", chars=len(result.col_section), iteration=iteration, confidence=result.confidence
+            "Extracted CoL section",
+            text_length=len(text),
+            result_length=len(result.col_section),
+            iteration=iteration,
+            has_feedback=bool(feedback),
+            confidence=result.confidence,
         )
         return result

@@ -93,7 +93,13 @@ def relevant_facts(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
 
-        logfire.info("Extracted relevant facts", chars=len(result.relevant_facts), confidence=result.confidence)
+        logfire.info(
+            "Extracted relevant facts",
+            text_length=len(text),
+            col_section_length=len(col_section),
+            result_length=len(result.relevant_facts),
+            confidence=result.confidence,
+        )
         return result
 
 
@@ -131,7 +137,13 @@ def pil_provisions(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
 
-        logfire.info("Extracted PIL provisions", count=len(result.pil_provisions), confidence=result.confidence)
+        logfire.info(
+            "Extracted PIL provisions",
+            text_length=len(text),
+            col_section_length=len(col_section),
+            provisions_count=len(result.pil_provisions),
+            confidence=result.confidence,
+        )
         return result
 
 
@@ -175,7 +187,14 @@ def col_issue(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
 
-        logfire.info("Extracted CoL issue", chars=len(result.col_issue), confidence=result.confidence)
+        logfire.info(
+            "Extracted CoL issue",
+            text_length=len(text),
+            col_section_length=len(col_section),
+            themes_count=len(classification_themes),
+            result_length=len(result.col_issue),
+            confidence=result.confidence,
+        )
         return result
 
 
@@ -359,5 +378,10 @@ def abstract(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output
 
-        logfire.info("Generated abstract", chars=len(result.abstract), confidence=result.confidence)
+        logfire.info(
+            "Generated abstract",
+            text_length=len(text),
+            result_length=len(result.abstract),
+            confidence=result.confidence,
+        )
         return result
