@@ -218,7 +218,6 @@ def courts_position(state):
         col_issue=col_issue, text=text, col_section=col_section, classification=classification
     )
     logger.debug("Prompting agent with: %s", prompt)
-    start_time = time.time()
 
     system_prompt = get_system_prompt_for_analysis(state)
 
@@ -230,7 +229,6 @@ def courts_position(state):
         model=selected_model,
     )
     result = asyncio.run(Runner.run(agent, prompt)).final_output
-    position_time = time.time() - start_time
     courts_position_text = result.courts_position
     confidence = result.confidence
     reasoning = result.reasoning

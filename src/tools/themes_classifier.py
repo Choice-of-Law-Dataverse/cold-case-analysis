@@ -61,6 +61,7 @@ def theme_classification_node(state):
         reasoning = ""
         theme_time = 0.0
         attempt = 0
+        result = None  # Initialize result to avoid unbound variable error
 
         for attempt in range(1, max_attempts + 1):
             logger.debug("Prompting agent (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
@@ -104,4 +105,8 @@ def theme_classification_node(state):
             attempts=attempt,
             confidence=confidence,
         )
+
+        if result is None:
+            result = ThemeClassificationOutput(themes=cls_list, confidence=confidence, reasoning=reasoning)
+
         return result

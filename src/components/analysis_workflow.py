@@ -132,7 +132,7 @@ def execute_analysis_step(state, name, func):
         bool: True if step was executed, False if already completed
     """
     if not state.get(f"{name}_printed"):
-        result = func(state)
+        func(state)
 
         display_name = get_step_display_name(name, state)
 
