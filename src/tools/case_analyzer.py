@@ -1,8 +1,5 @@
 import asyncio
-import json
 import logging
-from collections.abc import Sequence
-from typing import Any
 
 import logfire
 from agents import Agent, Runner
@@ -23,43 +20,7 @@ from utils.themes_extractor import filter_themes_by_list
 logger = logging.getLogger(__name__)
 
 
-def _ensure_text(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if content is None:
-        return ""
-    if isinstance(content, list):
-        return "\n".join(_ensure_text(item) for item in content if item is not None)
-    if isinstance(content, dict):
-        try:
-            return json.dumps(content)
-        except TypeError:
-            return str(content)
-    return str(content)
-
-
-def _get_last_message_content(messages: Sequence[Any] | None) -> str:
-    if messages:
-        last_message = messages[-1]
-        if hasattr(last_message, "content"):
-            return _ensure_text(last_message.content)
-    return ""
-
-
-def _get_classification_content_str(messages: Sequence[Any] | None) -> str:
-    if messages:
-        last_message = messages[-1]
-        if hasattr(last_message, "content"):
-            raw_content = last_message.content
-            if isinstance(raw_content, list):
-                values = [str(item) for item in raw_content if isinstance(item, str) and item]
-                if values:
-                    return ", ".join(values)
-            return _ensure_text(raw_content)
-    return ""
-
-
-def relevant_facts(
+def extract_relevant_facts(
     text: str,
     col_section: str,
     jurisdiction: str,
@@ -103,7 +64,7 @@ def relevant_facts(
         return result
 
 
-def pil_provisions(
+def extract_pil_provisions(
     text: str,
     col_section: str,
     jurisdiction: str,
@@ -147,7 +108,7 @@ def pil_provisions(
         return result
 
 
-def col_issue(
+def extract_col_issue(
     text: str,
     col_section: str,
     jurisdiction: str,
@@ -198,7 +159,7 @@ def col_issue(
         return result
 
 
-def courts_position(
+def extract_courts_position(
     text: str,
     col_section: str,
     jurisdiction: str,
@@ -240,7 +201,7 @@ def courts_position(
     return result
 
 
-def obiter_dicta(
+def extract_obiter_dicta(
     text: str,
     col_section: str,
     jurisdiction: str,
@@ -280,7 +241,7 @@ def obiter_dicta(
     return result
 
 
-def dissenting_opinions(
+def extract_dissenting_opinions(
     text: str,
     col_section: str,
     jurisdiction: str,
@@ -320,7 +281,7 @@ def dissenting_opinions(
     return result
 
 
-def abstract(
+def extract_abstract(
     text: str,
     jurisdiction: str,
     specific_jurisdiction: str | None,
