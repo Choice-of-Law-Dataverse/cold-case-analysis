@@ -61,6 +61,7 @@ def theme_classification_node(state):
         reasoning = ""
         theme_time = 0.0
         attempt = 0
+        result = None  # Initialize result to avoid unbound variable error
 
         for attempt in range(1, max_attempts + 1):
             logger.debug("Prompting agent (attempt %d/%d) with: %s", attempt, max_attempts, prompt)
@@ -68,7 +69,6 @@ def theme_classification_node(state):
 
             system_prompt = get_system_prompt_for_analysis(state)
 
-            # Create and run agent
             selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
             agent = Agent(
                 name="ThemeClassifier",
@@ -105,10 +105,8 @@ def theme_classification_node(state):
             attempts=attempt,
             confidence=confidence,
         )
-        return {
-            "classification": state["classification"],
-            "classification_confidence": state["classification_confidence"],
-            "classification_reasoning": state["classification_reasoning"],
-            "theme_feedback": state.get("theme_feedback", []),
-            "theme_classification_time": theme_time,
-        }
+
+        if result is None:
+            result = ThemeClassificationOutput(themes=cls_list, confidence=confidence, reasoning=reasoning)
+
+        return result

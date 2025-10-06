@@ -104,7 +104,6 @@ def get_analysis_steps(state):
         relevant_facts,
     )
 
-    # Build base pipeline - abstract moved to end
     steps = [
         ("relevant_facts", relevant_facts),
         ("pil_provisions", pil_provisions),
@@ -112,11 +111,9 @@ def get_analysis_steps(state):
         ("courts_position", courts_position),
     ]
 
-    # Add extra steps for common-law decisions
     if state.get("jurisdiction") == "Common-law jurisdiction":
         steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
 
-    # Add abstract as final step for all jurisdictions
     steps.append(("abstract", abstract))
 
     return steps
@@ -135,30 +132,23 @@ def execute_analysis_step(state, name, func):
         bool: True if step was executed, False if already completed
     """
     if not state.get(f"{name}_printed"):
-        result = func(state)
-        state.update(result)
+        func(state)
 
-        # Get proper display name for the step
         display_name = get_step_display_name(name, state)
 
-        # Display analysis step label
         st.markdown(f"**{display_name}**")
 
-        # Special handling for PIL provisions
         if name == "pil_provisions":
             formatted_content = display_pil_provisions(state, name)
             if formatted_content:
                 st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
-                # Store formatted content for chat history
                 state.setdefault("chat_history", []).append(("machine", f"{display_name}: {formatted_content}"))
             else:
-                # Fallback to original format
                 out = state.get(name)
                 last = out[-1] if isinstance(out, list) else out
                 st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
                 state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
         else:
-            # Standard handling for other steps
             out = state.get(name)
             last = out[-1] if isinstance(out, list) else out
             st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
@@ -168,26 +158,6 @@ def execute_analysis_step(state, name, func):
         st.rerun()
         return True
     return False
-
-
-def handle_step_scoring(state, name):
-    """
-    Auto-approve analysis steps without scoring UI.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-
-    Returns:
-        bool: True (always complete)
-    """
-    score_key = f"{name}_score_submitted"
-
-    # Automatically mark as submitted without user interaction
-    if not state.get(score_key):
-        state[score_key] = True
-
-    return True
 
 
 def handle_step_editing(state, name, steps):
@@ -236,14 +206,11 @@ def execute_all_analysis_steps_parallel(state):
         ("col_issue", col_issue),
     ]
 
-    # Steps that depend on parallel steps
     sequential_steps = [("courts_position", courts_position)]
 
-    # Add jurisdiction-specific steps
     if state.get("jurisdiction") == "Common-law jurisdiction":
         sequential_steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
 
-    # Abstract runs last using all previous results
     sequential_steps.append(("abstract", abstract))
 
     st.markdown("**Analyzing case...**")
@@ -260,7 +227,6 @@ def execute_all_analysis_steps_parallel(state):
             name = futures[future]
             try:
                 result = future.result()
-                state.update(result)
                 completed += 1
                 progress = completed / total_steps
                 progress_bar.progress(progress)
@@ -272,7 +238,6 @@ def execute_all_analysis_steps_parallel(state):
     for name, func in sequential_steps:
         try:
             result = func(state)
-            state.update(result)
             completed += 1
             progress = completed / total_steps
             progress_bar.progress(progress)
@@ -286,7 +251,6 @@ def execute_all_analysis_steps_parallel(state):
     # Mark all steps as printed and scored
     for name, _ in parallel_steps + sequential_steps:
         state[f"{name}_printed"] = True
-        state[f"{name}_score_submitted"] = True
 
 
 def render_final_editing_phase(state):
@@ -298,13 +262,11 @@ def render_final_editing_phase(state):
     """
     from components.confidence_display import add_confidence_chip_css, render_confidence_chip
 
-    # Add CSS for confidence chips
     add_confidence_chip_css()
 
     steps = get_analysis_steps(state)
     edited_values = {}
 
-    # Add custom CSS for textarea heights using key-based targeting
     st.markdown(
         """
     <style>
@@ -357,18 +319,15 @@ def render_final_editing_phase(state):
         unsafe_allow_html=True,
     )
 
-    # Create editable text areas for all steps
     for name, _ in steps:
         display_name = get_step_display_name(name, state)
 
-        # Get current value
         content = state.get(name)
         if not content:
             continue
 
         current_value = content[-1] if isinstance(content, list) else content
 
-        # Get confidence and reasoning for this step
         confidence_key = f"{name}_confidence"
         reasoning_key = f"{name}_reasoning"
         confidence_list = state.get(confidence_key, [])
@@ -376,15 +335,12 @@ def render_final_editing_phase(state):
         confidence = confidence_list[-1] if confidence_list else None
         reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
 
-        # Display title with confidence chip
         with st.container(horizontal=True):
             st.subheader(display_name)
             if confidence:
                 render_confidence_chip(confidence, reasoning, f"analysis_{name}")
 
-        # Special handling for PIL provisions display
         if name == "pil_provisions":
-            # Display as chips
             if isinstance(current_value, list):
                 chips_html = '<div class="pil-chips-container">'
                 for provision in current_value:
@@ -393,7 +349,6 @@ def render_final_editing_phase(state):
                 chips_html += "</div>"
                 st.markdown(chips_html, unsafe_allow_html=True)
 
-                # Provide text area with JSON for editing
                 edit_value = json.dumps(current_value, indent=2)
             else:
                 edit_value = str(current_value)
@@ -403,24 +358,19 @@ def render_final_editing_phase(state):
             )
             edited_values[name] = edited
         else:
-            # Standard text area for other steps - height controlled by CSS
             edited = st.text_area(
                 f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed"
             )
             edited_values[name] = edited
 
-    # Submit button
     if st.button("Submit Final Analysis", type="primary", key="submit_final_analysis"):
-        # Update state with edited values
         for name, edited_value in edited_values.items():
             if name == "pil_provisions":
-                # Try to parse JSON for PIL provisions
                 try:
                     parsed = json.loads(edited_value)
                     state[name][-1] = parsed
                     state[f"{name}_edited"] = parsed
                 except json.JSONDecodeError:
-                    # If not valid JSON, store as string
                     state[name][-1] = edited_value
                     state[f"{name}_edited"] = edited_value
             else:
@@ -430,27 +380,6 @@ def render_final_editing_phase(state):
         state["analysis_done"] = True
         print_state("\n\n\nFinal CoLD State after editing\n\n", state)
         st.rerun()
-
-
-def process_current_analysis_step(state):
-    """
-    Process the current analysis step.
-
-    Args:
-        state: The current analysis state
-    """
-    steps = get_analysis_steps(state)
-    name, func = steps[state["analysis_step"]]
-
-    # Execute the step if not already done
-    execute_analysis_step(state, name, func)
-
-    # Handle scoring
-    scoring_complete = handle_step_scoring(state, name)
-
-    # Handle editing after scoring
-    if scoring_complete:
-        handle_step_editing(state, name, steps)
 
 
 def render_analysis_workflow(state):
@@ -463,15 +392,11 @@ def render_analysis_workflow(state):
     if not state.get("analysis_ready"):
         return
 
-    # Check if we should use new parallel workflow
     if not state.get("parallel_execution_started"):
-        # Execute all steps in parallel
         execute_all_analysis_steps_parallel(state)
         state["parallel_execution_started"] = True
         st.rerun()
     elif not state.get("analysis_done"):
-        # Show final editing phase
         render_final_editing_phase(state)
     else:
-        # Display completion message
         display_completion_message(state)

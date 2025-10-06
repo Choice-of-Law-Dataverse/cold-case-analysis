@@ -51,7 +51,6 @@ def extract_col_section(state):
 
         system_prompt = get_system_prompt_for_analysis(state)
 
-        # Create and run agent
         selected_model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
         agent = Agent(
             name="ColSectionExtractor",
@@ -73,10 +72,4 @@ def extract_col_section(state):
         logfire.info(
             "Extracted CoL section", chars=len(col_section), iteration=iter_count, time_seconds=col_time, confidence=confidence
         )
-        return {
-            "col_section": state["col_section"],
-            "col_section_confidence": state["col_section_confidence"],
-            "col_section_reasoning": state["col_section_reasoning"],
-            "col_section_feedback": state.get("col_section_feedback", []),
-            "col_section_time": col_time,
-        }
+        return result

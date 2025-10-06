@@ -199,7 +199,6 @@ cold-case-analysis/
 │   ├── QUICK_START.md                  # Quick start guide
 │   ├── ARCHITECTURE.md                 # Architecture documentation
 │   ├── WORKFLOWS.md                    # Workflow documentation
-│   ├── agent.md                        # Agent workflow documentation
 │   └── DYNAMIC_SYSTEM_PROMPTS_README.md  # Dynamic prompts documentation
 ├── latam_case_analysis/                # Additional Latin America case tools
 ├── pyproject.toml                      # Project configuration & dependencies

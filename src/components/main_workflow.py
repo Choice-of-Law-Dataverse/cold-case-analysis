@@ -58,8 +58,7 @@ def render_initial_input_phase():
                 )
 
                 # Extract COL section
-                result = extract_col_section(state)
-                state.update(result)
+                extract_col_section(state)
 
                 # Update session state
                 st.session_state.col_state = state
