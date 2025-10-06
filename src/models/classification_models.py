@@ -4,6 +4,23 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+Theme = Literal[
+    "Party autonomy",
+    "Tacit choice",
+    "Partial choice",
+    "Absence of choice",
+    "Arbitration",
+    "Freedom of Choice",
+    "Rules of Law",
+    "Dépeçage",
+    "Public policy",
+    "Mandatory rules",
+    "Consumer contracts",
+    "Employment contracts",
+]
+
+ThemeWithNA = Theme | Literal["NA"]
+
 
 class JurisdictionOutput(BaseModel):
     """Output model for jurisdiction detection."""
@@ -22,7 +39,7 @@ class JurisdictionOutput(BaseModel):
 class ThemeClassificationOutput(BaseModel):
     """Output model for theme classification."""
 
-    themes: list[str] = Field(description="List of classified PIL themes")
+    themes: list[ThemeWithNA] = Field(description="List of classified PIL themes")
     confidence: Literal["low", "medium", "high"] = Field(
         description="Overall confidence level in the classification: 'low', 'medium', or 'high'"
     )

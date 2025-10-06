@@ -114,7 +114,7 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
             model=selected_model,
         )
 
-        result = asyncio.run(Runner.run(agent, prompt)).final_output
+        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(JurisdictionOutput)
 
         jurisdiction_name = result.precise_jurisdiction
         legal_system_type = result.legal_system_type

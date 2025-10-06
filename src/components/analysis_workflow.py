@@ -6,11 +6,29 @@ Analysis workflow components for the CoLD Case Analyzer.
 import json
 import logging
 import os
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import streamlit as st
 
 from components.database import save_to_db
 from components.pil_provisions_handler import display_pil_provisions
+from models.analysis_models import (
+    CourtsPositionOutput,
+    DissentingOpinionsOutput,
+    ObiterDictaOutput,
+    PILProvisionsOutput,
+    RelevantFactsOutput,
+)
+from tools.case_analyzer import (
+    extract_abstract,
+    extract_col_issue,
+    extract_courts_position,
+    extract_dissenting_opinions,
+    extract_obiter_dicta,
+    extract_pil_provisions,
+    extract_relevant_facts,
+)
 from utils.debug_print_state import print_state
 
 logger = logging.getLogger(__name__)
@@ -96,26 +114,26 @@ def get_analysis_steps(state):
         list: List of (name, function) tuples for analysis steps
     """
     from tools.case_analyzer import (
-        abstract,
-        col_issue,
-        courts_position,
-        dissenting_opinions,
-        obiter_dicta,
-        pil_provisions,
-        relevant_facts,
+        extract_abstract,
+        extract_col_issue,
+        extract_courts_position,
+        extract_dissenting_opinions,
+        extract_obiter_dicta,
+        extract_pil_provisions,
+        extract_relevant_facts,
     )
 
     steps = [
-        ("relevant_facts", relevant_facts),
-        ("pil_provisions", pil_provisions),
-        ("col_issue", col_issue),
-        ("courts_position", courts_position),
+        ("relevant_facts", extract_relevant_facts),
+        ("pil_provisions", extract_pil_provisions),
+        ("col_issue", extract_col_issue),
+        ("courts_position", extract_courts_position),
     ]
 
     if state.get("jurisdiction") == "Common-law jurisdiction":
-        steps.extend([("obiter_dicta", obiter_dicta), ("dissenting_opinions", dissenting_opinions)])
+        steps.extend([("obiter_dicta", extract_obiter_dicta), ("dissenting_opinions", extract_dissenting_opinions)])
 
-    steps.append(("abstract", abstract))
+    steps.append(("abstract", extract_abstract))
 
     return steps
 
@@ -195,7 +213,19 @@ def execute_analysis_step(state, name, func):
             court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
             obiter_dicta = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
             dissenting_opinions = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
-            result = func(text, jurisdiction, specific_jurisdiction, model, classification, facts, pil_provisions, col_issue, court_position, obiter_dicta, dissenting_opinions)
+            result = func(
+                text,
+                jurisdiction,
+                specific_jurisdiction,
+                model,
+                classification,
+                facts,
+                pil_provisions,
+                col_issue,
+                court_position,
+                obiter_dicta,
+                dissenting_opinions,
+            )
             state.setdefault("abstract", []).append(result.abstract)
             state.setdefault("abstract_confidence", []).append(result.confidence)
             state.setdefault("abstract_reasoning", []).append(result.reasoning)
@@ -253,17 +283,6 @@ def execute_all_analysis_steps_parallel(state):
     Args:
         state: The current analysis state
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    from tools.case_analyzer import (
-        abstract,
-        col_issue,
-        courts_position,
-        dissenting_opinions,
-        obiter_dicta,
-        pil_provisions,
-        relevant_facts,
-    )
 
     text = state["full_text"]
     col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
@@ -271,9 +290,9 @@ def execute_all_analysis_steps_parallel(state):
     specific_jurisdiction = state.get("precise_jurisdiction")
     model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
-    parallel_steps = [
-        ("relevant_facts", lambda: relevant_facts(text, col_section, jurisdiction, specific_jurisdiction, model)),
-        ("pil_provisions", lambda: pil_provisions(text, col_section, jurisdiction, specific_jurisdiction, model)),
+    parallel_steps: list[tuple[str, Callable[[], RelevantFactsOutput | PILProvisionsOutput]]] = [
+        ("relevant_facts", lambda: extract_relevant_facts(text, col_section, jurisdiction, specific_jurisdiction, model)),
+        ("pil_provisions", lambda: extract_pil_provisions(text, col_section, jurisdiction, specific_jurisdiction, model)),
     ]
 
     st.markdown("**Analyzing case...**")
@@ -288,11 +307,11 @@ def execute_all_analysis_steps_parallel(state):
             name = futures[future]
             try:
                 result = future.result()
-                if name == "relevant_facts":
+                if name == "relevant_facts" and isinstance(result, RelevantFactsOutput):
                     state.setdefault("relevant_facts", []).append(result.relevant_facts)
                     state.setdefault("relevant_facts_confidence", []).append(result.confidence)
                     state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
-                elif name == "pil_provisions":
+                elif name == "pil_provisions" and isinstance(result, PILProvisionsOutput):
                     state.setdefault("pil_provisions", []).append(result.pil_provisions)
                     state.setdefault("pil_provisions_confidence", []).append(result.confidence)
                     state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
@@ -319,7 +338,7 @@ def execute_all_analysis_steps_parallel(state):
             themes_list = [t.strip() for t in last_msg.split(",")]
 
     try:
-        result = col_issue(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
+        result = extract_col_issue(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
         state.setdefault("col_issue", []).append(result.col_issue)
         state.setdefault("col_issue_confidence", []).append(result.confidence)
         state.setdefault("col_issue_reasoning", []).append(result.reasoning)
@@ -333,28 +352,45 @@ def execute_all_analysis_steps_parallel(state):
     classification = state.get("classification", [""])[-1] if state.get("classification") else ""
     col_issue_text = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
 
-    sequential_steps = [
-        ("courts_position", lambda: courts_position(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text)),
+    sequential_steps: list[tuple[str, Callable[[], DissentingOpinionsOutput | ObiterDictaOutput | CourtsPositionOutput]]] = [
+        (
+            "courts_position",
+            lambda: extract_courts_position(
+                text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text
+            ),
+        ),
     ]
 
     if state.get("jurisdiction") == "Common-law jurisdiction":
-        sequential_steps.extend([
-            ("obiter_dicta", lambda: obiter_dicta(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text)),
-            ("dissenting_opinions", lambda: dissenting_opinions(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text)),
-        ])
+        sequential_steps.extend(
+            [
+                (
+                    "obiter_dicta",
+                    lambda: extract_obiter_dicta(
+                        text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text
+                    ),
+                ),
+                (
+                    "dissenting_opinions",
+                    lambda: extract_dissenting_opinions(
+                        text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text
+                    ),
+                ),
+            ]
+        )
 
     for name, func in sequential_steps:
         try:
             result = func()
-            if name == "courts_position":
+            if name == "courts_position" and isinstance(result, CourtsPositionOutput):
                 state.setdefault("courts_position", []).append(result.courts_position)
                 state.setdefault("courts_position_confidence", []).append(result.confidence)
                 state.setdefault("courts_position_reasoning", []).append(result.reasoning)
-            elif name == "obiter_dicta":
+            elif name == "obiter_dicta" and isinstance(result, ObiterDictaOutput):
                 state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
                 state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
                 state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
-            elif name == "dissenting_opinions":
+            elif name == "dissenting_opinions" and isinstance(result, DissentingOpinionsOutput):
                 state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
                 state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
                 state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
@@ -374,7 +410,19 @@ def execute_all_analysis_steps_parallel(state):
         obiter_dicta_text = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
         dissenting_opinions_text = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
 
-        result = abstract(text, jurisdiction, specific_jurisdiction, model, classification, facts, pil_provisions_data, col_issue_text, court_position, obiter_dicta_text, dissenting_opinions_text)
+        result = extract_abstract(
+            text,
+            jurisdiction,
+            specific_jurisdiction,
+            model,
+            classification,
+            facts,
+            pil_provisions_data,
+            col_issue_text,
+            court_position,
+            obiter_dicta_text,
+            dissenting_opinions_text,
+        )
         state.setdefault("abstract", []).append(result.abstract)
         state.setdefault("abstract_confidence", []).append(result.confidence)
         state.setdefault("abstract_reasoning", []).append(result.reasoning)
