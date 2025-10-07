@@ -61,16 +61,6 @@ def theme_classification_node(
                     result = None
                 continue
 
-        logfire.info(
-            "Classified themes",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            themes_table_length=len(THEMES_TABLE_STR),
-            themes_count=len(result.themes) if result else 0,
-            attempts=attempt,
-            confidence=result.confidence if result else "none",
-        )
-
         if result is None:
             fallback_reason = f"Classification failed after {max_attempts} attempts."
             result = ThemeClassificationOutput(themes=["NA"], confidence="low", reasoning=fallback_reason)

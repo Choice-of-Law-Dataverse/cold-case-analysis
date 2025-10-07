@@ -45,11 +45,4 @@ def extract_relevant_facts(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(RelevantFactsOutput)
 
-        logfire.info(
-            "Extracted relevant facts",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            result_length=len(result.relevant_facts),
-            confidence=result.confidence,
-        )
         return result

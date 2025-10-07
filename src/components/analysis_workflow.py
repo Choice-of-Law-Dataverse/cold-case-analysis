@@ -190,7 +190,7 @@ def execute_all_analysis_steps_with_generator(state):
         col_section_text = col_section_data[-1] if isinstance(col_section_data, list) else col_section_data
         # Convert back to list for generator
         col_sections = [col_section_text] if col_section_text else None
-    
+
     legal_system = state.get("jurisdiction", "Civil-law jurisdiction")
     jurisdiction = state.get("precise_jurisdiction")
     model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"

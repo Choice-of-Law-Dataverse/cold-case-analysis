@@ -39,12 +39,11 @@ def extract_obiter_dicta(
     with logfire.span("extract_obiter_dicta"):
         prompt_module = get_prompt_module(legal_system, "analysis", jurisdiction)
         OBITER_PROMPT = prompt_module.COURTS_POSITION_OBITER_DICTA_PROMPT
-        
-        # Extract data from typed outputs
+
         col_section = "\n\n".join(col_section_output.col_sections)
         themes = ", ".join(themes_output.themes)
         col_issue = col_issue_output.col_issue
-        
+
         prompt = OBITER_PROMPT.format(text=text, col_section=col_section, classification=themes, col_issue=col_issue)
         system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
@@ -56,11 +55,4 @@ def extract_obiter_dicta(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ObiterDictaOutput)
 
-        logfire.info(
-            "Extracted obiter dicta",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            result_length=len(result.obiter_dicta),
-            confidence=result.confidence,
-        )
         return result

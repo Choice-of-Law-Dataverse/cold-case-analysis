@@ -38,14 +38,11 @@ def extract_col_issue(
     with logfire.span("extract_col_issue"):
         COL_ISSUE_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).COL_ISSUE_PROMPT
 
-        # Extract data from typed outputs
         col_section = "\n\n".join(col_section_output.col_sections)
         themes = themes_output.themes
         themes_definitions = filter_themes_by_list(themes)
 
-        prompt = COL_ISSUE_PROMPT.format(
-            text=text, col_section=col_section, classification_definitions=themes_definitions
-        )
+        prompt = COL_ISSUE_PROMPT.format(text=text, col_section=col_section, classification_definitions=themes_definitions)
         system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(
@@ -56,12 +53,4 @@ def extract_col_issue(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColIssueOutput)
 
-        logfire.info(
-            "Extracted CoL issue",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            themes_count=len(themes),
-            result_length=len(result.col_issue),
-            confidence=result.confidence,
-        )
         return result

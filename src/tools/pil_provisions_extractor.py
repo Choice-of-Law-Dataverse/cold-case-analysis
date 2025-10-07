@@ -45,11 +45,4 @@ def extract_pil_provisions(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(PILProvisionsOutput)
 
-        logfire.info(
-            "Extracted PIL provisions",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            provisions_count=len(result.pil_provisions),
-            confidence=result.confidence,
-        )
         return result

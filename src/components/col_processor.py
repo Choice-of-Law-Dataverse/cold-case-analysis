@@ -89,12 +89,12 @@ def render_feedback_input():
 
                 result = extract_col_section(
                     text=col_state["full_text"],
-                    jurisdiction=col_state.get("jurisdiction", "Civil-law jurisdiction"),
-                    specific_jurisdiction=col_state.get("precise_jurisdiction"),
+                    legal_system=col_state.get("jurisdiction", "Civil-law jurisdiction"),
+                    jurisdiction=col_state.get("precise_jurisdiction"),
                     model=model,
                 )
 
-                col_state.setdefault("col_section", []).append(result.col_section.strip())
+                col_state.setdefault("col_section", []).append(result.col_sections)
                 col_state.setdefault("col_section_confidence", []).append(result.confidence)
                 col_state.setdefault("col_section_reasoning", []).append(result.reasoning)
 
@@ -170,8 +170,8 @@ def render_edit_section():
                 result = theme_classification_node(
                     text=col_state["full_text"],
                     col_section=edited_extraction,
-                    jurisdiction=col_state.get("jurisdiction", "Civil-law jurisdiction"),
-                    specific_jurisdiction=col_state.get("precise_jurisdiction"),
+                    legal_system=col_state.get("jurisdiction", "Civil-law jurisdiction"),
+                    jurisdiction=col_state.get("precise_jurisdiction"),
                     model=model,
                 )
 

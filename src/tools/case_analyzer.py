@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
+from typing import Any, cast
 
 import logfire
 
@@ -9,7 +9,10 @@ from models.analysis_models import (
     CourtsPositionOutput,
     DissentingOpinionsOutput,
     ObiterDictaOutput,
+    PILProvisionsOutput,
+    RelevantFactsOutput,
 )
+from models.classification_models import ThemeClassificationOutput, ThemeWithNA
 from tools.abstract_generator import extract_abstract
 from tools.col_extractor import extract_col_section
 from tools.col_issue_extractor import extract_col_issue
@@ -76,10 +79,9 @@ def analyze_case_workflow(
         else:
             # Create output object from provided sections
             from models.analysis_models import ColSectionOutput
+
             col_section_output = ColSectionOutput(
-                col_sections=col_sections,
-                confidence="high",
-                reasoning="Pre-extracted sections provided"
+                col_sections=col_sections, confidence="high", reasoning="Pre-extracted sections provided"
             )
 
         # Step 2: Classify themes if not provided
@@ -93,19 +95,16 @@ def analyze_case_workflow(
                 jurisdiction=jurisdiction,
                 model=model,
             )
-            themes = [str(theme) for theme in themes_output.themes]
             yield themes_output
         else:
-            # Create output object from provided themes
-            from models.classification_models import ThemeClassificationOutput
             themes_output = ThemeClassificationOutput(
-                themes=themes,
-                confidence="high",
-                reasoning="Pre-classified themes provided"
+                themes=cast(list[ThemeWithNA], themes), confidence="high", reasoning="Pre-classified themes provided"
             )
 
         # Step 3: Run parallel analysis (relevant facts + PIL provisions)
-        parallel_results = {}
+        facts_output = None
+        pil_provisions_output = None
+        futures = []
         with ThreadPoolExecutor(max_workers=2) as executor:
             col_section_text = "\n\n".join(col_section_output.col_sections)
             futures = {
@@ -116,7 +115,7 @@ def analyze_case_workflow(
                     legal_system,
                     jurisdiction,
                     model,
-                ): "relevant_facts",
+                ),
                 executor.submit(
                     extract_pil_provisions,
                     text,
@@ -124,18 +123,16 @@ def analyze_case_workflow(
                     legal_system,
                     jurisdiction,
                     model,
-                ): "pil_provisions",
+                ),
             }
 
             for future in as_completed(futures):
-                step_name = futures[future]
-                try:
-                    result = future.result()
-                    parallel_results[step_name] = result
-                    yield result
-                except Exception as e:
-                    logger.error(f"Error in parallel step {step_name}: {e}")
-                    raise
+                result = future.result()
+                if isinstance(result, RelevantFactsOutput):
+                    facts_output = result
+                elif isinstance(result, PILProvisionsOutput):
+                    pil_provisions_output = result
+                yield result
 
         # Step 4: Extract CoL issue (depends on themes)
         col_issue_output = extract_col_issue(
@@ -152,8 +149,6 @@ def analyze_case_workflow(
         courts_position_output = None
         obiter_dicta_output = None
         dissenting_opinions_output = None
-
-        # Determine which extractions to run in parallel
         futures = []
         with ThreadPoolExecutor(max_workers=3) as executor:
             # Always extract court's position
@@ -207,8 +202,15 @@ def analyze_case_workflow(
                 yield result
 
         # Step 6: Generate abstract (final step, depends on all previous steps)
-        facts_output = parallel_results.get("relevant_facts")
-        pil_provisions_output = parallel_results.get("pil_provisions")
+
+        if facts_output is None:
+            raise RuntimeError("Relevant facts extraction failed - cannot generate abstract")
+
+        if pil_provisions_output is None:
+            raise RuntimeError("PIL provisions extraction failed - cannot generate abstract")
+
+        if courts_position_output is None:
+            raise RuntimeError("Court's position extraction failed - cannot generate abstract")
 
         result = extract_abstract(
             text=text,

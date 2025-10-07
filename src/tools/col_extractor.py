@@ -45,10 +45,4 @@ def extract_col_section(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColSectionOutput)
 
-        logfire.info(
-            "Extracted CoL sections",
-            text_length=len(text),
-            sections_count=len(result.col_sections),
-            confidence=result.confidence,
-        )
         return result

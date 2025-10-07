@@ -55,13 +55,12 @@ def extract_abstract(
     with logfire.span("generate_abstract"):
         ABSTRACT_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).ABSTRACT_PROMPT
 
-        # Extract data from typed outputs
         themes = ", ".join(themes_output.themes)
         facts = facts_output.relevant_facts
         pil_provisions = "\n".join(pil_provisions_output.pil_provisions)
         col_issue = col_issue_output.col_issue
         court_position = court_position_output.courts_position
-        
+
         prompt_vars = {
             "text": text,
             "classification": themes,
@@ -87,10 +86,4 @@ def extract_abstract(
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(AbstractOutput)
 
-        logfire.info(
-            "Generated abstract",
-            text_length=len(text),
-            result_length=len(result.abstract),
-            confidence=result.confidence,
-        )
         return result
