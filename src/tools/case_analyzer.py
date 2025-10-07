@@ -9,8 +9,6 @@ from models.analysis_models import (
     CourtsPositionOutput,
     DissentingOpinionsOutput,
     ObiterDictaOutput,
-    PILProvisionsOutput,
-    RelevantFactsOutput,
 )
 from tools.abstract_generator import extract_abstract
 from tools.col_extractor import extract_col_section
@@ -65,35 +63,51 @@ def analyze_case_workflow(
     """
     with logfire.span("analyze_case_workflow"):
         # Step 1: Extract CoL sections if not provided
-        col_section_text = ""
+        col_section_output = None
         if not col_sections:
-            result = extract_col_section(
+            col_section_output = extract_col_section(
                 text=text,
                 legal_system=legal_system,
                 jurisdiction=jurisdiction,
                 model=model,
             )
-            col_sections = result.col_sections
-            col_section_text = "\n\n".join(col_sections)
-            yield result
+            col_sections = col_section_output.col_sections
+            yield col_section_output
         else:
-            col_section_text = "\n\n".join(col_sections) if isinstance(col_sections, list) else str(col_sections)
+            # Create output object from provided sections
+            from models.analysis_models import ColSectionOutput
+            col_section_output = ColSectionOutput(
+                col_sections=col_sections,
+                confidence="high",
+                reasoning="Pre-extracted sections provided"
+            )
 
         # Step 2: Classify themes if not provided
+        themes_output = None
         if not themes:
-            result = theme_classification_node(
+            col_section_text = "\n\n".join(col_section_output.col_sections)
+            themes_output = theme_classification_node(
                 text=text,
                 col_section=col_section_text,
                 legal_system=legal_system,
                 jurisdiction=jurisdiction,
                 model=model,
             )
-            themes = [str(theme) for theme in result.themes]
-            yield result
+            themes = [str(theme) for theme in themes_output.themes]
+            yield themes_output
+        else:
+            # Create output object from provided themes
+            from models.classification_models import ThemeClassificationOutput
+            themes_output = ThemeClassificationOutput(
+                themes=themes,
+                confidence="high",
+                reasoning="Pre-classified themes provided"
+            )
 
         # Step 3: Run parallel analysis (relevant facts + PIL provisions)
         parallel_results = {}
         with ThreadPoolExecutor(max_workers=2) as executor:
+            col_section_text = "\n\n".join(col_section_output.col_sections)
             futures = {
                 executor.submit(
                     extract_relevant_facts,
@@ -124,23 +138,20 @@ def analyze_case_workflow(
                     raise
 
         # Step 4: Extract CoL issue (depends on themes)
-        themes_list = themes if isinstance(themes, list) else [t.strip() for t in str(themes).split(",")]
-        result = extract_col_issue(
+        col_issue_output = extract_col_issue(
             text=text,
-            col_section=col_section_text,
+            col_section_output=col_section_output,
             legal_system=legal_system,
             jurisdiction=jurisdiction,
             model=model,
-            themes=themes_list,
+            themes_output=themes_output,
         )
-        col_issue_text = result.col_issue
-        yield result
+        yield col_issue_output
 
         # Step 5: Run parallel analysis (court's position + common law specific steps)
-        themes_str = ", ".join(themes_list) if isinstance(themes_list, list) else str(themes_list)
-        courts_position_text = ""
-        obiter_dicta_text = ""
-        dissenting_opinions_text = ""
+        courts_position_output = None
+        obiter_dicta_output = None
+        dissenting_opinions_output = None
 
         # Determine which extractions to run in parallel
         futures = []
@@ -149,12 +160,12 @@ def analyze_case_workflow(
             courts_future = executor.submit(
                 extract_courts_position,
                 text,
-                col_section_text,
+                col_section_output,
                 legal_system,
                 jurisdiction,
                 model,
-                themes_str,
-                col_issue_text,
+                themes_output,
+                col_issue_output,
             )
             futures.append(courts_future)
 
@@ -163,24 +174,24 @@ def analyze_case_workflow(
                 obiter_future = executor.submit(
                     extract_obiter_dicta,
                     text,
-                    col_section_text,
+                    col_section_output,
                     legal_system,
                     jurisdiction,
                     model,
-                    themes_str,
-                    col_issue_text,
+                    themes_output,
+                    col_issue_output,
                 )
                 futures.append(obiter_future)
 
                 dissent_future = executor.submit(
                     extract_dissenting_opinions,
                     text,
-                    col_section_text,
+                    col_section_output,
                     legal_system,
                     jurisdiction,
                     model,
-                    themes_str,
-                    col_issue_text,
+                    themes_output,
+                    col_issue_output,
                 )
                 futures.append(dissent_future)
 
@@ -188,33 +199,28 @@ def analyze_case_workflow(
             for future in as_completed(futures):
                 result = future.result()
                 if isinstance(result, CourtsPositionOutput):
-                    courts_position_text = result.courts_position
+                    courts_position_output = result
                 elif isinstance(result, ObiterDictaOutput):
-                    obiter_dicta_text = result.obiter_dicta
+                    obiter_dicta_output = result
                 elif isinstance(result, DissentingOpinionsOutput):
-                    dissenting_opinions_text = result.dissenting_opinions
+                    dissenting_opinions_output = result
                 yield result
 
         # Step 6: Generate abstract (final step, depends on all previous steps)
-        facts = parallel_results.get("relevant_facts", "")
-        if isinstance(facts, RelevantFactsOutput):
-            facts = facts.relevant_facts
-
-        pil_provisions_data = parallel_results.get("pil_provisions", "")
-        if isinstance(pil_provisions_data, PILProvisionsOutput):
-            pil_provisions_data = pil_provisions_data.pil_provisions
+        facts_output = parallel_results.get("relevant_facts")
+        pil_provisions_output = parallel_results.get("pil_provisions")
 
         result = extract_abstract(
             text=text,
             legal_system=legal_system,
             jurisdiction=jurisdiction,
             model=model,
-            themes=themes_str,
-            facts=str(facts),
-            pil_provisions=str(pil_provisions_data),
-            col_issue=col_issue_text,
-            court_position=courts_position_text,
-            obiter_dicta=obiter_dicta_text,
-            dissenting_opinions=dissenting_opinions_text,
+            themes_output=themes_output,
+            facts_output=facts_output,
+            pil_provisions_output=pil_provisions_output,
+            col_issue_output=col_issue_output,
+            court_position_output=courts_position_output,
+            obiter_dicta_output=obiter_dicta_output,
+            dissenting_opinions_output=dissenting_opinions_output,
         )
         yield result
