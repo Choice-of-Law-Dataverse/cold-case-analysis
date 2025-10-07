@@ -88,33 +88,29 @@ flowchart TD
 
     subgraph "Automated Analysis Workflow"
         StartGen[Start Generator Workflow<br/>analyze_case_workflow]
-        ParallelNote[Automatic Processing<br/>No User Input]
         
-        subgraph "Generator Step 1"
+        subgraph "Step 1"
             ExtractCOL[Extract COL Sections<br/>Returns list of sections]
         end
         
-        subgraph "Generator Step 2"
+        subgraph "Step 2"
             ClassifyTheme[Classify PIL Themes<br/>Against Taxonomy]
         end
         
-        subgraph "Generator Step 3 - Parallel"
+        subgraph "Step 3 - Parallel Execution"
             Facts[Extract Relevant Facts]
             Provisions[Extract PIL Provisions]
+            Issue[Identify COL Issue]
         end
         
-        subgraph "Generator Step 4"
-            Issue[Identify COL Issue<br/>Depends on themes]
-        end
-        
-        subgraph "Generator Step 5 - Parallel"
+        subgraph "Step 4 - Parallel Execution"
             Position[Extract Court Position]
             CommonLaw{Common Law?}
             ObiterDicta[Extract Obiter Dicta<br/>Common Law Only]
             DissentOps[Extract Dissenting Opinions<br/>Common Law Only]
         end
         
-        subgraph "Generator Step 6"
+        subgraph "Step 5"
             Abstract[Generate Abstract<br/>Final Summary]
         end
     end
@@ -149,13 +145,14 @@ flowchart TD
 
     StartGen --> ExtractCOL
     ExtractCOL --> ClassifyTheme
-    ClassifyTheme --> ParallelNote
+    ClassifyTheme --> Facts
+    ClassifyTheme --> Provisions
+    ClassifyTheme --> Issue
     
-    ParallelNote --> Facts
-    ParallelNote --> Provisions
-    Facts --> Issue
-    Provisions --> Issue
+    Facts --> Position
+    Provisions --> Position
     Issue --> Position
+    
     Position --> CommonLaw
     CommonLaw -->|Yes| ObiterDicta
     CommonLaw -->|Yes| DissentOps
@@ -184,7 +181,7 @@ flowchart TD
     class Citation,EmailOpt,InputSource,TextInput,PDFUpload,DemoLoad input
     class DetectJuris,DisplayJuris process
     class ConfirmJuris decision
-    class StartGen,ParallelNote,ExtractCOL,ClassifyTheme,Facts,Provisions,Issue,Position,CommonLaw,ObiterDicta,DissentOps,Abstract automated
+    class StartGen,ExtractCOL,ClassifyTheme,Facts,Provisions,Issue,Position,CommonLaw,ObiterDicta,DissentOps,Abstract automated
     class ReviewAll,EditThemes,EditCOL,EditOther,SaveDB,Complete output
 ```
 
@@ -271,7 +268,7 @@ sequenceDiagram
     Components->>StateManager: Update theme state
 
     Components->>Tools: Run complete analysis (parallel)
-    Note over Tools,LLM: Parallel execution:<br/>- Facts<br/>- PIL Provisions<br/>- COL Issue<br/>Then: Position, Abstract
+    Note over Tools,LLM: Step 3 parallel:<br/>Facts + PIL Provisions + COL Issue<br/>Step 4 parallel:<br/>Court Position + Obiter/Dissent
     Tools->>LLM: Extract all analysis components
     LLM-->>Tools: Complete analysis results
     Tools-->>Components: Display full analysis for editing
@@ -298,7 +295,6 @@ sequenceDiagram
 
     User->>UI: Confirm jurisdiction
     UI->>Generator: Start analyze_case_workflow()
-    Note over Generator: Workflow orchestrates<br/>all analysis steps
     
     Generator->>Tool: extract_col_section(text, legal_system, jurisdiction)
     Tool->>Prompt: Get jurisdiction-specific prompt
@@ -311,9 +307,9 @@ sequenceDiagram
     Tool-->>Generator: Yield ColSectionOutput
     Generator-->>UI: Yield result object
     UI->>State: Save col_sections list
-    UI->>User: Display progress (automatic)
+    UI->>User: Display progress
     
-    Note over Generator,UI: Workflow continues<br/>automatically with themes,<br/>facts, provisions, etc.
+    Note over Generator,UI: Continues with themes,<br/>parallel analysis steps
 ```
 
 ### Theme Classification Workflow
@@ -331,7 +327,7 @@ sequenceDiagram
     Generator->>Data: Load valid themes
     Data-->>Generator: Theme taxonomy (themes.csv)
     
-    Generator->>Tool: theme_classification_node(text, col_section_text, legal_system, jurisdiction)
+    Generator->>Tool: theme_classification_node(text, col_section, legal_system, jurisdiction)
     Tool->>LLM: Classify against PIL taxonomy
     Note over LLM: Categorizes case<br/>against predefined<br/>PIL themes
     LLM-->>Tool: Theme classifications
@@ -339,9 +335,9 @@ sequenceDiagram
     Tool-->>Generator: Yield ThemeClassificationOutput
     Generator-->>UI: Yield result object
     UI->>State: Save themes
-    UI->>User: Display progress (automatic)
+    UI->>User: Display progress
     
-    Note over Generator,UI: Workflow continues<br/>automatically with facts,<br/>PIL provisions, etc.
+    Note over Generator,UI: Continues with parallel<br/>facts, provisions, COL issue
 ```
 
 ## Data Processing Patterns
@@ -458,40 +454,37 @@ flowchart TD
 
 This workflow documentation provides a comprehensive overview of the CoLD Case Analyzer's operational processes:
 
-- **Main Workflow**: Automated generator-based analysis from jurisdiction confirmation to completion
-- **Component Workflows**: Detailed flows for jurisdiction detection, COL extraction, and theme classification
+- **Main Workflow**: Generator-based automated analysis from jurisdiction confirmation to completion
+- **Component Workflows**: Jurisdiction detection, COL extraction, and theme classification
 - **Data Processing**: Input transformation and result storage patterns
 
-### Key Changes in Current Implementation
+### Current Implementation
 
 **Generator-Based Workflow:**
 - All analysis steps after jurisdiction confirmation are automated
 - Uses `analyze_case_workflow()` generator function that yields result objects
-- Parallel execution where possible (facts + PIL provisions, position + common law steps)
-- User only needs to confirm jurisdiction; all other steps run automatically
+- User confirms jurisdiction only; all other steps run automatically
+
+**Parallel Execution:**
+- Step 3: Facts + PIL Provisions + COL Issue (3 parallel operations)
+- Step 4: Court Position + Obiter Dicta + Dissenting Opinions (up to 3 parallel operations for Common Law)
 
 **Parameter Naming:**
-- `jurisdiction` → `legal_system` (e.g., "Civil-law jurisdiction", "Common-law jurisdiction")
-- `specific_jurisdiction` → `jurisdiction` (e.g., "Switzerland", "United States", "India")
-- `classification` → `themes` (classified PIL themes)
+- `legal_system`: Type of legal system (e.g., "Civil-law jurisdiction", "Common-law jurisdiction")
+- `jurisdiction`: Specific jurisdiction (e.g., "Switzerland", "United States", "India")
+- `themes`: Classified PIL themes
 
 **ColSectionOutput Model:**
-- Changed from single `col_section: str` to `col_sections: list[str]`
-- Supports multiple Choice of Law sections from a single court decision
+- Returns `col_sections: list[str]` supporting multiple Choice of Law sections
 - Sections are joined with double newlines for processing
 
 **Workflow Steps:**
 1. **COL Section Extraction**: Yields `ColSectionOutput` with list of sections
 2. **Theme Classification**: Yields `ThemeClassificationOutput` with themes list
-3. **Parallel Analysis**: Yields `RelevantFactsOutput` and `PILProvisionsOutput` in parallel
-4. **COL Issue**: Yields `ColIssueOutput` (depends on themes)
-5. **Court's Position**: Yields `CourtsPositionOutput` (depends on COL issue)
-6. **Common Law Steps** (if applicable): Yields `ObiterDictaOutput` and `DissentingOpinionsOutput` in parallel
-7. **Abstract**: Yields `AbstractOutput` (depends on all previous steps)
+3. **Parallel Analysis Step 1**: Yields `RelevantFactsOutput`, `PILProvisionsOutput`, and `ColIssueOutput` in parallel
+4. **Parallel Analysis Step 2**: Yields `CourtsPositionOutput`, and for Common Law: `ObiterDictaOutput` and `DissentingOpinionsOutput` in parallel
+5. **Abstract**: Yields `AbstractOutput` synthesizing all previous steps
 
 **Final Editing Phase:**
-- After abstract generation, user can edit ALL results including:
-  - Themes (multiselect dropdown)
-  - COL sections (textarea)
-  - All other analysis steps (textareas)
+- User can edit all results including themes, COL sections, and all analysis steps
 - Single comprehensive review before saving
