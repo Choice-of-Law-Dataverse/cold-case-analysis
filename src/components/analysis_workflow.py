@@ -316,8 +316,6 @@ def execute_all_analysis_steps_with_generator(state):
     Args:
         state: The current analysis state
     """
-    from components.confidence_display import add_confidence_chip_css
-
     text = state["full_text"]
     col_sections = None
     col_section_data = state.get("col_section", [])
@@ -348,33 +346,6 @@ def execute_all_analysis_steps_with_generator(state):
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    # Add CSS for confidence chips and PIL provisions
-    add_confidence_chip_css()
-    st.markdown(
-        """
-    <style>
-    /* Chip styling for PIL provisions */
-    .pil-chip {
-        display: inline-block;
-        background-color: #e3f2fd;
-        color: #1976d2;
-        border: 1px solid #1976d2;
-        border-radius: 16px;
-        padding: 6px 12px;
-        margin: 4px;
-        font-size: 14px;
-    }
-    .pil-chips-container {
-        margin: 10px 0;
-    }
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    # Create a container for partial results that will be updated as steps complete
-    results_container = st.container()
-
     # Calculate total steps
     total_steps = 8  # col_section, themes, relevant_facts, pil_provisions, col_issue, courts_position, abstract
     if legal_system == "Common-law jurisdiction":
@@ -403,10 +374,6 @@ def execute_all_analysis_steps_with_generator(state):
             progress = completed / total_steps
             progress_bar.progress(min(progress, 1.0))
             status_text.text(f"Completed: {get_step_display_name(step_name, state)}")
-
-            # Render partial result in the results container
-            with results_container:
-                render_partial_step(step_name, state)
 
     except Exception as e:
         st.error(f"Error during analysis: {str(e)}")
@@ -629,6 +596,62 @@ def render_final_editing_phase():
         st.rerun()
 
 
+def render_partial_results_phase():
+    """
+    Render all completed analysis steps in read-only mode.
+    This is shown after analysis completes but before the editing phase.
+    """
+    from components.confidence_display import add_confidence_chip_css
+
+    state = st.session_state.col_state
+    add_confidence_chip_css()
+
+    # Add CSS for PIL provisions
+    st.markdown(
+        """
+    <style>
+    /* Chip styling for PIL provisions */
+    .pil-chip {
+        display: inline-block;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #1976d2;
+        border-radius: 16px;
+        padding: 6px 12px;
+        margin: 4px;
+        font-size: 14px;
+    }
+    .pil-chips-container {
+        margin: 10px 0;
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## Analysis Results (Preview)")
+    st.markdown("Review the analysis results below. Click **Proceed to Edit** when ready to make changes.")
+
+    # Render themes if available
+    if state.get("classification"):
+        render_partial_step("themes", state)
+
+    # Render col_section if available
+    if state.get("col_section"):
+        render_partial_step("col_section", state)
+
+    # Render analysis steps
+    steps = get_analysis_steps(state)
+    for name, _ in steps:
+        if state.get(name):
+            render_partial_step(name, state)
+
+    # Button to proceed to editing phase
+    if st.button("Proceed to Edit", type="primary", key="proceed_to_edit_btn"):
+        state["show_partial_results"] = False
+        st.rerun()
+
+
 def render_analysis_workflow():
     """
     Render the complete analysis workflow with parallel execution and final editing.
@@ -640,7 +663,11 @@ def render_analysis_workflow():
     if not state.get("parallel_execution_started"):
         execute_all_analysis_steps_with_generator(state)
         state["parallel_execution_started"] = True
+        state["show_partial_results"] = True
         st.rerun()
+    elif state.get("show_partial_results"):
+        # Show partial results in read-only mode
+        render_partial_results_phase()
     elif not state.get("analysis_done"):
         render_final_editing_phase()
     else:
