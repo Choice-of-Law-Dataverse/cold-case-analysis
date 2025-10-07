@@ -14,6 +14,10 @@ class ColSectionOutput(BaseModel):
     )
     reasoning: str = Field(description="Explanation of why these sections were extracted")
 
+    def __str__(self) -> str:
+        """Return all sections joined with double newlines."""
+        return "\n\n".join(self.col_sections)
+
 
 class RelevantFactsOutput(BaseModel):
     """Output model for relevant facts extraction."""

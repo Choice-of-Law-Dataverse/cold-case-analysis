@@ -6,6 +6,7 @@ from typing import Any, cast
 import logfire
 
 from models.analysis_models import (
+    ColIssueOutput,
     CourtsPositionOutput,
     DissentingOpinionsOutput,
     ObiterDictaOutput,
@@ -65,7 +66,7 @@ def analyze_case_workflow(
             - AbstractOutput
     """
     with logfire.span("analyze_case_workflow"):
-        # Step 1: Extract CoL sections if not provided
+        # Step: Extract CoL sections if not provided
         col_section_output = None
         if not col_sections:
             col_section_output = extract_col_section(
@@ -84,13 +85,12 @@ def analyze_case_workflow(
                 col_sections=col_sections, confidence="high", reasoning="Pre-extracted sections provided"
             )
 
-        # Step 2: Classify themes if not provided
+        # Step: Classify themes if not provided
         themes_output = None
         if not themes:
-            col_section_text = "\n\n".join(col_section_output.col_sections)
             themes_output = theme_classification_node(
                 text=text,
-                col_section=col_section_text,
+                col_section=str(col_section_output),
                 legal_system=legal_system,
                 jurisdiction=jurisdiction,
                 model=model,
@@ -101,17 +101,17 @@ def analyze_case_workflow(
                 themes=cast(list[ThemeWithNA], themes), confidence="high", reasoning="Pre-classified themes provided"
             )
 
-        # Step 3: Run parallel analysis (relevant facts + PIL provisions)
+        # Step: Run parallel analysis (relevant facts + PIL provisions + CoL issue)
         facts_output = None
         pil_provisions_output = None
+        col_issue_output = None
         futures = []
         with ThreadPoolExecutor(max_workers=2) as executor:
-            col_section_text = "\n\n".join(col_section_output.col_sections)
             futures = {
                 executor.submit(
                     extract_relevant_facts,
                     text,
-                    col_section_text,
+                    col_section_output,
                     legal_system,
                     jurisdiction,
                     model,
@@ -119,10 +119,19 @@ def analyze_case_workflow(
                 executor.submit(
                     extract_pil_provisions,
                     text,
-                    col_section_text,
+                    col_section_output,
                     legal_system,
                     jurisdiction,
                     model,
+                ),
+                executor.submit(
+                    extract_col_issue,
+                    text,
+                    col_section_output,
+                    legal_system,
+                    jurisdiction,
+                    model,
+                    themes_output,
                 ),
             }
 
@@ -132,65 +141,59 @@ def analyze_case_workflow(
                     facts_output = result
                 elif isinstance(result, PILProvisionsOutput):
                     pil_provisions_output = result
+                elif isinstance(result, ColIssueOutput):
+                    col_issue_output = result
                 yield result
 
-        # Step 4: Extract CoL issue (depends on themes)
-        col_issue_output = extract_col_issue(
-            text=text,
-            col_section_output=col_section_output,
-            legal_system=legal_system,
-            jurisdiction=jurisdiction,
-            model=model,
-            themes_output=themes_output,
-        )
-        yield col_issue_output
+        if col_issue_output is None:
+            raise RuntimeError("Choice of Law issue extraction failed - cannot proceed")
 
-        # Step 5: Run parallel analysis (court's position + common law specific steps)
+        # Step: Run parallel analysis (court's position + common law specific steps)
         courts_position_output = None
         obiter_dicta_output = None
         dissenting_opinions_output = None
         futures = []
         with ThreadPoolExecutor(max_workers=3) as executor:
-            # Always extract court's position
-            courts_future = executor.submit(
-                extract_courts_position,
-                text,
-                col_section_output,
-                legal_system,
-                jurisdiction,
-                model,
-                themes_output,
-                col_issue_output,
+            futures.append(
+                executor.submit(
+                    extract_courts_position,
+                    text,
+                    col_section_output,
+                    legal_system,
+                    jurisdiction,
+                    model,
+                    themes_output,
+                    col_issue_output,
+                )
             )
-            futures.append(courts_future)
 
-            # Add Common Law specific extractions if applicable
             if legal_system == "Common-law jurisdiction":
-                obiter_future = executor.submit(
-                    extract_obiter_dicta,
-                    text,
-                    col_section_output,
-                    legal_system,
-                    jurisdiction,
-                    model,
-                    themes_output,
-                    col_issue_output,
+                futures.append(
+                    executor.submit(
+                        extract_obiter_dicta,
+                        text,
+                        col_section_output,
+                        legal_system,
+                        jurisdiction,
+                        model,
+                        themes_output,
+                        col_issue_output,
+                    )
                 )
-                futures.append(obiter_future)
 
-                dissent_future = executor.submit(
-                    extract_dissenting_opinions,
-                    text,
-                    col_section_output,
-                    legal_system,
-                    jurisdiction,
-                    model,
-                    themes_output,
-                    col_issue_output,
+                futures.append(
+                    executor.submit(
+                        extract_dissenting_opinions,
+                        text,
+                        col_section_output,
+                        legal_system,
+                        jurisdiction,
+                        model,
+                        themes_output,
+                        col_issue_output,
+                    )
                 )
-                futures.append(dissent_future)
 
-            # Collect results as they complete
             for future in as_completed(futures):
                 result = future.result()
                 if isinstance(result, CourtsPositionOutput):
@@ -201,8 +204,6 @@ def analyze_case_workflow(
                     dissenting_opinions_output = result
                 yield result
 
-        # Step 6: Generate abstract (final step, depends on all previous steps)
-
         if facts_output is None:
             raise RuntimeError("Relevant facts extraction failed - cannot generate abstract")
 
@@ -212,6 +213,7 @@ def analyze_case_workflow(
         if courts_position_output is None:
             raise RuntimeError("Court's position extraction failed - cannot generate abstract")
 
+        # Step: Generate abstract (final step, depends on all previous steps)
         result = extract_abstract(
             text=text,
             legal_system=legal_system,

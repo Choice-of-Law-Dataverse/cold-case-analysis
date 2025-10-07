@@ -39,11 +39,12 @@ def extract_courts_position(
     with logfire.span("extract_courts_position"):
         COURTS_POSITION_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).COURTS_POSITION_PROMPT
 
-        col_section = "\n\n".join(col_section_output.col_sections)
         themes = ", ".join(themes_output.themes)
         col_issue = col_issue_output.col_issue
 
-        prompt = COURTS_POSITION_PROMPT.format(col_issue=col_issue, text=text, col_section=col_section, classification=themes)
+        prompt = COURTS_POSITION_PROMPT.format(
+            col_issue=col_issue, text=text, col_section=str(col_section_output), classification=themes
+        )
         system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(

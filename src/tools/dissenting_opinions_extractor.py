@@ -40,11 +40,12 @@ def extract_dissenting_opinions(
         prompt_module = get_prompt_module(legal_system, "analysis", jurisdiction)
         DISSENT_PROMPT = prompt_module.COURTS_POSITION_DISSENTING_OPINIONS_PROMPT
 
-        col_section = "\n\n".join(col_section_output.col_sections)
         themes = ", ".join(themes_output.themes)
         col_issue = col_issue_output.col_issue
 
-        prompt = DISSENT_PROMPT.format(text=text, col_section=col_section, classification=themes, col_issue=col_issue)
+        prompt = DISSENT_PROMPT.format(
+            text=text, col_section=str(col_section_output), classification=themes, col_issue=col_issue
+        )
         system_prompt = generate_system_prompt(legal_system, jurisdiction, "analysis")
 
         agent = Agent(
