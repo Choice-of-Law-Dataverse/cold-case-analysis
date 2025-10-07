@@ -3,16 +3,11 @@
 Main workflow orchestrator for the CoLD Case Analyzer.
 """
 
-import os
-
 import streamlit as st
 
 from components.analysis_workflow import render_analysis_workflow
-from components.col_processor import render_col_processing
 from components.input_handler import render_input_phase
-from components.jurisdiction_detection import get_final_jurisdiction_data, render_jurisdiction_detection
-from components.theme_classifier import render_theme_classification
-from tools.col_extractor import extract_col_section
+from components.jurisdiction import get_final_jurisdiction_data, render_jurisdiction_detection
 from utils.state_manager import create_initial_analysis_state, get_col_state
 
 
@@ -42,10 +37,11 @@ def render_initial_input_phase():
     jurisdiction_confirmed = render_jurisdiction_detection(full_text)
 
     if jurisdiction_confirmed:
-        if not st.session_state.get("col_extraction_started", False):
-            st.markdown("## Choice of Law Analysis")
+        if not st.session_state.get("workflow_started", False):
+            st.markdown("## Case Analysis")
+            st.markdown("Starting automated analysis workflow...")
 
-            with st.spinner("Extracting Choice of Law section..."):
+            with st.spinner("Initializing analysis..."):
                 final_jurisdiction_data = get_final_jurisdiction_data()
 
                 state = create_initial_analysis_state(
@@ -57,36 +53,16 @@ def render_initial_input_phase():
                     user_email=st.session_state.get("user_email"),
                 )
 
-                model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-                result = extract_col_section(
-                    text=state["full_text"],
-                    jurisdiction=state.get("jurisdiction", "Civil-law jurisdiction"),
-                    specific_jurisdiction=state.get("precise_jurisdiction"),
-                    model=model,
-                    feedback=state.get("col_section_feedback", []),
-                    previous_section=None,
-                    iteration=1,
-                )
-
-                state.setdefault("col_section", []).append(result.col_section.strip())
-                state.setdefault("col_section_confidence", []).append(result.confidence)
-                state.setdefault("col_section_reasoning", []).append(result.reasoning)
-                state["col_section_eval_iter"] = 1
+                # Mark workflow as started and analysis as ready
+                # The generator will handle CoL extraction and theme classification automatically
+                state["workflow_started"] = True
+                state["analysis_ready"] = True
 
                 st.session_state.col_state = state
-                st.session_state["col_extraction_started"] = True
+                st.session_state["workflow_started"] = True
                 st.rerun()
 
     return False
-
-
-def render_processing_phases():
-    """Render the COL processing, theme classification, and analysis phases."""
-    render_col_processing()
-
-    render_theme_classification()
-
-    render_analysis_workflow()
 
 
 def render_main_workflow():
@@ -94,4 +70,4 @@ def render_main_workflow():
     if not get_col_state().get("full_text"):
         render_initial_input_phase()
     else:
-        render_processing_phases()
+        render_analysis_workflow()

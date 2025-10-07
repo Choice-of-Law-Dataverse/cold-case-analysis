@@ -1,11 +1,11 @@
-import asyncio
 import logging
+from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, cast
 
 import logfire
-from agents import Agent, Runner
 
 from models.analysis_models import (
-    AbstractOutput,
     ColIssueOutput,
     CourtsPositionOutput,
     DissentingOpinionsOutput,
@@ -13,336 +13,218 @@ from models.analysis_models import (
     PILProvisionsOutput,
     RelevantFactsOutput,
 )
-from prompts.prompt_selector import get_prompt_module
-from utils.system_prompt_generator import generate_system_prompt
-from utils.themes_extractor import filter_themes_by_list
+from models.classification_models import ThemeClassificationOutput, ThemeWithNA
+from tools.abstract_generator import extract_abstract
+from tools.col_extractor import extract_col_section
+from tools.col_issue_extractor import extract_col_issue
+from tools.courts_position_extractor import extract_courts_position
+from tools.dissenting_opinions_extractor import extract_dissenting_opinions
+from tools.obiter_dicta_extractor import extract_obiter_dicta
+from tools.pil_provisions_extractor import extract_pil_provisions
+from tools.relevant_facts_extractor import extract_relevant_facts
+from tools.theme_classifier import theme_classification_node
 
 logger = logging.getLogger(__name__)
 
 
-def extract_relevant_facts(
+def analyze_case_workflow(
     text: str,
-    col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
-):
+    col_sections: list[str] | None = None,
+    themes: list[str] | None = None,
+) -> Generator[Any, None, None]:
     """
-    Extract relevant facts from court decision.
+    Execute complete case analysis workflow with parallel execution where possible.
+
+    This generator orchestrates all analysis steps and yields intermediate results.
+    The component should consume these yields and update the UI/state accordingly.
+
+    Parallel execution phases:
+    1. Relevant facts + PIL provisions (Step 3)
+    2. Court's position + obiter dicta + dissenting opinions (Step 5)
 
     Args:
         text: Full court decision text
-        col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        model: Model to use for analysis
+        col_sections: Pre-extracted Choice of Law sections (optional)
+        themes: Pre-classified themes (optional)
 
-    Returns:
-        RelevantFactsOutput: Extracted facts with confidence and reasoning
+    Yields:
+        Output objects for each completed step:
+            - ColSectionOutput
+            - ThemeClassificationOutput
+            - RelevantFactsOutput
+            - PILProvisionsOutput
+            - ColIssueOutput
+            - CourtsPositionOutput
+            - ObiterDictaOutput (Common Law only)
+            - DissentingOpinionsOutput (Common Law only)
+            - AbstractOutput
     """
-    with logfire.span("extract_relevant_facts"):
-        FACTS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).FACTS_PROMPT
+    with logfire.span("analyze_case_workflow"):
+        # Step: Extract CoL sections if not provided
+        col_section_output = None
+        if not col_sections:
+            col_section_output = extract_col_section(
+                text=text,
+                legal_system=legal_system,
+                jurisdiction=jurisdiction,
+                model=model,
+            )
+            col_sections = col_section_output.col_sections
+            yield col_section_output
+        else:
+            # Create output object from provided sections
+            from models.analysis_models import ColSectionOutput
 
-        prompt = FACTS_PROMPT.format(text=text, col_section=col_section)
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
+            col_section_output = ColSectionOutput(
+                col_sections=col_sections, confidence="high", reasoning="Pre-extracted sections provided"
+            )
 
-        agent = Agent(
-            name="RelevantFactsExtractor",
-            instructions=system_prompt,
-            output_type=RelevantFactsOutput,
+        # Step: Classify themes if not provided
+        themes_output = None
+        if not themes:
+            themes_output = theme_classification_node(
+                text=text,
+                col_section=str(col_section_output),
+                legal_system=legal_system,
+                jurisdiction=jurisdiction,
+                model=model,
+            )
+            yield themes_output
+        else:
+            themes_output = ThemeClassificationOutput(
+                themes=cast(list[ThemeWithNA], themes), confidence="high", reasoning="Pre-classified themes provided"
+            )
+
+        # Step: Run parallel analysis (relevant facts + PIL provisions + CoL issue)
+        facts_output = None
+        pil_provisions_output = None
+        col_issue_output = None
+        futures = []
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(
+                    extract_relevant_facts,
+                    text,
+                    col_section_output,
+                    legal_system,
+                    jurisdiction,
+                    model,
+                ),
+                executor.submit(
+                    extract_pil_provisions,
+                    text,
+                    col_section_output,
+                    legal_system,
+                    jurisdiction,
+                    model,
+                ),
+                executor.submit(
+                    extract_col_issue,
+                    text,
+                    col_section_output,
+                    legal_system,
+                    jurisdiction,
+                    model,
+                    themes_output,
+                ),
+            }
+
+            for future in as_completed(futures):
+                result = future.result()
+                if isinstance(result, RelevantFactsOutput):
+                    facts_output = result
+                elif isinstance(result, PILProvisionsOutput):
+                    pil_provisions_output = result
+                elif isinstance(result, ColIssueOutput):
+                    col_issue_output = result
+                yield result
+
+        if col_issue_output is None:
+            raise RuntimeError("Choice of Law issue extraction failed - cannot proceed")
+
+        # Step: Run parallel analysis (court's position + common law specific steps)
+        courts_position_output = None
+        obiter_dicta_output = None
+        dissenting_opinions_output = None
+        futures = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures.append(
+                executor.submit(
+                    extract_courts_position,
+                    text,
+                    col_section_output,
+                    legal_system,
+                    jurisdiction,
+                    model,
+                    themes_output,
+                    col_issue_output,
+                )
+            )
+
+            if legal_system == "Common-law jurisdiction":
+                futures.append(
+                    executor.submit(
+                        extract_obiter_dicta,
+                        text,
+                        col_section_output,
+                        legal_system,
+                        jurisdiction,
+                        model,
+                        themes_output,
+                        col_issue_output,
+                    )
+                )
+
+                futures.append(
+                    executor.submit(
+                        extract_dissenting_opinions,
+                        text,
+                        col_section_output,
+                        legal_system,
+                        jurisdiction,
+                        model,
+                        themes_output,
+                        col_issue_output,
+                    )
+                )
+
+            for future in as_completed(futures):
+                result = future.result()
+                if isinstance(result, CourtsPositionOutput):
+                    courts_position_output = result
+                elif isinstance(result, ObiterDictaOutput):
+                    obiter_dicta_output = result
+                elif isinstance(result, DissentingOpinionsOutput):
+                    dissenting_opinions_output = result
+                yield result
+
+        if facts_output is None:
+            raise RuntimeError("Relevant facts extraction failed - cannot generate abstract")
+
+        if pil_provisions_output is None:
+            raise RuntimeError("PIL provisions extraction failed - cannot generate abstract")
+
+        if courts_position_output is None:
+            raise RuntimeError("Court's position extraction failed - cannot generate abstract")
+
+        # Step: Generate abstract (final step, depends on all previous steps)
+        result = extract_abstract(
+            text=text,
+            legal_system=legal_system,
+            jurisdiction=jurisdiction,
             model=model,
+            themes_output=themes_output,
+            facts_output=facts_output,
+            pil_provisions_output=pil_provisions_output,
+            col_issue_output=col_issue_output,
+            court_position_output=courts_position_output,
+            obiter_dicta_output=obiter_dicta_output,
+            dissenting_opinions_output=dissenting_opinions_output,
         )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(RelevantFactsOutput)
-
-        logfire.info(
-            "Extracted relevant facts",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            result_length=len(result.relevant_facts),
-            confidence=result.confidence,
-        )
-        return result
-
-
-def extract_pil_provisions(
-    text: str,
-    col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
-    model: str,
-):
-    """
-    Extract PIL provisions from court decision.
-
-    Args:
-        text: Full court decision text
-        col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
-
-    Returns:
-        PILProvisionsOutput: Extracted provisions with confidence and reasoning
-    """
-    with logfire.span("extract_pil_provisions"):
-        PIL_PROVISIONS_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).PIL_PROVISIONS_PROMPT
-
-        prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=col_section)
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
-
-        agent = Agent(
-            name="PILProvisionsExtractor",
-            instructions=system_prompt,
-            output_type=PILProvisionsOutput,
-            model=model,
-        )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(PILProvisionsOutput)
-
-        logfire.info(
-            "Extracted PIL provisions",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            provisions_count=len(result.pil_provisions),
-            confidence=result.confidence,
-        )
-        return result
-
-
-def extract_col_issue(
-    text: str,
-    col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
-    model: str,
-    classification_themes: list[str],
-):
-    """
-    Extract Choice of Law issue from court decision.
-
-    Args:
-        text: Full court decision text
-        col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
-        classification_themes: List of classified themes
-
-    Returns:
-        ColIssueOutput: Extracted issue with confidence and reasoning
-    """
-    with logfire.span("extract_col_issue"):
-        COL_ISSUE_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COL_ISSUE_PROMPT
-
-        classification_definitions = filter_themes_by_list(classification_themes)
-
-        prompt = COL_ISSUE_PROMPT.format(
-            text=text, col_section=col_section, classification_definitions=classification_definitions
-        )
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
-
-        agent = Agent(
-            name="ColIssueExtractor",
-            instructions=system_prompt,
-            output_type=ColIssueOutput,
-            model=model,
-        )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColIssueOutput)
-
-        logfire.info(
-            "Extracted CoL issue",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            themes_count=len(classification_themes),
-            result_length=len(result.col_issue),
-            confidence=result.confidence,
-        )
-        return result
-
-
-def extract_courts_position(
-    text: str,
-    col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
-    model: str,
-    classification: str,
-    col_issue: str,
-):
-    """
-    Extract court's position from court decision.
-
-    Args:
-        text: Full court decision text
-        col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
-        classification: Classified themes
-        col_issue: Choice of Law issue
-
-    Returns:
-        CourtsPositionOutput: Extracted position with confidence and reasoning
-    """
-    COURTS_POSITION_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).COURTS_POSITION_PROMPT
-
-    prompt = COURTS_POSITION_PROMPT.format(
-        col_issue=col_issue, text=text, col_section=col_section, classification=classification
-    )
-    system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
-
-    agent = Agent(
-        name="CourtsPositionAnalyzer",
-        instructions=system_prompt,
-        output_type=CourtsPositionOutput,
-        model=model,
-    )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(CourtsPositionOutput)
-
-    return result
-
-
-def extract_obiter_dicta(
-    text: str,
-    col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
-    model: str,
-    classification: str,
-    col_issue: str,
-):
-    """
-    Extract obiter dicta from court decision.
-
-    Args:
-        text: Full court decision text
-        col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
-        classification: Classified themes
-        col_issue: Choice of Law issue
-
-    Returns:
-        ObiterDictaOutput: Extracted obiter dicta with confidence and reasoning
-    """
-    prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
-    OBITER_PROMPT = prompt_module.COURTS_POSITION_OBITER_DICTA_PROMPT
-    prompt = OBITER_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
-
-    agent = Agent(
-        name="ObiterDictaExtractor",
-        instructions=system_prompt,
-        output_type=ObiterDictaOutput,
-        model=model,
-    )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ObiterDictaOutput)
-
-    return result
-
-
-def extract_dissenting_opinions(
-    text: str,
-    col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
-    model: str,
-    classification: str,
-    col_issue: str,
-):
-    """
-    Extract dissenting opinions from court decision.
-
-    Args:
-        text: Full court decision text
-        col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
-        classification: Classified themes
-        col_issue: Choice of Law issue
-
-    Returns:
-        DissentingOpinionsOutput: Extracted opinions with confidence and reasoning
-    """
-    prompt_module = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction)
-    DISSENT_PROMPT = prompt_module.COURTS_POSITION_DISSENTING_OPINIONS_PROMPT
-    prompt = DISSENT_PROMPT.format(text=text, col_section=col_section, classification=classification, col_issue=col_issue)
-    system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
-
-    agent = Agent(
-        name="DissentingOpinionsExtractor",
-        instructions=system_prompt,
-        output_type=DissentingOpinionsOutput,
-        model=model,
-    )
-    result = asyncio.run(Runner.run(agent, prompt)).final_output_as(DissentingOpinionsOutput)
-
-    return result
-
-
-def extract_abstract(
-    text: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
-    model: str,
-    classification: str,
-    facts: str,
-    pil_provisions: str,
-    col_issue: str,
-    court_position: str,
-    obiter_dicta: str = "",
-    dissenting_opinions: str = "",
-):
-    """
-    Generate abstract from court decision analysis.
-
-    Args:
-        text: Full court decision text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for generation
-        classification: Classified themes
-        facts: Relevant facts
-        pil_provisions: PIL provisions
-        col_issue: Choice of Law issue
-        court_position: Court's position
-        obiter_dicta: Obiter dicta (for Common Law jurisdictions)
-        dissenting_opinions: Dissenting opinions (for Common Law jurisdictions)
-
-    Returns:
-        AbstractOutput: Generated abstract with confidence and reasoning
-    """
-    with logfire.span("generate_abstract"):
-        ABSTRACT_PROMPT = get_prompt_module(jurisdiction, "analysis", specific_jurisdiction).ABSTRACT_PROMPT
-
-        prompt_vars = {
-            "text": text,
-            "classification": classification,
-            "facts": facts,
-            "pil_provisions": pil_provisions,
-            "col_issue": col_issue,
-            "court_position": court_position,
-        }
-
-        if jurisdiction == "Common-law jurisdiction" or (specific_jurisdiction and specific_jurisdiction.lower() == "india"):
-            prompt_vars.update({"obiter_dicta": obiter_dicta, "dissenting_opinions": dissenting_opinions})
-
-        prompt = ABSTRACT_PROMPT.format(**prompt_vars)
-        system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "analysis")
-
-        agent = Agent(
-            name="AbstractGenerator",
-            instructions=system_prompt,
-            output_type=AbstractOutput,
-            model=model,
-        )
-        result = asyncio.run(Runner.run(agent, prompt)).final_output_as(AbstractOutput)
-
-        logfire.info(
-            "Generated abstract",
-            text_length=len(text),
-            result_length=len(result.abstract),
-            confidence=result.confidence,
-        )
-        return result
+        yield result

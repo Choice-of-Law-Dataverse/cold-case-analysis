@@ -6,32 +6,101 @@ Analysis workflow components for the CoLD Case Analyzer.
 import json
 import logging
 import os
-from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import streamlit as st
 
 from components.database import save_to_db
-from components.pil_provisions_handler import display_pil_provisions
 from models.analysis_models import (
+    AbstractOutput,
+    ColIssueOutput,
+    ColSectionOutput,
     CourtsPositionOutput,
     DissentingOpinionsOutput,
     ObiterDictaOutput,
     PILProvisionsOutput,
     RelevantFactsOutput,
 )
-from tools.case_analyzer import (
-    extract_abstract,
-    extract_col_issue,
-    extract_courts_position,
-    extract_dissenting_opinions,
-    extract_obiter_dicta,
-    extract_pil_provisions,
-    extract_relevant_facts,
-)
+from models.classification_models import ThemeClassificationOutput
+from tools.case_analyzer import analyze_case_workflow
 from utils.debug_print_state import print_state
 
 logger = logging.getLogger(__name__)
+
+
+class WorkflowStateUpdater:
+    """Helper class to update state based on output type."""
+
+    @staticmethod
+    def update_state(state: dict, result: object) -> str:
+        """
+        Update state based on the result type.
+
+        Args:
+            state: The current analysis state dictionary
+            result: The output object from analysis
+
+        Returns:
+            str: The step name for this result type
+        """
+        if isinstance(result, ColSectionOutput):
+            # Join multiple sections with newlines
+            col_section_text = "\n\n".join(result.col_sections) if result.col_sections else ""
+            state.setdefault("col_section", []).append(col_section_text)
+            state.setdefault("col_section_confidence", []).append(result.confidence)
+            state.setdefault("col_section_reasoning", []).append(result.reasoning)
+            return "col_section"
+
+        elif isinstance(result, ThemeClassificationOutput):
+            themes_str = ", ".join(result.themes) if isinstance(result.themes, list) else str(result.themes)
+            state.setdefault("classification", []).append(themes_str)
+            state.setdefault("classification_confidence", []).append(result.confidence)
+            state.setdefault("classification_reasoning", []).append(result.reasoning)
+            return "themes"
+
+        elif isinstance(result, RelevantFactsOutput):
+            state.setdefault("relevant_facts", []).append(result.relevant_facts)
+            state.setdefault("relevant_facts_confidence", []).append(result.confidence)
+            state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
+            return "relevant_facts"
+
+        elif isinstance(result, PILProvisionsOutput):
+            state.setdefault("pil_provisions", []).append(result.pil_provisions)
+            state.setdefault("pil_provisions_confidence", []).append(result.confidence)
+            state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
+            return "pil_provisions"
+
+        elif isinstance(result, ColIssueOutput):
+            state.setdefault("col_issue", []).append(result.col_issue)
+            state.setdefault("col_issue_confidence", []).append(result.confidence)
+            state.setdefault("col_issue_reasoning", []).append(result.reasoning)
+            return "col_issue"
+
+        elif isinstance(result, CourtsPositionOutput):
+            state.setdefault("courts_position", []).append(result.courts_position)
+            state.setdefault("courts_position_confidence", []).append(result.confidence)
+            state.setdefault("courts_position_reasoning", []).append(result.reasoning)
+            return "courts_position"
+
+        elif isinstance(result, ObiterDictaOutput):
+            state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
+            state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
+            state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
+            return "obiter_dicta"
+
+        elif isinstance(result, DissentingOpinionsOutput):
+            state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
+            state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
+            state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
+            return "dissenting_opinions"
+
+        elif isinstance(result, AbstractOutput):
+            state.setdefault("abstract", []).append(result.abstract)
+            state.setdefault("abstract_confidence", []).append(result.confidence)
+            state.setdefault("abstract_reasoning", []).append(result.reasoning)
+            return "abstract"
+
+        else:
+            raise ValueError(f"Unknown result type: {type(result)}")
 
 
 def get_step_display_name(step_name, state):
@@ -59,28 +128,6 @@ def get_step_display_name(step_name, state):
     }
 
     return step_names.get(step_name, step_name.replace("_", " ").title())
-
-
-def display_analysis_history(state):
-    """
-    Display chronological chat history of analysis.
-
-    Args:
-        state: The current analysis state
-    """
-    for speaker, msg in state.get("chat_history", []):
-        if speaker == "machine":
-            # Separate step label and content if formatted as 'Step: content'
-            if ": " in msg:
-                step_label, content = msg.split(": ", 1)
-                # Display step label in bold
-                st.markdown(f"**{step_label}**")
-                # Display content as machine message
-                st.markdown(f"<div class='machine-message'>{content}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='machine-message'>{msg}</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='user-message'>{msg}</div>", unsafe_allow_html=True)
 
 
 def display_completion_message(state):
@@ -111,344 +158,106 @@ def get_analysis_steps(state):
         state: The current analysis state
 
     Returns:
-        list: List of (name, function) tuples for analysis steps
+        list: List of (name, None) tuples for analysis steps (functions not needed with generator)
     """
-    from tools.case_analyzer import (
-        extract_abstract,
-        extract_col_issue,
-        extract_courts_position,
-        extract_dissenting_opinions,
-        extract_obiter_dicta,
-        extract_pil_provisions,
-        extract_relevant_facts,
-    )
-
     steps = [
-        ("relevant_facts", extract_relevant_facts),
-        ("pil_provisions", extract_pil_provisions),
-        ("col_issue", extract_col_issue),
-        ("courts_position", extract_courts_position),
+        ("relevant_facts", None),
+        ("pil_provisions", None),
+        ("col_issue", None),
+        ("courts_position", None),
     ]
 
     if state.get("jurisdiction") == "Common-law jurisdiction":
-        steps.extend([("obiter_dicta", extract_obiter_dicta), ("dissenting_opinions", extract_dissenting_opinions)])
+        steps.extend([("obiter_dicta", None), ("dissenting_opinions", None)])
 
-    steps.append(("abstract", extract_abstract))
+    steps.append(("abstract", None))
 
     return steps
 
 
-def execute_analysis_step(state, name, func):
+def execute_all_analysis_steps_with_generator(state):
     """
-    Execute a single analysis step.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-        func: Function to execute for this step
-
-    Returns:
-        bool: True if step was executed, False if already completed
-    """
-    if not state.get(f"{name}_printed"):
-        text = state["full_text"]
-        col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
-        jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-        specific_jurisdiction = state.get("precise_jurisdiction")
-        model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-
-        if name == "relevant_facts":
-            result = func(text, col_section, jurisdiction, specific_jurisdiction, model)
-            state.setdefault("relevant_facts", []).append(result.relevant_facts)
-            state.setdefault("relevant_facts_confidence", []).append(result.confidence)
-            state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
-        elif name == "pil_provisions":
-            result = func(text, col_section, jurisdiction, specific_jurisdiction, model)
-            state.setdefault("pil_provisions", []).append(result.pil_provisions)
-            state.setdefault("pil_provisions_confidence", []).append(result.confidence)
-            state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
-        elif name == "col_issue":
-            classification_messages = state.get("classification", [])
-            themes_list: list[str] = []
-            if classification_messages:
-                last_msg = classification_messages[-1]
-                if hasattr(last_msg, "content"):
-                    content_value = last_msg.content
-                    if isinstance(content_value, list):
-                        themes_list = content_value
-                    elif isinstance(content_value, str) and content_value:
-                        themes_list = [t.strip() for t in last_msg.split(",")]
-                elif isinstance(last_msg, str):
-                    themes_list = [t.strip() for t in last_msg.split(",")]
-            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
-            state.setdefault("col_issue", []).append(result.col_issue)
-            state.setdefault("col_issue_confidence", []).append(result.confidence)
-            state.setdefault("col_issue_reasoning", []).append(result.reasoning)
-        elif name == "courts_position":
-            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
-            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
-            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue)
-            state.setdefault("courts_position", []).append(result.courts_position)
-            state.setdefault("courts_position_confidence", []).append(result.confidence)
-            state.setdefault("courts_position_reasoning", []).append(result.reasoning)
-        elif name == "obiter_dicta":
-            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
-            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
-            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue)
-            state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
-            state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
-            state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
-        elif name == "dissenting_opinions":
-            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
-            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
-            result = func(text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue)
-            state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
-            state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
-            state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
-        elif name == "abstract":
-            classification = state.get("classification", [""])[-1] if state.get("classification") else ""
-            facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
-            pil_provisions = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
-            col_issue = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
-            court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
-            obiter_dicta = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
-            dissenting_opinions = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
-            result = func(
-                text,
-                jurisdiction,
-                specific_jurisdiction,
-                model,
-                classification,
-                facts,
-                pil_provisions,
-                col_issue,
-                court_position,
-                obiter_dicta,
-                dissenting_opinions,
-            )
-            state.setdefault("abstract", []).append(result.abstract)
-            state.setdefault("abstract_confidence", []).append(result.confidence)
-            state.setdefault("abstract_reasoning", []).append(result.reasoning)
-
-        display_name = get_step_display_name(name, state)
-
-        st.markdown(f"**{display_name}**")
-
-        if name == "pil_provisions":
-            formatted_content = display_pil_provisions(state, name)
-            if formatted_content:
-                st.markdown(f"<div class='machine-message'>{formatted_content}</div>", unsafe_allow_html=True)
-                state.setdefault("chat_history", []).append(("machine", f"{display_name}: {formatted_content}"))
-            else:
-                out = state.get(name)
-                last = out[-1] if isinstance(out, list) else out
-                st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
-                state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
-        else:
-            out = state.get(name)
-            last = out[-1] if isinstance(out, list) else out
-            st.markdown(f"<div class='machine-message'>{last}</div>", unsafe_allow_html=True)
-            state.setdefault("chat_history", []).append(("machine", f"{display_name}: {last}"))
-
-        state[f"{name}_printed"] = True
-        st.rerun()
-        return True
-    return False
-
-
-def handle_step_editing(state, name, steps):
-    """
-    Store edited content without showing editing UI during processing.
-
-    Args:
-        state: The current analysis state
-        name: Name of the analysis step
-        steps: List of all analysis steps
-    """
-    # Automatically advance to next step without editing during processing
-    if state["analysis_step"] < len(steps) - 1:
-        state["analysis_step"] += 1
-    else:
-        state["analysis_done"] = True
-
-    print_state("\n\n\nUpdated CoLD State after analysis step\n\n", state)
-    st.rerun()
-
-
-def execute_all_analysis_steps_parallel(state):
-    """
-    Execute all analysis steps in parallel where possible.
-    This runs all steps without user interaction and stores results.
+    Execute all analysis steps using the generator pattern.
+    The workflow logic is in the tool, this just handles UI updates.
 
     Args:
         state: The current analysis state
     """
-
     text = state["full_text"]
-    col_section = state.get("col_section", [""])[-1] if state.get("col_section") else ""
-    jurisdiction = state.get("jurisdiction", "Civil-law jurisdiction")
-    specific_jurisdiction = state.get("precise_jurisdiction")
+    col_sections = None
+    col_section_data = state.get("col_section", [])
+    if col_section_data:
+        col_section_text = col_section_data[-1] if isinstance(col_section_data, list) else col_section_data
+        # Convert back to list for generator
+        col_sections = [col_section_text] if col_section_text else None
+
+    legal_system = state.get("jurisdiction", "Civil-law jurisdiction")
+    jurisdiction = state.get("precise_jurisdiction")
     model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
-    parallel_steps: list[tuple[str, Callable[[], RelevantFactsOutput | PILProvisionsOutput]]] = [
-        ("relevant_facts", lambda: extract_relevant_facts(text, col_section, jurisdiction, specific_jurisdiction, model)),
-        ("pil_provisions", lambda: extract_pil_provisions(text, col_section, jurisdiction, specific_jurisdiction, model)),
-    ]
-
-    st.markdown("**Analyzing case...**")
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    completed = 0
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {executor.submit(func): name for name, func in parallel_steps}
-
-        for future in as_completed(futures):
-            name = futures[future]
-            try:
-                result = future.result()
-                if name == "relevant_facts" and isinstance(result, RelevantFactsOutput):
-                    state.setdefault("relevant_facts", []).append(result.relevant_facts)
-                    state.setdefault("relevant_facts_confidence", []).append(result.confidence)
-                    state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
-                elif name == "pil_provisions" and isinstance(result, PILProvisionsOutput):
-                    state.setdefault("pil_provisions", []).append(result.pil_provisions)
-                    state.setdefault("pil_provisions_confidence", []).append(result.confidence)
-                    state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
-
-                completed += 1
-                total_steps = 2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2
-                progress = completed / total_steps
-                progress_bar.progress(progress)
-                status_text.text(f"Completed: {get_step_display_name(name, state)}")
-            except Exception as e:
-                st.error(f"Error processing {name}: {str(e)}")
-
+    # Get themes if already classified
     classification_messages = state.get("classification", [])
-    themes_list: list[str] = []
+    themes = None
     if classification_messages:
         last_msg = classification_messages[-1]
         if hasattr(last_msg, "content"):
             content_value = last_msg.content
             if isinstance(content_value, list):
-                themes_list = content_value
+                themes = content_value
             elif isinstance(content_value, str) and content_value:
-                themes_list = [t.strip() for t in last_msg.split(",")]
+                themes = [t.strip() for t in content_value.split(",")]
         elif isinstance(last_msg, str):
-            themes_list = [t.strip() for t in last_msg.split(",")]
+            themes = [t.strip() for t in last_msg.split(",")]
+
+    st.markdown("**Analyzing case...**")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    # Calculate total steps
+    total_steps = 8  # col_section, themes, relevant_facts, pil_provisions, col_issue, courts_position, abstract
+    if legal_system == "Common-law jurisdiction":
+        total_steps += 2  # obiter_dicta, dissenting_opinions
+
+    completed = 0
 
     try:
-        result = extract_col_issue(text, col_section, jurisdiction, specific_jurisdiction, model, themes_list)
-        state.setdefault("col_issue", []).append(result.col_issue)
-        state.setdefault("col_issue_confidence", []).append(result.confidence)
-        state.setdefault("col_issue_reasoning", []).append(result.reasoning)
-        completed += 1
-        progress = completed / (2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2)
-        progress_bar.progress(progress)
-        status_text.text(f"Completed: {get_step_display_name('col_issue', state)}")
-    except Exception as e:
-        st.error(f"Error processing col_issue: {str(e)}")
+        # Use the generator to orchestrate the workflow
+        for result in analyze_case_workflow(
+            text=text,
+            legal_system=legal_system,
+            jurisdiction=jurisdiction,
+            model=model,
+            col_sections=col_sections,
+            themes=themes,
+        ):
+            # Update state using helper class
+            step_name = WorkflowStateUpdater.update_state(state, result)
 
-    classification = state.get("classification", [""])[-1] if state.get("classification") else ""
-    col_issue_text = state.get("col_issue", [""])[-1] if state.get("col_issue") else ""
+            # Mark step as printed
+            state[f"{step_name}_printed"] = True
 
-    sequential_steps: list[tuple[str, Callable[[], DissentingOpinionsOutput | ObiterDictaOutput | CourtsPositionOutput]]] = [
-        (
-            "courts_position",
-            lambda: extract_courts_position(
-                text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text
-            ),
-        ),
-    ]
-
-    if state.get("jurisdiction") == "Common-law jurisdiction":
-        sequential_steps.extend(
-            [
-                (
-                    "obiter_dicta",
-                    lambda: extract_obiter_dicta(
-                        text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text
-                    ),
-                ),
-                (
-                    "dissenting_opinions",
-                    lambda: extract_dissenting_opinions(
-                        text, col_section, jurisdiction, specific_jurisdiction, model, classification, col_issue_text
-                    ),
-                ),
-            ]
-        )
-
-    for name, func in sequential_steps:
-        try:
-            result = func()
-            if name == "courts_position" and isinstance(result, CourtsPositionOutput):
-                state.setdefault("courts_position", []).append(result.courts_position)
-                state.setdefault("courts_position_confidence", []).append(result.confidence)
-                state.setdefault("courts_position_reasoning", []).append(result.reasoning)
-            elif name == "obiter_dicta" and isinstance(result, ObiterDictaOutput):
-                state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
-                state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
-                state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
-            elif name == "dissenting_opinions" and isinstance(result, DissentingOpinionsOutput):
-                state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
-                state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
-                state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
-
+            # Update progress
             completed += 1
-            total_steps = 2 + (1 if state.get("jurisdiction") != "Common-law jurisdiction" else 3) + 2
             progress = completed / total_steps
-            progress_bar.progress(progress)
-            status_text.text(f"Completed: {get_step_display_name(name, state)}")
-        except Exception as e:
-            st.error(f"Error processing {name}: {str(e)}")
+            progress_bar.progress(min(progress, 1.0))
+            status_text.text(f"Completed: {get_step_display_name(step_name, state)}")
 
-    try:
-        facts = state.get("relevant_facts", [""])[-1] if state.get("relevant_facts") else ""
-        pil_provisions_data = state.get("pil_provisions", [""])[-1] if state.get("pil_provisions") else ""
-        court_position = state.get("courts_position", [""])[-1] if state.get("courts_position") else ""
-        obiter_dicta_text = state.get("obiter_dicta", [""])[-1] if state.get("obiter_dicta") else ""
-        dissenting_opinions_text = state.get("dissenting_opinions", [""])[-1] if state.get("dissenting_opinions") else ""
-
-        result = extract_abstract(
-            text,
-            jurisdiction,
-            specific_jurisdiction,
-            model,
-            classification,
-            facts,
-            pil_provisions_data,
-            col_issue_text,
-            court_position,
-            obiter_dicta_text,
-            dissenting_opinions_text,
-        )
-        state.setdefault("abstract", []).append(result.abstract)
-        state.setdefault("abstract_confidence", []).append(result.confidence)
-        state.setdefault("abstract_reasoning", []).append(result.reasoning)
-
-        completed += 1
-        progress_bar.progress(1.0)
-        status_text.text(f"Completed: {get_step_display_name('abstract', state)}")
     except Exception as e:
-        st.error(f"Error processing abstract: {str(e)}")
+        st.error(f"Error during analysis: {str(e)}")
+        logger.error(f"Analysis workflow error: {e}", exc_info=True)
+        raise
 
     progress_bar.progress(1.0)
     status_text.text("✓ Analysis complete!")
-
-    for name, _ in parallel_steps:
-        state[f"{name}_printed"] = True
-    state["col_issue_printed"] = True
-    for name, _ in sequential_steps:
-        state[f"{name}_printed"] = True
-    state["abstract_printed"] = True
 
 
 def render_final_editing_phase():
     """
     Render the final editing phase where all results are shown as editable text areas.
+    This includes themes, CoL section, and all analysis steps.
     """
     from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+    from utils.data_loaders import load_valid_themes
 
     state = st.session_state.col_state
     add_confidence_chip_css()
@@ -508,6 +317,75 @@ def render_final_editing_phase():
         unsafe_allow_html=True,
     )
 
+    st.markdown("## Review and Edit Results")
+    st.markdown("Review all extracted information below. You can edit any field before final submission.")
+
+    # Section 1: Themes
+
+    classification = state.get("classification", [])
+    if classification:
+        current_themes = classification[-1] if isinstance(classification, list) else classification
+        confidence_key = "classification_confidence"
+        reasoning_key = "classification_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Themes")
+
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "final_edit_themes")
+
+        valid_themes = load_valid_themes()
+        valid_themes.append("NA")
+
+        default_sel = [t.strip() for t in current_themes.split(",") if t.strip()] if isinstance(current_themes, str) else []
+        theme_mapping = {theme.lower(): theme for theme in valid_themes}
+        filtered_defaults = []
+        for theme in default_sel:
+            if theme in valid_themes:
+                filtered_defaults.append(theme)
+            elif theme.lower() in theme_mapping:
+                filtered_defaults.append(theme_mapping[theme.lower()])
+
+        selected_themes = st.multiselect(
+            "Select themes:",
+            options=valid_themes,
+            default=filtered_defaults,
+            key="final_edit_themes_select",
+            label_visibility="collapsed",
+        )
+        edited_values["themes"] = selected_themes
+
+    # Section 2: Choice of Law Section
+
+    col_section = state.get("col_section", [])
+    if col_section:
+        current_col = col_section[-1] if isinstance(col_section, list) else col_section
+        confidence_key = "col_section_confidence"
+        reasoning_key = "col_section_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Choice of Law Section")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "final_edit_col_section")
+
+        edited_col = st.text_area(
+            "Edit Choice of Law Section:",
+            value=str(current_col),
+            key="final_edit_col_section_text",
+            height=300,
+            label_visibility="collapsed",
+        )
+        edited_values["col_section"] = edited_col
+
+    # Section 3: Analysis Steps
     for name, _ in steps:
         display_name = get_step_display_name(name, state)
 
@@ -553,7 +431,21 @@ def render_final_editing_phase():
             edited_values[name] = edited
 
     if st.button("Submit Final Analysis", type="primary", key="submit_final_analysis"):
+        # Update themes
+        if "themes" in edited_values:
+            new_themes = ", ".join(edited_values["themes"])
+            state.setdefault("classification", []).append(new_themes)
+            state["classification_edited"] = new_themes
+
+        # Update CoL section
+        if "col_section" in edited_values:
+            state["col_section"][-1] = edited_values["col_section"]
+            state["col_section_edited"] = edited_values["col_section"]
+
+        # Update analysis steps
         for name, edited_value in edited_values.items():
+            if name in ["themes", "col_section"]:
+                continue
             if name == "pil_provisions":
                 try:
                     parsed = json.loads(edited_value)
@@ -580,7 +472,7 @@ def render_analysis_workflow():
         return
 
     if not state.get("parallel_execution_started"):
-        execute_all_analysis_steps_parallel(state)
+        execute_all_analysis_steps_with_generator(state)
         state["parallel_execution_started"] = True
         st.rerun()
     elif not state.get("analysis_done"):

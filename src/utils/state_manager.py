@@ -2,6 +2,7 @@
 """
 State management utilities for the CoLD Case Analyzer.
 """
+
 import streamlit as st
 
 
@@ -32,11 +33,10 @@ def create_initial_analysis_state(case_citation, username, model, full_text, fin
         "full_text": full_text,
         "col_section": [],
         "col_section_feedback": [],
-        "col_section_eval_iter": 0,
-    "jurisdiction": final_jurisdiction_data.get("legal_system_type", "Unknown legal system"),
+        "jurisdiction": final_jurisdiction_data.get("legal_system_type", "Unknown legal system"),
         "precise_jurisdiction": final_jurisdiction_data.get("jurisdiction_name"),
-    "jurisdiction_eval_score": final_jurisdiction_data.get("evaluation_score"),
-    "user_email": user_email,
+        "jurisdiction_eval_score": final_jurisdiction_data.get("evaluation_score"),
+        "user_email": user_email,
     }
 
 
@@ -63,6 +63,7 @@ def get_col_state():
 def load_demo_case():
     """Demo loader callback to populate the text widget state."""
     from utils.data_loaders import get_demo_case_text
+
     st.session_state.full_text_input = get_demo_case_text()
     # Also set a representative demo case citation
     st.session_state.case_citation = "Federal Court, 20.12.2005 - BGE 132 III 285"

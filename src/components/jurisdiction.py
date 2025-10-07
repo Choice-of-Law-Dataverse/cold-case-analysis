@@ -5,7 +5,7 @@ Streamlit component for enhanced jurisdiction detection with precise jurisdictio
 import streamlit as st
 
 from components.confidence_display import add_confidence_chip_css, render_confidence_chip
-from tools.precise_jurisdiction_detector import detect_precise_jurisdiction_with_confidence
+from tools.jurisdiction_classifier import detect_precise_jurisdiction_with_confidence
 
 
 def render_jurisdiction_detection(full_text: str):
@@ -34,32 +34,36 @@ def render_jurisdiction_detection(full_text: str):
         st.session_state["jurisdiction_confidence"] = None
     if "jurisdiction_reasoning" not in st.session_state:
         st.session_state["jurisdiction_reasoning"] = None
+    if "jurisdiction_detect_clicked" not in st.session_state:
+        st.session_state["jurisdiction_detect_clicked"] = False
 
     # Create a container for consistent widget structure
     main_container = st.container()
 
     with main_container:
-        # Phase 1: Detect Jurisdiction Button
-        detect_clicked = False  # Initialize to prevent UnboundLocalError
-        if not st.session_state["precise_jurisdiction_detected"]:
-            detect_clicked = st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary")
+        # Phase 1: Detect Jurisdiction Button (only show if not detected and not clicked)
+        if not st.session_state.get("precise_jurisdiction_detected", False) and not st.session_state.get(
+            "jurisdiction_detect_clicked", False
+        ):
+            if st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary"):
+                # Immediately save click state to hide button
+                st.session_state["jurisdiction_detect_clicked"] = True
 
-        if detect_clicked:
-            if full_text.strip():
-                with st.spinner("Analyzing jurisdiction..."):
-                    jurisdiction_data = detect_precise_jurisdiction_with_confidence(full_text)
+                if full_text.strip():
+                    with st.spinner("Analyzing jurisdiction..."):
+                        jurisdiction_data = detect_precise_jurisdiction_with_confidence(full_text)
 
-                    st.session_state["precise_jurisdiction"] = jurisdiction_data.precise_jurisdiction
-                    st.session_state["legal_system_type"] = jurisdiction_data.legal_system_type
-                    st.session_state["jurisdiction_confidence"] = jurisdiction_data.confidence
-                    st.session_state["jurisdiction_reasoning"] = jurisdiction_data.reasoning
-                    st.session_state["precise_jurisdiction_detected"] = True
+                        st.session_state["precise_jurisdiction"] = jurisdiction_data.precise_jurisdiction
+                        st.session_state["legal_system_type"] = jurisdiction_data.legal_system_type
+                        st.session_state["jurisdiction_confidence"] = jurisdiction_data.confidence
+                        st.session_state["jurisdiction_reasoning"] = jurisdiction_data.reasoning
+                        st.session_state["precise_jurisdiction_detected"] = True
 
-                    st.rerun()
-            else:
-                st.warning("Please enter the court decision text before detecting jurisdiction.")
+                        st.rerun()
+                else:
+                    st.warning("Please enter the court decision text before detecting jurisdiction.")
 
-            return False
+                return False
 
         # Phase 2: Display Results and Override Options
         if st.session_state["precise_jurisdiction_detected"]:
@@ -81,7 +85,7 @@ def render_jurisdiction_detection(full_text: str):
                 render_confidence_chip(confidence, reasoning, chip_key)
 
             # Load all jurisdictions for selection
-            from tools.precise_jurisdiction_detector import load_jurisdictions
+            from tools.jurisdiction_classifier import load_jurisdictions
 
             jurisdictions = load_jurisdictions()
             jurisdiction_names = [j["name"] for j in jurisdictions if j["name"]]

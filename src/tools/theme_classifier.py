@@ -15,11 +15,9 @@ logger = logging.getLogger(__name__)
 def theme_classification_node(
     text: str,
     col_section: str,
-    jurisdiction: str,
-    specific_jurisdiction: str | None,
+    legal_system: str,
+    jurisdiction: str | None,
     model: str,
-    previous_classification: str | None = None,
-    iteration: int = 1,
 ):
     """
     Classify themes for a court decision.
@@ -27,22 +25,17 @@ def theme_classification_node(
     Args:
         text: Full court decision text
         col_section: Choice of Law section text
-        jurisdiction: Legal system type (e.g., "Civil-law jurisdiction")
-        specific_jurisdiction: Precise jurisdiction (e.g., "Switzerland")
+        legal_system: Legal system type (e.g., "Civil-law jurisdiction")
+        jurisdiction: Precise jurisdiction (e.g., "Switzerland")
         model: Model to use for classification
-        previous_classification: Previously classified themes
-        iteration: Iteration count for this classification
 
     Returns:
         ThemeClassificationOutput: Classified themes with confidence and reasoning
     """
     with logfire.span("classify_themes"):
-        PIL_THEME_PROMPT = get_prompt_module(jurisdiction, "theme", specific_jurisdiction).PIL_THEME_PROMPT
+        PIL_THEME_PROMPT = get_prompt_module(legal_system, "theme", jurisdiction).PIL_THEME_PROMPT
 
         base_prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
-
-        if previous_classification:
-            base_prompt += f"\n\nPrevious classification: {previous_classification}\n"
 
         max_attempts = 5
         attempt = 0
@@ -51,7 +44,7 @@ def theme_classification_node(
 
         for attempt in range(1, max_attempts + 1):
             try:
-                system_prompt = generate_system_prompt(jurisdiction, specific_jurisdiction, "theme")
+                system_prompt = generate_system_prompt(legal_system, jurisdiction, "theme")
 
                 agent = Agent(
                     name="ThemeClassifier",
@@ -67,16 +60,6 @@ def theme_classification_node(
                     logger.error("Max attempts reached. Returning fallback result.")
                     result = None
                 continue
-
-        logfire.info(
-            "Classified themes",
-            text_length=len(text),
-            col_section_length=len(col_section),
-            themes_table_length=len(THEMES_TABLE_STR),
-            themes_count=len(result.themes) if result else 0,
-            attempts=attempt,
-            confidence=result.confidence if result else "none",
-        )
 
         if result is None:
             fallback_reason = f"Classification failed after {max_attempts} attempts."

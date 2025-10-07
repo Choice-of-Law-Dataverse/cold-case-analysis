@@ -65,7 +65,7 @@ graph TB
 
 ## Complete Analysis Workflow
 
-This diagram shows the end-to-end analysis process from input to final results:
+This diagram shows the end-to-end analysis process with the new automated generator-based workflow:
 
 ```mermaid
 flowchart TD
@@ -83,37 +83,43 @@ flowchart TD
     subgraph "Jurisdiction Detection"
         DetectJuris[Detect Legal System<br/>Civil Law/Common Law/India]
         DisplayJuris[Display Jurisdiction<br/>Results]
-        ConfirmJuris[User Confirms<br/>Manual Override if Needed]
+        ConfirmJuris[✓ User Confirms<br/>ONLY MANUAL STEP]
     end
 
-    subgraph "COL Section Extraction"
-        ExtractCOL[Extract COL Sections<br/>Identify Relevant Text]
-        DisplayCOL[Display Extracted<br/>Sections]
-        EditCOL[User Edits Section<br/>if Needed]
-    end
-
-    subgraph "Theme Classification"
-        ClassifyTheme[Classify PIL Themes<br/>Against Taxonomy]
-        DisplayThemes[Display Classified<br/>Themes]
-        EditThemes[Edit Theme List<br/>Manual Adjustment]
+    subgraph "Automated Analysis Workflow"
+        StartGen[Start Generator Workflow<br/>analyze_case_workflow]
+        
+        subgraph "Step 1"
+            ExtractCOL[Extract COL Sections<br/>Returns list of sections]
+        end
+        
+        subgraph "Step 2"
+            ClassifyTheme[Classify PIL Themes<br/>Against Taxonomy]
+        end
+        
+        subgraph "Step 3 - Parallel Execution"
+            Facts[Extract Relevant Facts]
+            Provisions[Extract PIL Provisions]
+            Issue[Identify COL Issue]
+        end
+        
+        subgraph "Step 4 - Parallel Execution"
+            Position[Extract Court Position]
+            CommonLaw{Common Law?}
+            ObiterDicta[Extract Obiter Dicta<br/>Common Law Only]
+            DissentOps[Extract Dissenting Opinions<br/>Common Law Only]
+        end
+        
+        subgraph "Step 5"
+            Abstract[Generate Abstract<br/>Final Summary]
+        end
     end
     
-    subgraph "PIL Provisions"
-        ExtractPIL[Extract PIL Provisions<br/>Legal Rules]
-        DisplayPIL[Display Provisions]
-        ScorePIL[User Scores<br/>0-100]
-    end
-    
-    subgraph "Detailed Analysis Steps"
-        Abstract[1. Extract Abstract<br/>Case Summary]
-        Facts[2. Extract Relevant Facts<br/>Factual Background]
-        Provisions[3. Identify PIL Provisions<br/>Applicable Rules]
-        Issue[4. Identify COL Issue<br/>Legal Question]
-        Position[5. Extract Court Position<br/>Court's Reasoning]
-    end
-    
-    subgraph "Review & Save"
-        ReviewAll[Review Complete Analysis<br/>All Components]
+    subgraph "Review & Edit"
+        ReviewAll[Review Complete Analysis<br/>Edit ALL Results]
+        EditThemes[Edit Themes<br/>Multiselect]
+        EditCOL[Edit COL Sections<br/>Textarea]
+        EditOther[Edit Other Steps<br/>Facts, Issue, Position, etc.]
         SaveDB[Save to Database<br/>Optional PostgreSQL]
         Complete[Analysis Complete<br/>Display Summary]
     end
@@ -135,28 +141,32 @@ flowchart TD
     
     DetectJuris --> DisplayJuris
     DisplayJuris --> ConfirmJuris
-    ConfirmJuris --> ExtractCOL
+    ConfirmJuris --> StartGen
 
-    ExtractCOL --> DisplayCOL
-    DisplayCOL --> EditCOL
-    EditCOL --> ClassifyTheme
-
-    ClassifyTheme --> DisplayThemes
-    DisplayThemes --> EditThemes
-    EditThemes --> ParallelNote
-
-    ParallelNote --> Facts
-    ParallelNote --> Provisions
-    ParallelNote --> Issue
+    StartGen --> ExtractCOL
+    ExtractCOL --> ClassifyTheme
+    ClassifyTheme --> Facts
+    ClassifyTheme --> Provisions
+    ClassifyTheme --> Issue
+    
     Facts --> Position
     Provisions --> Position
     Issue --> Position
-    Position --> Abstract
+    
+    Position --> CommonLaw
+    CommonLaw -->|Yes| ObiterDicta
+    CommonLaw -->|Yes| DissentOps
+    CommonLaw -->|No| Abstract
+    ObiterDicta --> Abstract
+    DissentOps --> Abstract
+    
     Abstract --> ReviewAll
-
-    ReviewAll --> EditAny
-    EditAny --> Submit
-    Submit --> SaveDB
+    ReviewAll --> EditThemes
+    ReviewAll --> EditCOL
+    ReviewAll --> EditOther
+    EditThemes --> SaveDB
+    EditCOL --> SaveDB
+    EditOther --> SaveDB
     SaveDB --> Complete
     Complete --> End
 
@@ -164,13 +174,15 @@ flowchart TD
     classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef automated fill:#b3e5fc,stroke:#0277bd,stroke-width:2px
     classDef output fill:#fce4ec,stroke:#c2185b,stroke-width:2px
 
     class Start,End start
     class Citation,EmailOpt,InputSource,TextInput,PDFUpload,DemoLoad input
-    class DetectJuris,DisplayJuris,ExtractCOL,DisplayCOL,ClassifyTheme,DisplayThemes,ExtractPIL,DisplayPIL,Abstract,Facts,Provisions,Issue,Position process
-    class ScoreJuris,EditJuris,ScoreCOL,FeedbackCOL,ScoreThemes,EditThemes,ScorePIL decision
-    class ReviewAll,SaveDB,Complete output
+    class DetectJuris,DisplayJuris process
+    class ConfirmJuris decision
+    class StartGen,ExtractCOL,ClassifyTheme,Facts,Provisions,Issue,Position,CommonLaw,ObiterDicta,DissentOps,Abstract automated
+    class ReviewAll,EditThemes,EditCOL,EditOther,SaveDB,Complete output
 ```
 
 ## Detailed Component Workflows
@@ -256,7 +268,7 @@ sequenceDiagram
     Components->>StateManager: Update theme state
 
     Components->>Tools: Run complete analysis (parallel)
-    Note over Tools,LLM: Parallel execution:<br/>- Facts<br/>- PIL Provisions<br/>- COL Issue<br/>Then: Position, Abstract
+    Note over Tools,LLM: Step 3 parallel:<br/>Facts + PIL Provisions + COL Issue<br/>Step 4 parallel:<br/>Court Position + Obiter/Dissent
     Tools->>LLM: Extract all analysis components
     LLM-->>Tools: Complete analysis results
     Tools-->>Components: Display full analysis for editing
@@ -274,63 +286,58 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User
-    participant UI as COL Processor
+    participant UI as Workflow Component
+    participant Generator as Case Analyzer (Generator)
     participant Tool as COL Extractor
     participant Prompt as Prompt Library
     participant LLM as OpenAI API
     participant State as Session State
 
-    User->>UI: Proceed to COL extraction
-    UI->>State: Get jurisdiction & text
-    State-->>UI: Return context
+    User->>UI: Confirm jurisdiction
+    UI->>Generator: Start analyze_case_workflow()
     
-    UI->>Tool: extract_col_sections(text, jurisdiction)
+    Generator->>Tool: extract_col_section(text, legal_system, jurisdiction)
     Tool->>Prompt: Get jurisdiction-specific prompt
     Prompt-->>Tool: COL extraction prompt
     
     Tool->>LLM: Extract COL sections
-    Note over LLM: Identifies relevant<br/>Choice of Law sections<br/>from court decision
-    LLM-->>Tool: COL section list
+    Note over LLM: Identifies relevant<br/>Choice of Law sections<br/>Returns list of sections
+    LLM-->>Tool: col_sections: list[str]
     
-    Tool-->>UI: Display extracted sections
-    UI->>User: Show COL sections
-    User->>UI: Edit section if needed
-
-    UI->>State: Save COL sections
-    State-->>UI: Confirmation
-    UI-->>User: Ready for theme classification
+    Tool-->>Generator: Yield ColSectionOutput
+    Generator-->>UI: Yield result object
+    UI->>State: Save col_sections list
+    UI->>User: Display progress
+    
+    Note over Generator,UI: Continues with themes,<br/>parallel analysis steps
 ```
 
 ### Theme Classification Workflow
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI as Theme Classifier
-    participant Data as Data Loader
+    participant Generator as Case Analyzer (Generator)
     participant Tool as Themes Classifier
+    participant Data as Data Loader
     participant LLM as OpenAI API
+    participant UI as Workflow Component
     participant State as Session State
 
-    User->>UI: Proceed to theme classification
-    UI->>Data: Load valid themes
-    Data-->>UI: Theme taxonomy (themes.csv)
+    Note over Generator: After COL extraction
+    Generator->>Data: Load valid themes
+    Data-->>Generator: Theme taxonomy (themes.csv)
     
-    UI->>State: Get COL sections
-    State-->>UI: Return COL data
-    
-    UI->>Tool: classify_themes(col_sections, themes)
+    Generator->>Tool: theme_classification_node(text, col_section, legal_system, jurisdiction)
     Tool->>LLM: Classify against PIL taxonomy
     Note over LLM: Categorizes case<br/>against predefined<br/>PIL themes
     LLM-->>Tool: Theme classifications
     
-    Tool-->>UI: Display classified themes
-    UI->>User: Show themes for editing
-    User->>UI: Edit theme selections if needed
-
+    Tool-->>Generator: Yield ThemeClassificationOutput
+    Generator-->>UI: Yield result object
     UI->>State: Save themes
-    State-->>UI: Confirmation
-    UI-->>User: Ready for detailed analysis
+    UI->>User: Display progress
+    
+    Note over Generator,UI: Continues with parallel<br/>facts, provisions, COL issue
 ```
 
 ## Data Processing Patterns
@@ -447,5 +454,37 @@ flowchart TD
 
 This workflow documentation provides a comprehensive overview of the CoLD Case Analyzer's operational processes:
 
-- **Main Workflow**: Step-by-step user-guided analysis from input to completion
-- **Component Workflows**: Detailed flows for jurisdiction detection, COL extraction, and theme classification
+- **Main Workflow**: Generator-based automated analysis from jurisdiction confirmation to completion
+- **Component Workflows**: Jurisdiction detection, COL extraction, and theme classification
+- **Data Processing**: Input transformation and result storage patterns
+
+### Current Implementation
+
+**Generator-Based Workflow:**
+- All analysis steps after jurisdiction confirmation are automated
+- Uses `analyze_case_workflow()` generator function that yields result objects
+- User confirms jurisdiction only; all other steps run automatically
+
+**Parallel Execution:**
+- Step 3: Facts + PIL Provisions + COL Issue (3 parallel operations)
+- Step 4: Court Position + Obiter Dicta + Dissenting Opinions (up to 3 parallel operations for Common Law)
+
+**Parameter Naming:**
+- `legal_system`: Type of legal system (e.g., "Civil-law jurisdiction", "Common-law jurisdiction")
+- `jurisdiction`: Specific jurisdiction (e.g., "Switzerland", "United States", "India")
+- `themes`: Classified PIL themes
+
+**ColSectionOutput Model:**
+- Returns `col_sections: list[str]` supporting multiple Choice of Law sections
+- Sections are joined with double newlines for processing
+
+**Workflow Steps:**
+1. **COL Section Extraction**: Yields `ColSectionOutput` with list of sections
+2. **Theme Classification**: Yields `ThemeClassificationOutput` with themes list
+3. **Parallel Analysis Step 1**: Yields `RelevantFactsOutput`, `PILProvisionsOutput`, and `ColIssueOutput` in parallel
+4. **Parallel Analysis Step 2**: Yields `CourtsPositionOutput`, and for Common Law: `ObiterDictaOutput` and `DissentingOpinionsOutput` in parallel
+5. **Abstract**: Yields `AbstractOutput` synthesizing all previous steps
+
+**Final Editing Phase:**
+- User can edit all results including themes, COL sections, and all analysis steps
+- Single comprehensive review before saving

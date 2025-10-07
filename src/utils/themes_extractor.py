@@ -9,6 +9,8 @@ from typing import Any
 import pandas as pd
 import requests
 
+from models.classification_models import ThemeWithNA
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 logger = logging.getLogger(__name__)
@@ -175,7 +177,7 @@ def fetch_themes_dataframe() -> pd.DataFrame:
         return pd.DataFrame({"Theme": [], "Definition": []})
 
 
-def filter_themes_by_list(themes_list: list[str]) -> str:
+def filter_themes_by_list(themes_list: list[ThemeWithNA]) -> str:
     """
     Returns a markdown table (string) of Theme|Definition
     for those themes in themes_list, using the already‐loaded THEMES_TABLE_DF.
