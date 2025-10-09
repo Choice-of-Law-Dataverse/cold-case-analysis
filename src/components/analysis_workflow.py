@@ -198,6 +198,139 @@ def get_analysis_steps(state):
     return steps
 
 
+def render_partial_step(step_name: str, state: dict):
+    """
+    Render a single analysis step in read-only mode during generation.
+
+    Args:
+        step_name: Name of the step to render
+        state: The current analysis state
+    """
+    from components.confidence_display import render_confidence_chip
+    from utils.data_loaders import load_valid_themes
+
+    # Handle themes specially
+    if step_name == "themes":
+        classification = state.get("classification", [])
+        if not classification:
+            return
+
+        current_themes = classification[-1] if isinstance(classification, list) else classification
+        confidence_key = "classification_confidence"
+        reasoning_key = "classification_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Themes")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, f"partial_{step_name}")
+
+        valid_themes = load_valid_themes()
+        valid_themes.append("NA")
+        default_sel = [t.strip() for t in current_themes.split(",") if t.strip()] if isinstance(current_themes, str) else []
+        theme_mapping = {theme.lower(): theme for theme in valid_themes}
+        filtered_defaults = []
+        for theme in default_sel:
+            if theme in valid_themes:
+                filtered_defaults.append(theme)
+            elif theme.lower() in theme_mapping:
+                filtered_defaults.append(theme_mapping[theme.lower()])
+
+        st.multiselect(
+            "Themes (read-only):",
+            options=valid_themes,
+            default=filtered_defaults,
+            key=f"partial_{step_name}",
+            label_visibility="collapsed",
+            disabled=True,
+        )
+        return
+
+    # Handle col_section specially
+    if step_name == "col_section":
+        col_section = state.get("col_section", [])
+        if not col_section:
+            return
+
+        current_col = col_section[-1] if isinstance(col_section, list) else col_section
+        confidence_key = "col_section_confidence"
+        reasoning_key = "col_section_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Choice of Law Section")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, f"partial_{step_name}")
+
+        st.text_area(
+            "Choice of Law Section (read-only):",
+            value=str(current_col),
+            key=f"partial_{step_name}",
+            height=300,
+            label_visibility="collapsed",
+            disabled=True,
+        )
+        return
+
+    # Handle regular analysis steps
+    display_name = get_step_display_name(step_name, state)
+    content = state.get(step_name)
+
+    if not content:
+        return
+
+    current_value = content[-1] if isinstance(content, list) else content
+
+    confidence_key = f"{step_name}_confidence"
+    reasoning_key = f"{step_name}_reasoning"
+    confidence_list = state.get(confidence_key, [])
+    reasoning_list = state.get(reasoning_key, [])
+    confidence = confidence_list[-1] if confidence_list else None
+    reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+    with st.container(horizontal=True):
+        st.subheader(display_name)
+        if confidence:
+            render_confidence_chip(confidence, reasoning, f"partial_{step_name}")
+
+    if step_name == "pil_provisions":
+        if isinstance(current_value, list):
+            chips_html = '<div class="pil-chips-container">'
+            for provision in current_value:
+                provision_str = str(provision).strip('"')
+                chips_html += f'<span class="pil-chip">{provision_str}</span>'
+            chips_html += "</div>"
+            st.markdown(chips_html, unsafe_allow_html=True)
+
+            display_value = json.dumps(current_value, indent=2)
+        else:
+            display_value = str(current_value)
+
+        st.text_area(
+            f"{display_name} (read-only)",
+            value=display_value,
+            key=f"partial_{step_name}",
+            label_visibility="collapsed",
+            disabled=True,
+            height=300,
+        )
+    else:
+        st.text_area(
+            f"{display_name} (read-only)",
+            value=str(current_value),
+            key=f"partial_{step_name}",
+            label_visibility="collapsed",
+            disabled=True,
+            height=400,
+        )
+
+
 def execute_all_analysis_steps_with_generator(state):
     """
     Execute all analysis steps using the generator pattern.
@@ -506,6 +639,62 @@ def render_final_editing_phase():
         st.rerun()
 
 
+def render_partial_results_phase():
+    """
+    Render all completed analysis steps in read-only mode.
+    This is shown after analysis completes but before the editing phase.
+    """
+    from components.confidence_display import add_confidence_chip_css
+
+    state = st.session_state.col_state
+    add_confidence_chip_css()
+
+    # Add CSS for PIL provisions
+    st.markdown(
+        """
+    <style>
+    /* Chip styling for PIL provisions */
+    .pil-chip {
+        display: inline-block;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #1976d2;
+        border-radius: 16px;
+        padding: 6px 12px;
+        margin: 4px;
+        font-size: 14px;
+    }
+    .pil-chips-container {
+        margin: 10px 0;
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("## Analysis Results (Preview)")
+    st.markdown("Review the analysis results below. Click **Proceed to Edit** when ready to make changes.")
+
+    # Render themes if available
+    if state.get("classification"):
+        render_partial_step("themes", state)
+
+    # Render col_section if available
+    if state.get("col_section"):
+        render_partial_step("col_section", state)
+
+    # Render analysis steps
+    steps = get_analysis_steps(state)
+    for name, _ in steps:
+        if state.get(name):
+            render_partial_step(name, state)
+
+    # Button to proceed to editing phase
+    if st.button("Proceed to Edit", type="primary", key="proceed_to_edit_btn"):
+        state["show_partial_results"] = False
+        st.rerun()
+
+
 def render_analysis_workflow():
     """
     Render the complete analysis workflow with parallel execution and final editing.
@@ -517,7 +706,11 @@ def render_analysis_workflow():
     if not state.get("parallel_execution_started"):
         execute_all_analysis_steps_with_generator(state)
         state["parallel_execution_started"] = True
+        state["show_partial_results"] = True
         st.rerun()
+    elif state.get("show_partial_results"):
+        # Show partial results in read-only mode
+        render_partial_results_phase()
     elif not state.get("analysis_done"):
         render_final_editing_phase()
     else:
