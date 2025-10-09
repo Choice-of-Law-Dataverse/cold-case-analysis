@@ -25,10 +25,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.title("CoLD Case Analyzer")
-st.info("The CoLD Case Analyzer can make mistakes. Please review each answer carefully.")
 st.markdown("""
 This tool helps you analyze court decisions and get structured summaries.
 You can provide feedback to improve the analysis until you're satisfied with the result.
+
+The CoLD Case Analyzer can make mistakes. Please review each answer carefully.
 """)
 
 render_model_selector()

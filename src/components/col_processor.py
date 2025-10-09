@@ -34,19 +34,6 @@ def display_jurisdiction_info():
             st.badge(jurisdiction)
 
 
-def display_case_info():
-    """
-    Display case citation without the full text.
-    """
-    col_state = st.session_state.col_state
-    citation = col_state.get("case_citation")
-    if citation:
-        st.subheader("Case Citation")
-        st.markdown(f"<div class='user-message'>{citation}</div>", unsafe_allow_html=True)
-
-    display_jurisdiction_info()
-
-
 def display_col_extractions():
     """
     Display the history of COL extractions and feedback.
@@ -191,8 +178,6 @@ def render_col_processing():
     Render the complete COL processing interface.
     """
     col_state = st.session_state.col_state
-
-    display_case_info()
 
     display_col_extractions()
 

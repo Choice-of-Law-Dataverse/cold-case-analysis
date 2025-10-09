@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 import requests
+import streamlit as st
 
 from models.classification_models import ThemeWithNA
 
@@ -38,23 +39,25 @@ class NocoDBService:
             # X nocodb API token header
             self.headers["xc-token"] = api_token
 
-    def get_row(self, table: str, record_id: str) -> dict:
+    @st.cache_data
+    def get_row(_self, table: str, record_id: str) -> dict:
         """
         Fetch full record data and metadata for a specific row from NocoDB.
         """
         logger.debug("Fetching row %s from table %s in NocoDB", record_id, table)
-        url = f"{self.base_url}/{table}/{record_id}"
+        url = f"{_self.base_url}/{table}/{record_id}"
         logger.debug("NocoDBService.get_row: GET %s", url)
-        logger.debug("NocoDBService headers: %s", self.headers)
-        resp = requests.get(url, headers=self.headers)
+        logger.debug("NocoDBService headers: %s", _self.headers)
+        resp = requests.get(url, headers=_self.headers)
         logger.debug("Response from nocoDB: %d %s", resp.status_code, resp.text)
         resp.raise_for_status()
         payload = resp.json()
         logger.debug("NocoDBService.get_row response payload: %s", payload)
         return payload
 
+    @st.cache_data
     def list_rows(
-        self,
+        _self,
         table: str,
         filters: Sequence[FilterCondition] | None = None,
         limit: int = 100,
@@ -78,12 +81,12 @@ class NocoDBService:
                 where_clauses.append(f"({col},{op},{val})")
         where_param = "~and".join(where_clauses) if where_clauses else None
         while True:
-            url = f"{self.base_url}/{table}"
+            url = f"{_self.base_url}/{table}"
             params: dict[str, Any] = {"limit": limit, "offset": offset}
             if where_param:
                 params["where"] = where_param
             logger.debug("NocoDBService.list_rows: GET %s with params %s", url, params)
-            resp = requests.get(url, headers=self.headers, params=params)
+            resp = requests.get(url, headers=_self.headers, params=params)
             resp.raise_for_status()
             payload = resp.json()
             if isinstance(payload, dict):
