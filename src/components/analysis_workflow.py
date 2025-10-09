@@ -12,6 +12,7 @@ import streamlit as st
 from components.database import save_to_db
 from models.analysis_models import (
     AbstractOutput,
+    CaseCitationOutput,
     ColIssueOutput,
     ColSectionOutput,
     CourtsPositionOutput,
@@ -42,6 +43,13 @@ class WorkflowStateUpdater:
         Returns:
             str: The step name for this result type
         """
+
+        if isinstance(result, CaseCitationOutput):
+            state["case_citation"] = result.case_citation
+            state.setdefault("case_citation_confidence", []).append(result.confidence)
+            state.setdefault("case_citation_reasoning", []).append(result.reasoning)
+            return "case_citation"
+
         if isinstance(result, ColSectionOutput):
             # Join multiple sections with newlines
             col_section_text = "\n\n".join(result.col_sections) if result.col_sections else ""
@@ -103,6 +111,18 @@ class WorkflowStateUpdater:
             raise ValueError(f"Unknown result type: {type(result)}")
 
 
+def render_email_input():
+    """Render optional email input for contact consent."""
+    st.markdown("**Contact Email (optional):**")
+    st.caption("If you agree to be contacted about your contributed cases and analyses, provide an email address.")
+    return st.text_input(
+        label="Email",
+        key="user_email",
+        placeholder="name@example.com",
+        label_visibility="collapsed",
+    )
+
+
 def get_step_display_name(step_name, state):
     """
     Get the proper display name for an analysis step based on jurisdiction.
@@ -125,6 +145,9 @@ def get_step_display_name(step_name, state):
         "obiter_dicta": "Court's Position (Obiter Dicta)",
         "dissenting_opinions": "Dissenting Opinions",
         "abstract": "Abstract",
+        "col_section": "Choice of Law Sections",
+        "case_citation": "Case Citation",
+        "themes": "Themes",
     }
 
     return step_names.get(step_name, step_name.replace("_", " ").title())
@@ -184,34 +207,16 @@ def execute_all_analysis_steps_with_generator(state):
         state: The current analysis state
     """
     text = state["full_text"]
-    col_sections = None
-    col_section_data = state.get("col_section", [])
-    if col_section_data:
-        col_section_text = col_section_data[-1] if isinstance(col_section_data, list) else col_section_data
-        # Convert back to list for generator
-        col_sections = [col_section_text] if col_section_text else None
-
     legal_system = state.get("jurisdiction", "Civil-law jurisdiction")
     jurisdiction = state.get("precise_jurisdiction")
     model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
-    # Get themes if already classified
-    classification_messages = state.get("classification", [])
-    themes = None
-    if classification_messages:
-        last_msg = classification_messages[-1]
-        if hasattr(last_msg, "content"):
-            content_value = last_msg.content
-            if isinstance(content_value, list):
-                themes = content_value
-            elif isinstance(content_value, str) and content_value:
-                themes = [t.strip() for t in content_value.split(",")]
-        elif isinstance(last_msg, str):
-            themes = [t.strip() for t in last_msg.split(",")]
+    # Create progress placeholder
+    progress_placeholder = st.empty()
+    progress_placeholder.progress(0, text="Analysis in progress... it can take a few minutes.")
 
-    st.markdown("**Analyzing case...**")
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    # Create results container
+    results_container = st.container()
 
     # Calculate total steps
     total_steps = 8  # col_section, themes, relevant_facts, pil_provisions, col_issue, courts_position, abstract
@@ -227,8 +232,6 @@ def execute_all_analysis_steps_with_generator(state):
             legal_system=legal_system,
             jurisdiction=jurisdiction,
             model=model,
-            col_sections=col_sections,
-            themes=themes,
         ):
             # Update state using helper class
             step_name = WorkflowStateUpdater.update_state(state, result)
@@ -239,16 +242,19 @@ def execute_all_analysis_steps_with_generator(state):
             # Update progress
             completed += 1
             progress = completed / total_steps
-            progress_bar.progress(min(progress, 1.0))
-            status_text.text(f"Completed: {get_step_display_name(step_name, state)}")
+            progress_placeholder.progress(min(progress, 1.0), text=f"Completed {completed}/{total_steps} steps")
 
+            # Display result in results container
+            with results_container:
+                st.markdown(f"✅ {get_step_display_name(step_name, state)}")
+
+        # Clear progress when done
+        progress_placeholder.empty()
     except Exception as e:
+        progress_placeholder.empty()
         st.error(f"Error during analysis: {str(e)}")
         logger.error(f"Analysis workflow error: {e}", exc_info=True)
         raise
-
-    progress_bar.progress(1.0)
-    status_text.text("✓ Analysis complete!")
 
 
 def render_final_editing_phase():
@@ -270,7 +276,7 @@ def render_final_editing_phase():
     <style>
     /* Default height for all textareas */
     div[data-testid="stTextArea"] textarea {
-        min-height: 400px !important;
+        min-height: 100px !important;
         max-height: 66vh !important;
         resize: vertical !important;
     }
@@ -317,8 +323,32 @@ def render_final_editing_phase():
         unsafe_allow_html=True,
     )
 
-    st.markdown("## Review and Edit Results")
-    st.markdown("Review all extracted information below. You can edit any field before final submission.")
+    st.header("Review and Edit Results")
+
+    # Section 0: Case Citation
+
+    case_citation = state.get("case_citation", "N/A")
+    if case_citation:
+        confidence_key = "case_citation_confidence"
+        reasoning_key = "case_citation_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Case Citation")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "final_edit_case_citation")
+
+        edited_case_citation = st.text_area(
+            "Edit Case Citation",
+            value=case_citation,
+            key="final_edit_case_citation_text",
+            height=100,
+            label_visibility="collapsed",
+        )
+        edited_values["case_citation"] = edited_case_citation
 
     # Section 1: Themes
 
@@ -377,7 +407,7 @@ def render_final_editing_phase():
                 render_confidence_chip(confidence, reasoning, "final_edit_col_section")
 
         edited_col = st.text_area(
-            "Edit Choice of Law Section:",
+            "Edit Choice of Law Section",
             value=str(current_col),
             key="final_edit_col_section_text",
             height=300,
@@ -426,9 +456,11 @@ def render_final_editing_phase():
             edited_values[name] = edited
         else:
             edited = st.text_area(
-                f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed"
+                f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed", height=300
             )
             edited_values[name] = edited
+
+    render_email_input()
 
     if st.button("Submit Final Analysis", type="primary", key="submit_final_analysis"):
         # Update themes
@@ -446,16 +478,27 @@ def render_final_editing_phase():
         for name, edited_value in edited_values.items():
             if name in ["themes", "col_section"]:
                 continue
+
+            # Handle the case where state[name] might be a string or list
             if name == "pil_provisions":
                 try:
                     parsed = json.loads(edited_value)
-                    state[name][-1] = parsed
+                    if isinstance(state[name], list):
+                        state[name][-1] = parsed
+                    else:
+                        state[name] = [parsed]
                     state[f"{name}_edited"] = parsed
                 except json.JSONDecodeError:
-                    state[name][-1] = edited_value
+                    if isinstance(state[name], list):
+                        state[name][-1] = edited_value
+                    else:
+                        state[name] = [edited_value]
                     state[f"{name}_edited"] = edited_value
             else:
-                state[name][-1] = edited_value
+                if isinstance(state[name], list):
+                    state[name][-1] = edited_value
+                else:
+                    state[name] = [edited_value]
                 state[f"{name}_edited"] = edited_value
 
         state["analysis_done"] = True

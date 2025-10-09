@@ -19,6 +19,16 @@ class ColSectionOutput(BaseModel):
         return "\n\n".join(self.col_sections)
 
 
+class CaseCitationOutput(BaseModel):
+    """Output model for case citation extraction."""
+
+    case_citation: str = Field(description="The case citation extracted from the text. Academic format preferred.")
+    confidence: Literal["low", "medium", "high"] = Field(
+        description="Confidence level in the extraction: 'low', 'medium', or 'high'"
+    )
+    reasoning: str = Field(description="Explanation of the citation extraction")
+
+
 class RelevantFactsOutput(BaseModel):
     """Output model for relevant facts extraction."""
 

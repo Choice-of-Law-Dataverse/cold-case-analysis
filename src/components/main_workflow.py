@@ -19,27 +19,16 @@ def render_initial_input_phase():
         bool: True if ready to proceed to COL extraction, False otherwise
     """
 
-    case_citation, full_text = render_input_phase()
-
-    # Enforce mandatory case citation
-    if not case_citation or not case_citation.strip():
-        st.warning("Please enter a Case Citation before proceeding.")
-        return False
+    full_text = render_input_phase()
 
     if not full_text.strip():
         return False
-
-    st.markdown("## Jurisdiction Identification")
-    st.markdown(
-        "The first step consists of identifying the precise jurisdiction and legal system type from the court decision."
-    )
 
     jurisdiction_confirmed = render_jurisdiction_detection(full_text)
 
     if jurisdiction_confirmed:
         if not st.session_state.get("workflow_started", False):
             st.markdown("## Case Analysis")
-            st.markdown("Starting automated analysis workflow...")
 
             with st.spinner("Initializing analysis..."):
                 final_jurisdiction_data = get_final_jurisdiction_data()

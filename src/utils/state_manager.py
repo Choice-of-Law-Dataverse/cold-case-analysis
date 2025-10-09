@@ -17,7 +17,6 @@ def create_initial_analysis_state(case_citation, username, model, full_text, fin
     Create the initial analysis state dictionary.
 
     Args:
-        case_citation: The case citation
         username: The current user
         model: The selected LLM model
         full_text: The full court decision text
@@ -27,7 +26,6 @@ def create_initial_analysis_state(case_citation, username, model, full_text, fin
         dict: Initial state dictionary
     """
     return {
-        "case_citation": case_citation,
         "username": username,
         "model": model,
         "full_text": full_text,
@@ -65,5 +63,3 @@ def load_demo_case():
     from utils.data_loaders import get_demo_case_text
 
     st.session_state.full_text_input = get_demo_case_text()
-    # Also set a representative demo case citation
-    st.session_state.case_citation = "Federal Court, 20.12.2005 - BGE 132 III 285"

@@ -36,33 +36,47 @@ def render_jurisdiction_detection(full_text: str):
         st.session_state["jurisdiction_reasoning"] = None
     if "jurisdiction_detect_clicked" not in st.session_state:
         st.session_state["jurisdiction_detect_clicked"] = False
+    if "jurisdiction_detection_pending" not in st.session_state:
+        st.session_state["jurisdiction_detection_pending"] = False
 
     # Create a container for consistent widget structure
     main_container = st.container()
 
     with main_container:
-        # Phase 1: Detect Jurisdiction Button (only show if not detected and not clicked)
-        if not st.session_state.get("precise_jurisdiction_detected", False) and not st.session_state.get(
-            "jurisdiction_detect_clicked", False
-        ):
-            if st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary"):
-                # Immediately save click state to hide button
-                st.session_state["jurisdiction_detect_clicked"] = True
+        detection_complete = st.session_state.get("precise_jurisdiction_detected", False)
+        detect_clicked = st.session_state.get("jurisdiction_detect_clicked", False)
+        detection_pending = st.session_state.get("jurisdiction_detection_pending", False)
 
-                if full_text.strip():
+        # Phase 1: Detect Jurisdiction Button / Pending state handling
+        if not detection_complete:
+            if not detect_clicked:
+                if st.button("Detect Jurisdiction", key="detect_precise_jurisdiction_btn", type="primary"):
+                    if not full_text.strip():
+                        st.warning("Please enter the court decision text before detecting jurisdiction.")
+                        st.session_state["jurisdiction_detect_clicked"] = False
+                        return False
+
+                    st.session_state["jurisdiction_detect_clicked"] = True
+                    st.session_state["jurisdiction_detection_pending"] = True
+                    st.rerun()
+                    return False
+            elif detection_pending:
+                try:
                     with st.spinner("Analyzing jurisdiction..."):
                         jurisdiction_data = detect_precise_jurisdiction_with_confidence(full_text)
+                except Exception:
+                    st.session_state["jurisdiction_detect_clicked"] = False
+                    st.session_state["jurisdiction_detection_pending"] = False
+                    raise
 
-                        st.session_state["precise_jurisdiction"] = jurisdiction_data.precise_jurisdiction
-                        st.session_state["legal_system_type"] = jurisdiction_data.legal_system_type
-                        st.session_state["jurisdiction_confidence"] = jurisdiction_data.confidence
-                        st.session_state["jurisdiction_reasoning"] = jurisdiction_data.reasoning
-                        st.session_state["precise_jurisdiction_detected"] = True
+                st.session_state["precise_jurisdiction"] = jurisdiction_data.precise_jurisdiction
+                st.session_state["legal_system_type"] = jurisdiction_data.legal_system_type
+                st.session_state["jurisdiction_confidence"] = jurisdiction_data.confidence
+                st.session_state["jurisdiction_reasoning"] = jurisdiction_data.reasoning
+                st.session_state["precise_jurisdiction_detected"] = True
+                st.session_state["jurisdiction_detection_pending"] = False
 
-                        st.rerun()
-                else:
-                    st.warning("Please enter the court decision text before detecting jurisdiction.")
-
+                st.rerun()
                 return False
 
         # Phase 2: Display Results and Override Options
@@ -76,13 +90,14 @@ def render_jurisdiction_detection(full_text: str):
             reasoning = st.session_state.get("jurisdiction_reasoning", "No reasoning available")
 
             # Display results in an attractive format
-            st.markdown("### Jurisdiction Detection Results")
+            with st.container(horizontal=True):
+                st.subheader("Jurisdiction")
 
-            # Display confidence chip if we have confidence data
-            if confidence:
-                # Use a more unique key to avoid conflicts
-                chip_key = f"jurisdiction_detection_{hash(reasoning) % 10000}"
-                render_confidence_chip(confidence, reasoning, chip_key)
+                # Display confidence chip if we have confidence data
+                if confidence:
+                    # Use a more unique key to avoid conflicts
+                    chip_key = f"jurisdiction_detection_{hash(reasoning) % 10000}"
+                    render_confidence_chip(confidence, reasoning, chip_key)
 
             # Load all jurisdictions for selection
             from tools.jurisdiction_classifier import load_jurisdictions
@@ -133,17 +148,25 @@ def render_jurisdiction_detection(full_text: str):
             )
 
             if not is_confirmed:
+                # Show confirm button and handle click
                 if st.button("Confirm", key="confirm_final_jurisdiction", type="primary"):
+                    # Update the session state values
+                    st.session_state["legal_system_type"] = selected_legal_system
+                    st.session_state["precise_jurisdiction"] = selected_jurisdiction
+                    st.session_state["precise_jurisdiction_confirmed"] = True
+
+                    # Handle manual override if jurisdiction was changed
                     if selected_jurisdiction != jurisdiction_name:
                         selected_data = next((j for j in jurisdictions if j["name"] == selected_jurisdiction), None)
                         if selected_data:
                             st.session_state["jurisdiction_manual_override"] = {"jurisdiction_name": selected_data["name"]}
 
-                    if selected_legal_system != legal_system:
-                        st.session_state["legal_system_type"] = selected_legal_system
-
-                    st.session_state["precise_jurisdiction_confirmed"] = True
-                    st.rerun()
+                    st.success("✅ Jurisdiction confirmed! Proceeding to analysis...")
+            else:
+                # Show confirmation status
+                st.info(
+                    f"✅ Jurisdiction confirmed: **{st.session_state.get('precise_jurisdiction')}** ({st.session_state.get('legal_system_type')})"
+                )
 
     return st.session_state.get("precise_jurisdiction_confirmed", False)
 
