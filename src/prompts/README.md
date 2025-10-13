@@ -160,12 +160,12 @@ These prompts are tailored for specific legal systems and jurisdictions.
 
 ## Civil Law Jurisdiction
 
-### Col Section
+### Choice of Law Section
 
 *File: `civil_law\col_section_prompt.py`*
 
 
-#### Col Section
+#### Choice of Law Section
 
 ```text
 TASK: Extract all portions of the judgment that discuss choice of law in private international law (PIL) contexts.
@@ -212,12 +212,12 @@ Here is the text of the Court Decision:
 Here is the section of the Court Decision containing Choice of Law related information:
 ```
 
-### Pil Theme
+### PIL Theme
 
 *File: `civil_law\pil_theme_prompt.py`*
 
 
-#### Pil Theme
+#### PIL Theme
 
 ```text
 Your task is to assign specific themes to a court decision. Your response consists of the most fitting value(s) from the "Keywords" column in the format "keyword". You assign the theme most closely related to the choice of law issue. For example, the decision might be about "Party autonomy", but the issue refers specifically to "Tacit choice". Be as precise as possible. THE OUTPUT HAS TO BE ONE OR MULTIPLE OF THE VALUES FROM THE TABLE. Your output should adhere to the following format:
@@ -233,7 +233,7 @@ Here is the section of the Court Decision containing Choice of Law related infor
 {col_section}
 ```
 
-### Analysiss
+### Analysis
 
 *File: `civil_law\analysis_prompts.py`*
 
@@ -294,7 +294,7 @@ The court's position is:
 The abstract is:
 ```
 
-#### Col Issue
+#### Choice of Law Issue
 
 ```text
 Your task is to identify the main private international law issue from a court decision. Your response will be a concise question. Examples:
@@ -316,7 +316,7 @@ Extracted Choice of Law Section:
 The issue is:
 ```
 
-#### Courts Position
+#### Court's Position
 
 ```text
 Summarize the court's position on the choice-of-law issue(s) within the decision. Your response is phrased in a general way, generalizing the issue(s) so that your generalization could be applied to other private international law cases. If any legal provisions are mentioned, use their English abbreviation. Your output is a direct answer to the issue laid out here:
@@ -339,15 +339,15 @@ Classified Theme(s):
 The court's position is:
 ```
 
-#### Facts
+#### Relevant Facts
 
 ```text
 TASK: Extract and synthesize factual elements essential for understanding the choice of law analysis into a single, coherent paragraph.
 INSTRUCTIONS:
 1.	Output Requirement: 
-Provide an answer as concise as possible, up to 300 words containing all relevant facts in narrative form.
+Provide an answer as concise as possible, up to 300 words, containing all relevant facts in narrative form.
 2.	Content Priority:
-Elaborate on facts including, but not limited to the following, as long as they are relevant for the private international law (PIL) and choice of law discussion in the decision: 
+Elaborate on facts including, but not limited to, the following, as long as they are relevant for the private international law (PIL) and choice of law discussion in the decision: 
 -	Party characteristics (nationality, domicile, place of business/incorporation)
 -	Nature and geography of the underlying transaction/relationship
 -	Express or implied choice of law indicators
@@ -374,17 +374,17 @@ Extracted Choice of Law Section:
 The facts are:
 ```
 
-#### Pil Provisions
+#### PIL Provisions
 
 ```text
 Your task is to extract rules related to choice of law cited in a court decision. Your response is a list of provisions sorted by the impact of the rules for the choice of law issue(s) present within the court decision. Your response consists of this list only, no explanations or other additional information. A relevant provision usually stems from the most prominent legislation dealing with private international law in the respective jurisdiction. In some countries, the relevant provisions are included in the civil code. Other countries have acts that include private international law provisions. In many cases, the relevant provisions can also be found in international treaties. If no legislative provision is found, double-check whether there is any other court decision cited as a choice of law precedent.
 OUTPUT FORMAT:
 - The output adheres to this format: ["<provision>, <abbreviated name of the instrument>", "<provision>, <abbreviated name of the instrument>", ...]
 - Example for Switzerland: ["Art. 187, PILA"]
-- If you do not find PIL provisions in the court decision or if you are not sure, return ["NA"]. If any language other than English is used to cite a provision, use their English abbreviation.
+- If you do not find PIL provisions in the court decision or if you are not sure, return ["NA"]. If any language other than English is used to cite a provision, use its English abbreviation.
 LIMITATIONS:
 - No literature or other doctrinal remarks
-- Do not use the paragraph symbol (§). If necessary use the abbreviation "Para."
+- Do not use the paragraph symbol (§). If necessary, use the abbreviation "Para."
 
 Court Decision Text:
 {text}
@@ -397,12 +397,12 @@ The private international law provisions are:
 
 ## Common Law Jurisdiction
 
-### Col Section
+### Choice of Law Section
 
 *File: `common_law\col_section_prompt.py`*
 
 
-#### Col Section
+#### Choice of Law Section
 
 ```text
 TASK: Extract all portions of the judgment that discuss choice of law in private international law (PIL) contexts.
@@ -448,12 +448,12 @@ Here is the text of the Court Decision:
 Here is the section of the Court Decision containing Choice of Law related information:
 ```
 
-### Pil Theme
+### PIL Theme
 
 *File: `common_law\pil_theme_prompt.py`*
 
 
-#### Pil Theme
+#### PIL Theme
 
 ```text
 Your task is to assign specific themes to a court decision. Your response consists of the most fitting value(s) from the "Keywords" column in the format "keyword". You assign the theme most closely related to the choice of law issue. For example, the decision might be about "Party autonomy", but the issue refers specifically to "Tacit choice". Be as precise as possible. THE OUTPUT HAS TO BE ONE OR MULTIPLE OF THE VALUES FROM THE TABLE. Your output should adhere to the following format:
@@ -469,7 +469,7 @@ Here is the section of the Court Decision containing Choice of Law related infor
 {col_section}
 ```
 
-### Analysiss
+### Analysis
 
 *File: `common_law\analysis_prompts.py`*
 
@@ -536,7 +536,7 @@ The dissenting opinions are:
 The abstract is:
 ```
 
-#### Col Issue
+#### Choice of Law Issue
 
 ```text
 TASK: Identify the specific choice of law questions that the court actually decided in this private international law (PIL) case. 
@@ -571,7 +571,7 @@ Extracted Choice of Law Section:
 The issue is:
 ```
 
-#### Courts Position Dissenting Opinions
+#### Court's Position Dissenting Opinions
 
 ```text
 TASK: Identify and summarize any dissenting or minority judicial opinions specifically related to choice of law analysis.
@@ -614,7 +614,7 @@ Classified Theme(s):
 The dissenting opinions are:
 ```
 
-#### Courts Position Obiter Dicta
+#### Court's Position Obiter Dicta
 
 ```text
 TASK: Extract judicial observations about choice of law that are not essential to the court's decision but provide persuasive legal commentary.
@@ -663,7 +663,7 @@ Classified Theme(s):
 The obiter dicta is:
 ```
 
-#### Courts Position
+#### Court's Position
 
 ```text
 TASK: Extract the binding legal principle(s) that the court established as essential to its choice of law decision.
@@ -741,7 +741,7 @@ Extracted Choice of Law Section:
 The facts are:
 ```
 
-#### Pil Provisions
+#### PIL Provisions
 
 ```text
 TASK: Extract only the legal authorities that the court actually used to support its choice of law reasoning and decision.
@@ -788,12 +788,12 @@ The authorities are:
 
 ## India Jurisdiction
 
-### Col Section
+### Choice of Law Section
 
 *File: `india\col_section_prompt.py`*
 
 
-#### Col Section
+#### Choice of Law Section
 
 ```text
 TASK: Extract all portions of the judgment that discuss choice of law in private international law (PIL) contexts.
@@ -840,12 +840,12 @@ Here is the text of the Court Decision:
 Here is the section of the Court Decision containing Choice of Law related information:
 ```
 
-### Pil Theme
+### PIL Theme
 
 *File: `india\pil_theme_prompt.py`*
 
 
-#### Pil Theme
+#### PIL Theme
 
 ```text
 Your task is to assign specific themes to a court decision. Your response consists of the most fitting value(s) from the "Keywords" column in the format "keyword". You assign the theme most closely related to the choice of law issue. For example, the decision might be about "Party autonomy", but the issue refers specifically to "Tacit choice". Be as precise as possible. THE OUTPUT HAS TO BE ONE OR MULTIPLE OF THE VALUES FROM THE TABLE. Your output should adhere to the following format:
@@ -861,7 +861,7 @@ Here is the section of the Court Decision containing Choice of Law related infor
 {col_section}
 ```
 
-### Analysiss
+### Analysis
 
 *File: `india\analysis_prompts.py`*
 
@@ -928,7 +928,7 @@ The dissenting opinions are:
 The abstract is:
 ```
 
-#### Col Issue
+#### Choice of Law Issue
 
 ```text
 TASK: Identify the specific choice of law questions that the court actually decided in this private international law (PIL) case. 
@@ -968,7 +968,7 @@ Extracted Choice of Law Section:
 The issue is:
 ```
 
-#### Courts Position Dissenting Opinions
+#### Court's Position Dissenting Opinions
 
 ```text
 TASK: Identify and summarize any dissenting or minority judicial opinions specifically related to choice of law analysis.
@@ -1011,7 +1011,7 @@ Classified Theme(s):
 The dissenting opinions are:
 ```
 
-#### Courts Position Obiter Dicta
+#### Court's Position Obiter Dicta
 
 ```text
 TASK: Extract judicial observations about choice of law that are not essential to the court's decision but provide persuasive legal commentary.
@@ -1103,15 +1103,15 @@ Classified Theme(s):
 The court's position is:
 ```
 
-#### Facts
+#### Relevant Facts
 
 ```text
 TASK: Extract and synthesize factual elements essential for understanding the choice of law analysis into a single, coherent paragraph.
 INSTRUCTIONS:
 1.	Output Requirement: 
-Provide an answer as concise as possible, up to 300 words containing all relevant facts in narrative form.
+Provide an answer as concise as possible, up to 300 words, containing all relevant facts in narrative form.
 2.	Content Priority:
-Elaborate on facts including, but not limited to the following, as long as they are relevant for the private international law (PIL) and choice of law discussion in the decision: 
+Elaborate on facts, including but not limited to the following, as long as they are relevant for the private international law (PIL) and choice of law discussion in the decision: 
 -	Party characteristics (nationality, domicile, place of business/incorporation)
 -	Nature and geography of the underlying transaction/relationship
 -	Express or implied choice of law indicators
@@ -1138,7 +1138,7 @@ Extracted Choice of Law Section:
 The facts are:
 ```
 
-#### Pil Provisions
+#### PIL Provisions
 
 ```text
 TASK: Extract only the legal authorities that the court actually used to support its choice of law reasoning and decision.
