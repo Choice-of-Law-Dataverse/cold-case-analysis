@@ -27,39 +27,28 @@ Base the factual narrative solely on the provided judgment text, synthesizing in
 
 # ===== PIL PROVISIONS =====
 PIL_PROVISIONS_PROMPT = """
-TASK: Extract only the legal authorities that the court actually used to support its choice of law reasoning and decision.
+TASK: Extract only private international law–related cases that the court actually used to support its choice of law reasoning and decision.
 INSTRUCTIONS:
-1.	Inclusion Standard: Include authorities only where the court:
--	Applied the authority's principle to reach its conclusion
--	Adopted the authority's reasoning as part of its analysis
--	Used the authority to interpret or clarify legal principles
--	Distinguished or followed the authority's approach
--	If no textbooks/academic sources, and/or statutory provisions have been cited, then do not output these headings.
-2.	Authority Categories:
--	Judicial Decisions: Cases the court followed, distinguished, or applied
--	Textbooks/Treatises: Academic sources (Dicey, Cheshire, etc.) the court cited for legal principles
+1.	Authority Categories:
+-	Judicial Decisions: Private international law cases the court followed, distinguished, or applied
 -	Statutory Provisions: Specific legislative rules the court applied
 -	Legal Principles: Established doctrines or tests the court referenced.
-3.	Usage Description Requirements:
--	For Cases: List case name only. Include citations only if provided in the judgment. (no usage explanation needed)
--	For Textbooks/Academic Sources: List names. Provide one-line explanation of how used for each.
+2.	Usage Description Requirements:
+-	For Cases: List case name and full citations only if provided in the judgment. (no usage explanation needed)
 -	For Statutory Provisions: List provision only (no usage explanation needed)
-4.	Exclusions:
--	Authorities cited by parties/counsel unless court adopted their reasoning
+3.	Exclusions:
 -	Cases mentioned for historical context without direct application
 -	Authorities cited but not used in the court's actual reasoning
 -	General legal background citations not supporting the specific decision
 -   Sources that do not have precedential value
-5.	OUTPUT FORMAT:
+4.	OUTPUT FORMAT:
 **Judicial Precedents:**
--	[Case name 1]
--	[Case name 2]
-**Textbooks/Academic Sources:**
--	[Source]: [Brief explanation of how court used it]
-**Statutory Provisions:**
+-	[Case name 1; full citation]
+-	[Case name 2; full citation]
+**Statutory Provisions, if any:**
 -	[Provision name/section]
-6.	CONSTRAINT: Extract only from the court's own reasoning in the provided judgment text, focusing on authorities that directly supported the choice of law analysis and conclusion.
-\nCourt Decision Text:\n{text}\n\nExtracted Choice of Law Section:\n{col_section}\n\nThe authorities are:\n
+5.	CONSTRAINT: Extract only from the court's own reasoning in the provided judgment text, focusing on authorities that directly supported the choice of law analysis and conclusion. Do not cite cases or provisions that are not private international law-related.
+\nCourt Decision Text:\n{text}\n\nExtracted Choice of Law Section:\n{col_section}\n\nThe sources are:\n
 """
 
 # ===== CHOICE OF LAW ISSUE =====
