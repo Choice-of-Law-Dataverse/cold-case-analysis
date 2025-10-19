@@ -5,41 +5,9 @@ def load_css():
     """
     Load custom CSS styling for chat and UI components.
     """
-    st.markdown("""
+    st.markdown(
+        """
     <style>
-    /* Import Inter font */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-    /* Base styles */
-    body {
-        font-family: 'Inter', sans-serif;
-        color: #0F0035 !important;
-    }
-
-    /* Typography */
-    h1 {
-        font-size: 32px !important;
-        font-weight: 700 !important;
-        color: #0F0035 !important;
-    }
-
-    h2 {
-        font-size: 20px !important;
-        font-weight: 600 !important;
-        color: #0F0035 !important;
-    }
-
-    h3 {
-        font-size: 20px !important;
-        font-weight: 400 !important;
-        color: #0F0035 !important;
-    }
-
-    p {
-        font-size: 14px !important;
-        line-height: 28px !important;
-        color: #0F0035 !important;
-    }
 
     /* Message containers */
     .message-container {
@@ -56,20 +24,6 @@ def load_css():
         color: #0F0035;
     }
 
-    /* User messages */
-    .user-message {
-        background-color: #f3f2fa;  /* cold-purple-fake-alpha */
-        color: #0F0035;  /* cold-night */
-        padding: 15px;
-        border-radius: 0;
-        margin: 8px 0;
-        max-width: 80%;
-        margin-left: auto;
-        margin-right: 0;
-        border: 1px solid #6F4DFA;  /* cold-purple */
-        font-size: 14px !important;
-        line-height: 28px !important;
-    }
 
     /* Machine messages */
     .machine-message {
@@ -86,62 +40,6 @@ def load_css():
         line-height: 28px !important;
     }
 
-    /* Input areas */
-    .stTextArea textarea {
-        font-family: 'Inter', sans-serif;
-        font-size: 14px !important;
-        line-height: 28px !important;
-        color: #0F0035 !important;
-        caret-color: #0F0035 !important;
-        border: 1px solid #E2E8F0 !important;  /* cold-gray */
-        border-radius: 0 !important;
-        padding: 12px !important;
-        background-color: #FAFAFA; !important;
-    }
-
-    .stTextArea textarea:focus {
-        border-color: #6F4DFA !important;  /* cold-purple */
-        box-shadow: none !important;
-    }
-
-    /* Buttons */
-    .stButton button {
-        font-family: 'Inter', sans-serif;
-        font-size: 14px !important;
-        font-weight: 400 !important;
-        background-color: #6F4DFA !important;  /* cold-purple */
-        color: #FFFFFF !important;  /* white text for contrast */
-        border-radius: 0 !important;
-        padding: 8px 16px !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-
-    .stButton button:hover {
-        background-color: #5a3fd9 !important;  /* slightly darker cold-purple */
-        color: #FFFFFF !important;  /* maintain white text on hover */
-    }
-
-    /* Ensure button text/label elements are also white */
-    .stButton button p,
-    .stButton button div,
-    .stButton button span {
-        color: #FFFFFF !important;
-    }
-
-    /* Sliders */
-    .stSlider {
-        /* constrain slider width */
-        max-width: 400px;
-    }
-
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #FAFAFA !important;
-        color: #0F0035 !important;
-        border-right: 1px solid #E2E8F0 !important; /* optional, clean border */
-        position: relative;
-    }
 
     .cold-sidebar-footer {
         margin: 24px 0 0 0;
@@ -160,23 +58,6 @@ def load_css():
         display: block;
     }
 
-    /* Header */
-    header[data-testid="stHeader"] {
-        background-color: white !important;
-        /*border-bottom: 1px solid #E2E8F0 !important;   cold-gray */
-    }
-
-    /* Warnings */
-    .stWarning {
-        background-color: #FFF0D9 !important;  /* cold-cream */
-        border: 1px solid #FF9D00 !important;  /* label-legal-instrument */
-        color: #0F0035 !important;  /* cold-night */
-    }
-
-    /* Main container */
-    .stApp {
-        background-color: white !important;
-    }
 
     /* Main top logo */
     .cold-main-logo {
@@ -193,27 +74,53 @@ def load_css():
         margin: 0 0 40px 0;
     }
 
-    /* Lists */
-    ul {
-        list-style-type: disc;
-        margin: 0 !important;
-        padding: 0.5rem 0 1.5rem 1.5rem !important;
-    }
+    /* Print styles */
+    @media print {
+        /* Hide elements that shouldn't be printed */
+        section[data-testid="stSidebar"],
+        header[data-testid="stHeader"],
+        .stButton,
+        button,
+        .cold-main-logo,
+        footer,
+        .stDeployButton,
+        .machine-message,
+        div[data-testid="stStatusWidget"],
+        .stMarkdown:has(.cold-main-logo),
+        [role="tooltip"],
+        .stTooltipHoverTarget,
+        [data-testid="stTooltipHoverTarget"],
+        [data-testid="stButton"] [title],
+        button[title],
+        .stButton button[title]:after,
+        .stButton button[title]:before {
+            display: none !important;
+        }
 
-    li {
-        margin: 0 !important;
-        color: #0F0035 !important;  /* cold-night */
-    }
+        /* Ensure content fits on page */
+        .stApp {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
 
-    li::marker {
-        color: #0F0035 !important;  /* cold-night */
-    }
+        /* Optimize text for printing */
+        body, p, div, span {
+            color: #000 !important;
+            background: white !important;
+            font-size: 12pt !important;
+        }
 
-    /* Links */
-    a {
-        color: #6F4DFA !important;  /* cold-purple */
-        text-decoration: none !important;
-        font-weight: 400 !important;
+        .stMarkdown p, .stMarkdown div, .stMarkdown span {
+            font-size: 12pt !important;
+        }
+
+        /* Show links in full */
+        a[href]:after {
+            content: " (" attr(href) ")";
+            font-size: 0.8em;
+        }
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
