@@ -69,10 +69,10 @@ def test_llm_calls_are_instrumented():
 
 def test_jurisdiction_classifier_has_span():
     """Test that jurisdiction classifier functions have logfire spans."""
-    from tools.jurisdiction_classifier import detect_precise_jurisdiction_with_confidence
-    
     # Verify the function exists and has the proper structure with span
     import inspect
+
+    from tools.jurisdiction_classifier import detect_precise_jurisdiction_with_confidence
     source = inspect.getsource(detect_precise_jurisdiction_with_confidence)
     assert "logfire.span" in source, "detect_precise_jurisdiction_with_confidence should have logfire.span"
     assert 'logfire.span("detect_precise_jurisdiction")' in source
@@ -81,10 +81,10 @@ def test_jurisdiction_classifier_has_span():
 
 def test_database_save_has_span():
     """Test that database save function has logfire span."""
-    from components.database import save_to_db
-    
     # Verify the function exists and has the proper structure with span
     import inspect
+
+    from components.database import save_to_db
     source = inspect.getsource(save_to_db)
     assert "logfire.span" in source, "save_to_db should have logfire.span"
     assert 'logfire.span("save_to_db")' in source
