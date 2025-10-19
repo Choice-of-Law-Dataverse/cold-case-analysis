@@ -215,5 +215,49 @@ def load_css():
         text-decoration: none !important;
         font-weight: 400 !important;
     }
+
+    /* Print styles */
+    @media print {
+        /* Hide elements that shouldn't be printed */
+        section[data-testid="stSidebar"],
+        header[data-testid="stHeader"],
+        .stButton,
+        button,
+        .cold-main-logo,
+        footer,
+        .stDeployButton,
+        div[data-testid="stStatusWidget"],
+        .stMarkdown:has(.cold-main-logo) {
+            display: none !important;
+        }
+
+        /* Ensure content fits on page */
+        .stApp {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Optimize text for printing */
+        body, p, div, span {
+            color: #000 !important;
+            background: white !important;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #000 !important;
+            page-break-after: avoid;
+        }
+
+        /* Prevent breaking inside containers */
+        .element-container {
+            page-break-inside: avoid;
+        }
+
+        /* Show links in full */
+        a[href]:after {
+            content: " (" attr(href) ")";
+            font-size: 0.8em;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)

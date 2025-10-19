@@ -24,6 +24,7 @@ from models.analysis_models import (
 from models.classification_models import ThemeClassificationOutput
 from tools.case_analyzer import analyze_case_workflow
 from utils.debug_print_state import print_state
+from utils.state_manager import reset_workflow_state
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +172,111 @@ def display_completion_message(state):
         )
         return True
     return False
+
+
+def render_results_as_markdown(state):
+    """
+    Render all analysis results as markdown (read-only view mode).
+
+    Args:
+        state: The current analysis state
+    """
+    from components.confidence_display import add_confidence_chip_css, render_confidence_chip
+
+    add_confidence_chip_css()
+    steps = get_analysis_steps(state)
+
+    st.header("Analysis Results")
+
+    # Case Citation
+    case_citation = state.get("case_citation", "N/A")
+    if case_citation:
+        confidence_key = "case_citation_confidence"
+        reasoning_key = "case_citation_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Case Citation")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "view_case_citation")
+
+        st.markdown(case_citation)
+        st.markdown("---")
+
+    # Themes
+    classification = state.get("classification", [])
+    if classification:
+        current_themes = classification[-1] if isinstance(classification, list) else classification
+        confidence_key = "classification_confidence"
+        reasoning_key = "classification_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Themes")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "view_themes")
+
+        st.markdown(f"**{current_themes}**")
+        st.markdown("---")
+
+    # Choice of Law Section
+    col_section = state.get("col_section", [])
+    if col_section:
+        current_col = col_section[-1] if isinstance(col_section, list) else col_section
+        confidence_key = "col_section_confidence"
+        reasoning_key = "col_section_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader("Choice of Law Section")
+            if confidence:
+                render_confidence_chip(confidence, reasoning, "view_col_section")
+
+        st.markdown(current_col)
+        st.markdown("---")
+
+    # Analysis Steps
+    for name, _ in steps:
+        display_name = get_step_display_name(name, state)
+
+        content = state.get(name)
+        if not content:
+            continue
+
+        current_value = content[-1] if isinstance(content, list) else content
+
+        confidence_key = f"{name}_confidence"
+        reasoning_key = f"{name}_reasoning"
+        confidence_list = state.get(confidence_key, [])
+        reasoning_list = state.get(reasoning_key, [])
+        confidence = confidence_list[-1] if confidence_list else None
+        reasoning = reasoning_list[-1] if reasoning_list else "No reasoning available"
+
+        with st.container(horizontal=True):
+            st.subheader(display_name)
+            if confidence:
+                render_confidence_chip(confidence, reasoning, f"view_{name}")
+
+        if name == "pil_provisions":
+            # Display PIL provisions as formatted list
+            if isinstance(current_value, list):
+                for provision in current_value:
+                    st.markdown(f"- {provision}")
+            else:
+                st.markdown(current_value)
+        else:
+            st.markdown(current_value)
+
+        st.markdown("---")
 
 
 def get_analysis_steps(state):
@@ -521,4 +627,29 @@ def render_analysis_workflow():
     elif not state.get("analysis_done"):
         render_final_editing_phase()
     else:
+        # Analysis is done - show completion message, results in view mode, and action buttons
         display_completion_message(state)
+
+        # Render results as markdown (read-only)
+        render_results_as_markdown(state)
+
+        # Add action buttons in a horizontal layout
+        col1, col2, _ = st.columns([1, 1, 3])
+
+        with col1:
+            if st.button("🖨️ Print", key="print_button", help="Print the analysis results"):
+                # Inject JavaScript to trigger browser print dialog
+                st.markdown(
+                    """
+                    <script>
+                    window.print();
+                    </script>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+        with col2:
+            if st.button("📝 New Submission", key="new_submission_button", help="Start a new case analysis"):
+                reset_workflow_state()
+                st.rerun()
+

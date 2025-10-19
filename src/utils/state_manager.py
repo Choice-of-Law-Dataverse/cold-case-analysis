@@ -63,3 +63,30 @@ def load_demo_case():
     from utils.data_loaders import get_demo_case_text
 
     st.session_state.full_text_input = get_demo_case_text()
+
+
+def reset_workflow_state():
+    """
+    Reset the workflow state for a new submission while preserving authentication.
+    Keeps: user, llm_model_select, user_email
+    Resets: everything else
+    """
+    # Preserve auth and model selection
+    preserved_keys = {
+        "user": st.session_state.get("user"),
+        "llm_model_select": st.session_state.get("llm_model_select"),
+        "user_email": st.session_state.get("user_email"),
+    }
+
+    # Clear all session state
+    for key in list(st.session_state.keys()):
+        if key not in preserved_keys:
+            del st.session_state[key]
+
+    # Restore preserved values
+    for key, value in preserved_keys.items():
+        if value is not None:
+            st.session_state[key] = value
+
+    # Reinitialize col_state
+    initialize_col_state()
