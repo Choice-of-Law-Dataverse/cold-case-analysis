@@ -6,8 +6,10 @@ Analysis workflow components for the CoLD Case Analyzer.
 import json
 import logging
 import os
+import time
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from components.database import save_to_db
 from models.analysis_models import (
@@ -204,7 +206,6 @@ def render_results_as_markdown(state):
                 render_confidence_chip(confidence, reasoning, "view_case_citation")
 
         st.markdown(case_citation)
-        st.markdown("---")
 
     # Themes
     classification = state.get("classification", [])
@@ -223,7 +224,6 @@ def render_results_as_markdown(state):
                 render_confidence_chip(confidence, reasoning, "view_themes")
 
         st.markdown(f"**{current_themes}**")
-        st.markdown("---")
 
     # Choice of Law Section
     col_section = state.get("col_section", [])
@@ -242,7 +242,6 @@ def render_results_as_markdown(state):
                 render_confidence_chip(confidence, reasoning, "view_col_section")
 
         st.markdown(current_col)
-        st.markdown("---")
 
     # Analysis Steps
     for name, _ in steps:
@@ -275,8 +274,6 @@ def render_results_as_markdown(state):
                 st.markdown(current_value)
         else:
             st.markdown(current_value)
-
-        st.markdown("---")
 
 
 def get_analysis_steps(state):
@@ -638,18 +635,36 @@ def render_analysis_workflow():
 
         with col1:
             if st.button("🖨️ Print", key="print_button", help="Print the analysis results"):
-                # Inject JavaScript to trigger browser print dialog
-                st.markdown(
-                    """
+                # Use components to execute JavaScript for printing with access to parent window
+
+                # Create a unique timestamp to force different execution each time
+                timestamp = int(time.time() * 1000)
+
+                components.html(
+                    f"""
                     <script>
-                    window.print();
+                    // Try to access parent window for printing the main page content
+                    setTimeout(function() {{
+                        console.log('Triggering print at {timestamp}');
+                        try {{
+                            // Try to print parent window (main Streamlit page)
+                            if (window.parent && window.parent !== window) {{
+                                window.parent.print();
+                            }} else {{
+                                // Fallback to current window
+                                window.print();
+                            }}
+                        }} catch (e) {{
+                            console.log('Parent access failed, using current window:', e);
+                            window.print();
+                        }}
+                    }}, 200);
                     </script>
                     """,
-                    unsafe_allow_html=True,
+                    height=0,
                 )
 
         with col2:
             if st.button("📝 New Submission", key="new_submission_button", help="Start a new case analysis"):
                 reset_workflow_state()
                 st.rerun()
-
