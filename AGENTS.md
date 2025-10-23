@@ -167,6 +167,9 @@ cold-case-analysis/
 │   │   ├── sidebar.py                  # Sidebar rendering
 │   │   ├── database.py                 # Database persistence
 │   │   └── css.py                      # Custom CSS styling
+│   ├── models/                         # Data models (Pydantic)
+│   │   ├── analysis_models.py          # Analysis output models
+│   │   └── classification_models.py    # Classification models
 │   ├── tools/                          # Analysis tools and LLM integration
 │   │   ├── jurisdiction_detector.py    # Legal system type detection
 │   │   ├── jurisdiction_classifier.py  # Precise jurisdiction classification

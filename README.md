@@ -32,6 +32,7 @@ The codebase uses modular components for authentication, input processing, datab
 cold-case-analysis/
 ├── src/                          # Main application source code
 │   ├── app.py                    # Streamlit app entry point
+│   ├── config.py                 # Configuration and initialization
 │   ├── components/               # UI components
 │   │   ├── auth.py              # Authentication & model selection
 │   │   ├── database.py          # Database persistence
@@ -45,6 +46,9 @@ cold-case-analysis/
 │   │   ├── main_workflow.py    # Workflow orchestration
 │   │   ├── sidebar.py          # Sidebar component
 │   │   └── css.py              # Custom styling
+│   ├── models/                   # Data models (Pydantic)
+│   │   ├── analysis_models.py  # Analysis output models
+│   │   └── classification_models.py  # Classification models
 │   ├── utils/                    # Utility functions
 │   │   ├── state_manager.py    # Session state management
 │   │   ├── data_loaders.py     # Data loading utilities
@@ -140,6 +144,100 @@ The core workflow logic is distributed across the following components:
 #### `css.py`
 - Custom CSS styling for the application
 - Functions: `load_css()`
+
+Utilities are further specified under:
+
+### Configuration (`config.py`)
+
+The main configuration module that initializes the application environment:
+
+- **Environment Setup**: Loads environment variables from `.env` file
+- **Logging Configuration**: Sets up application-wide logging
+- **LLM Clients**: Provides factory functions for OpenAI clients
+  - `get_llm()`: Returns a LangChain ChatOpenAI instance
+  - `get_openai_client()`: Returns an OpenAI client instance
+- **Logfire Monitoring**: Configures and instruments:
+  - OpenAI API calls for automatic tracing
+  - HTTP requests via requests library
+  - PostgreSQL database calls via psycopg2
+- **Model Selection**: Supports configurable model selection via environment variables
+
+Key environment variables required:
+- `OPENAI_API_KEY` (required): OpenAI API key for LLM functionality
+- `OPENAI_MODEL` (optional): Default model to use (defaults to "gpt-5-nano")
+- `LOGFIRE_TOKEN` (optional): Token for Logfire monitoring service
+
+### Data Models (`models/`)
+
+Pydantic models that define structured outputs for analysis and classification tasks. These models ensure type safety and validation throughout the application.
+
+#### `analysis_models.py`
+
+Output models for case analysis steps:
+
+- **`ColSectionOutput`**: Choice of Law section extraction results
+  - `col_sections: list[str]` - List of extracted COL section texts
+  - `confidence: Literal["low", "medium", "high"]` - Confidence level
+  - `reasoning: str` - Explanation of extraction
+  
+- **`CaseCitationOutput`**: Case citation extraction results
+  - `case_citation: str` - Extracted academic-format citation
+  - `confidence` and `reasoning` fields
+  
+- **`RelevantFactsOutput`**: Relevant facts extraction results
+  - `relevant_facts: str` - Factual background of the case
+  - `confidence` and `reasoning` fields
+  
+- **`PILProvisionsOutput`**: PIL provisions extraction results
+  - `pil_provisions: list[str]` - List of legal provisions cited
+  - `confidence` and `reasoning` fields
+  
+- **`ColIssueOutput`**: Choice of Law issue identification results
+  - `col_issue: str` - The COL issue(s) in the case
+  - `confidence` and `reasoning` fields
+  
+- **`CourtsPositionOutput`**: Court's position analysis results
+  - `courts_position: str` - Court's reasoning and decision
+  - `confidence` and `reasoning` fields
+  
+- **`ObiterDictaOutput`**: Obiter dicta extraction results (Common Law)
+  - `obiter_dicta: str` - Non-binding statements from opinion
+  - `confidence` and `reasoning` fields
+  
+- **`DissentingOpinionsOutput`**: Dissenting opinions extraction results (Common Law)
+  - `dissenting_opinions: str` - Dissenting judge opinions
+  - `confidence` and `reasoning` fields
+  
+- **`AbstractOutput`**: Case abstract generation results
+  - `abstract: str` - Concise case summary
+  - `confidence` and `reasoning` fields
+
+#### `classification_models.py`
+
+Output models for classification tasks:
+
+- **`JurisdictionOutput`**: Jurisdiction detection results
+  - `legal_system_type: str` - Type of legal system (e.g., "Civil-law jurisdiction")
+  - `precise_jurisdiction: str` - Specific jurisdiction (e.g., "Switzerland")
+  - `jurisdiction_code: str` - ISO country code (e.g., "CH")
+  - `confidence` and `reasoning` fields
+  
+- **`ThemeClassificationOutput`**: PIL theme classification results
+  - `themes: list[ThemeWithNA]` - List of classified themes
+  - `confidence` and `reasoning` fields
+  
+- **`Theme`**: Literal type defining valid PIL themes:
+  - "Party autonomy", "Tacit choice", "Partial choice", "Absence of choice"
+  - "Arbitration", "Freedom of Choice", "Rules of Law", "Dépeçage"
+  - "Public policy", "Mandatory rules", "Consumer contracts", "Employment contracts"
+  
+- **`ThemeWithNA`**: Theme type extended with "NA" for non-applicable cases
+
+All models include:
+- Type-safe field definitions with Pydantic
+- Confidence levels (low, medium, high) for quality assessment
+- Reasoning fields for explainability and transparency
+- Field descriptions for documentation
 
 Utilities are further specified under:
 

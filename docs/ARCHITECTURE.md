@@ -205,6 +205,22 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `css.py`: Custom styling
 - `database.py`: PostgreSQL persistence
 
+**Configuration** (`config.py`):
+- Application initialization and environment setup
+- LLM client factory functions (`get_llm()`, `get_openai_client()`)
+- Logfire monitoring and instrumentation configuration
+- OpenAI, HTTP, and database call tracing
+- Environment variable management
+
+**Data Models** (`models/`):
+- `analysis_models.py`: Pydantic models for analysis outputs
+  - ColSectionOutput, CaseCitationOutput, RelevantFactsOutput
+  - PILProvisionsOutput, ColIssueOutput, CourtsPositionOutput
+  - ObiterDictaOutput, DissentingOpinionsOutput, AbstractOutput
+- `classification_models.py`: Pydantic models for classification tasks
+  - JurisdictionOutput, ThemeClassificationOutput
+  - Theme type definitions and validation
+
 **Tools** (`tools/`):
 - `case_analyzer.py`: Core case analysis logic with LLM integration
 - `col_extractor.py`: COL section extraction tool
@@ -857,6 +873,9 @@ cold-case-analysis/
 │   │   ├── sidebar.py                  # Sidebar component
 │   │   ├── css.py                      # Custom styling
 │   │   └── database.py                 # Database persistence
+│   ├── models/                         # Data models (Pydantic)
+│   │   ├── analysis_models.py          # Analysis output models
+│   │   └── classification_models.py    # Classification models
 │   ├── tools/                          # Analysis tools
 │   │   ├── case_analyzer.py            # Core analyzer
 │   │   ├── col_extractor.py            # COL extraction
