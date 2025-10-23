@@ -157,27 +157,40 @@ cold-case-analysis/
 │   ├── components/                     # UI components and workflow phases
 │   │   ├── auth.py                     # Authentication & model selection
 │   │   ├── input_handler.py            # Case input handling (PDF, text, demo)
-│   │   ├── jurisdiction_detection.py   # Jurisdiction detection phase
+│   │   ├── jurisdiction.py             # Jurisdiction detection phase
 │   │   ├── col_processor.py            # Choice of Law extraction phase
-│   │   ├── theme_classifier.py         # Theme classification phase
+│   │   ├── themes.py                   # Theme classification phase
 │   │   ├── analysis_workflow.py        # Analysis workflow execution
 │   │   ├── pil_provisions_handler.py   # PIL provisions extraction
 │   │   ├── main_workflow.py            # Main workflow orchestration
+│   │   ├── confidence_display.py       # Confidence display utilities
 │   │   ├── sidebar.py                  # Sidebar rendering
 │   │   ├── database.py                 # Database persistence
 │   │   └── css.py                      # Custom CSS styling
 │   ├── tools/                          # Analysis tools and LLM integration
-│   │   ├── jurisdiction_detector.py    # Legal system type detection
-│   │   ├── precise_jurisdiction_detector.py  # Precise jurisdiction detection
+│   │   ├── jurisdiction_classifier.py  # Jurisdiction detection and classification
 │   │   ├── col_extractor.py            # Choice of Law section extraction
-│   │   ├── themes_classifier.py        # Theme classification
-│   │   └── case_analyzer.py            # Main case analysis logic
+│   │   ├── theme_classifier.py         # Theme classification
+│   │   ├── case_analyzer.py            # Main case analysis logic
+│   │   ├── abstract_generator.py       # Abstract generation
+│   │   ├── case_citation_extractor.py  # Case citation extraction
+│   │   ├── col_issue_extractor.py      # COL issue extraction
+│   │   ├── courts_position_extractor.py # Court position extraction
+│   │   ├── dissenting_opinions_extractor.py # Dissenting opinions (Common Law)
+│   │   ├── obiter_dicta_extractor.py   # Obiter dicta (Common Law)
+│   │   ├── pil_provisions_extractor.py # PIL provisions extraction
+│   │   └── relevant_facts_extractor.py # Relevant facts extraction
+│   ├── models/                         # Data models
+│   │   ├── analysis_models.py          # Pydantic models for analysis outputs
+│   │   └── classification_models.py    # Pydantic models for classification
 │   ├── utils/                          # Utility functions
 │   │   ├── state_manager.py            # Session state management
 │   │   ├── data_loaders.py             # Data loading utilities
 │   │   ├── pdf_handler.py              # PDF processing
 │   │   ├── system_prompt_generator.py  # Dynamic system prompt generation
-│   │   └── themes_extractor.py         # Theme extraction utilities
+│   │   ├── themes_extractor.py         # Theme extraction utilities
+│   │   ├── debug_print_state.py        # Debug utilities
+│   │   └── sample_cd.py                # Sample court decision data
 │   ├── prompts/                        # Prompt templates by jurisdiction
 │   │   ├── legal_system_type_detection.py    # Legal system detection prompt
 │   │   ├── precise_jurisdiction_detection_prompt.py  # Jurisdiction detection

@@ -36,26 +36,46 @@ cold-case-analysis/
 │   │   ├── auth.py              # Authentication & model selection
 │   │   ├── database.py          # Database persistence
 │   │   ├── input_handler.py    # Case input handling
-│   │   ├── jurisdiction_detection.py  # Jurisdiction detection
+│   │   ├── jurisdiction.py     # Jurisdiction detection
 │   │   ├── col_processor.py    # Choice of Law processing
-│   │   ├── theme_classifier.py # Theme classification
+│   │   ├── themes.py           # Theme classification
 │   │   ├── pil_provisions_handler.py  # PIL provisions extraction
 │   │   ├── analysis_workflow.py # Main analysis workflow
-│   │   └── main_workflow.py    # Workflow orchestration
+│   │   ├── main_workflow.py    # Workflow orchestration
+│   │   ├── confidence_display.py # Confidence display utilities
+│   │   ├── sidebar.py          # Sidebar navigation
+│   │   └── css.py              # Custom styling
 │   ├── utils/                    # Utility functions
 │   │   ├── state_manager.py    # Session state management
 │   │   ├── data_loaders.py     # Data loading utilities
 │   │   ├── pdf_handler.py      # PDF text extraction
-│   │   └── themes_extractor.py # Theme extraction logic
+│   │   ├── themes_extractor.py # Theme extraction logic
+│   │   ├── system_prompt_generator.py # System prompt generation
+│   │   ├── debug_print_state.py # Debug utilities
+│   │   └── sample_cd.py        # Sample court decision data
 │   ├── tools/                    # Analysis tools
 │   │   ├── case_analyzer.py    # Core case analysis
 │   │   ├── col_extractor.py    # COL section extraction
-│   │   ├── jurisdiction_detector.py    # Jurisdiction detection
-│   │   └── themes_classifier.py        # Theme classification
+│   │   ├── jurisdiction_classifier.py  # Jurisdiction detection
+│   │   ├── theme_classifier.py # Theme classification
+│   │   ├── abstract_generator.py # Abstract generation
+│   │   ├── case_citation_extractor.py # Citation extraction
+│   │   ├── col_issue_extractor.py # COL issue extraction
+│   │   ├── courts_position_extractor.py # Court position extraction
+│   │   ├── dissenting_opinions_extractor.py # Dissenting opinions
+│   │   ├── obiter_dicta_extractor.py # Obiter dicta extraction
+│   │   ├── pil_provisions_extractor.py # PIL provisions
+│   │   └── relevant_facts_extractor.py # Relevant facts
+│   ├── models/                   # Data models
+│   │   ├── analysis_models.py  # Analysis output models
+│   │   └── classification_models.py # Classification models
 │   ├── prompts/                  # Prompt templates
 │   │   ├── civil_law/          # Civil law jurisdiction prompts
 │   │   ├── common_law/         # Common law jurisdiction prompts
-│   │   └── india/              # Indian law jurisdiction prompts
+│   │   ├── india/              # Indian law jurisdiction prompts
+│   │   ├── legal_system_type_detection.py # System detection
+│   │   ├── precise_jurisdiction_detection_prompt.py # Jurisdiction detection
+│   │   └── prompt_selector.py  # Prompt selection logic
 │   ├── data/                     # Application data
 │   │   ├── themes.csv          # PIL theme taxonomy
 │   │   └── jurisdictions.csv   # Jurisdiction data
@@ -90,17 +110,21 @@ The core workflow logic is distributed across the following components:
 - Input handling for case citation, email, PDF upload, text input, demo case
 - Functions: `render_case_citation_input()`, `render_email_input()`, `render_pdf_uploader()`, `render_text_input()`, `render_demo_button()`, `render_input_phase()`
 
-#### `jurisdiction_detection.py`
+#### `jurisdiction.py`
 - Jurisdiction detection and validation interface
-- Functions: `detect_jurisdiction()`, `render_jurisdiction_detection()`
+- Functions: `render_jurisdiction_detection()`
 
 #### `col_processor.py`
 - Choice of Law section processing and feedback
 - Functions: `display_jurisdiction_info()`, `display_case_info()`, `display_col_extractions()`, `handle_first_extraction_scoring()`, `handle_col_feedback_phase()`, `render_col_processing()`
 
-#### `theme_classifier.py`
+#### `themes.py`
 - Theme classification and editing interface
 - Functions: `display_theme_classification()`, `handle_theme_scoring()`, `handle_theme_editing()`, `display_final_themes()`, `render_theme_classification()`
+
+#### `confidence_display.py`
+- Confidence display utilities for jurisdiction detection
+- Functions: `render_confidence_chip()`, `add_confidence_chip_css()`
 
 #### `pil_provisions_handler.py`
 - PIL provisions extraction and processing
@@ -137,6 +161,14 @@ Utilities are further specified under:
 #### `system_prompt_generator.py`
 - Dynamic system prompt generation for different jurisdictions
 - Functions: Jurisdiction-specific prompt generation
+
+#### `debug_print_state.py`
+- Debug utilities for printing session state
+- Functions: State debugging and inspection
+
+#### `sample_cd.py`
+- Sample court decision data and utilities
+- Functions: Sample data management
 
 ## Quick Start
 
