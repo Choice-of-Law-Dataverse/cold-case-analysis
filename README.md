@@ -103,31 +103,31 @@ The core workflow logic is distributed across the following components:
 
 #### `input_handler.py`
 - Input handling for case citation, email, PDF upload, text input, demo case
-- Functions: `render_case_citation_input()`, `render_email_input()`, `render_pdf_uploader()`, `render_text_input()`, `render_demo_button()`, `render_input_phase()`
+- Functions: `render_pdf_uploader()`, `render_text_input()`, `render_input_phase()`
 
 #### `jurisdiction.py`
 - Enhanced jurisdiction detection with precise jurisdiction identification
-- Functions: `render_jurisdiction_detection()`
+- Functions: `render_jurisdiction_detection()`, `get_final_jurisdiction_data()`
 
 #### `col_processor.py`
 - Choice of Law section processing and feedback
-- Functions: `display_jurisdiction_info()`, `display_case_info()`, `display_col_extractions()`, `handle_first_extraction_scoring()`, `handle_col_feedback_phase()`, `render_col_processing()`
+- Functions: `display_jurisdiction_info()`, `display_col_extractions()`, `handle_col_feedback_phase()`
 
 #### `themes.py`
 - Theme classification and editing interface
-- Functions: `display_theme_classification()`, `handle_theme_editing()`, `display_final_themes()`
+- Functions: `display_theme_classification()`, `handle_theme_editing()`, `render_theme_classification()`
 
 #### `confidence_display.py`
 - Confidence score display with reasoning
-- Functions: `add_confidence_chip_css()`, `render_confidence_chip()`
+- Functions: `render_confidence_chip()`, `render_confidence_modal()`, `add_confidence_chip_css()`
 
 #### `pil_provisions_handler.py`
 - PIL provisions extraction and processing
-- Functions: `render_pil_provisions_handler()`
+- Functions: `display_pil_provisions()`, `handle_pil_provisions_editing()`, `parse_pil_provisions()`, `format_pil_for_display()`, `format_pil_for_storage()`, `update_pil_provisions_state()`
 
 #### `analysis_workflow.py`
 - Analysis workflow execution and management
-- Functions: `display_analysis_history()`, `display_completion_message()`, `get_analysis_steps()`, `execute_analysis_step()`, `handle_step_scoring()`, `handle_step_editing()`, `process_current_analysis_step()`, `render_analysis_workflow()`
+- Functions: `render_email_input()`, `display_completion_message()`, `render_results_as_markdown()`
 
 #### `main_workflow.py`
 - Main workflow orchestration
