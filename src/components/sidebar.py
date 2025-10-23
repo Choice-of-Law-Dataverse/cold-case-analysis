@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import streamlit as st
 
 import config
@@ -33,25 +31,21 @@ def render_sidebar():
 
         st.header("How to Use")
         st.markdown("""
-        1. (Optional) Log in to access more advanced models
-        2. Select the model you want to use
-        3. Enter the case citation for the court decision
-        4. Paste the full text of the court decision
-        5. Click "Detect Jurisdiction" to classify the jurisdiction of the decision, evaluate its accuracy and optionally edit it
-        6. Extract the Choice of Law section, evaluate it, and provide feedback
-        7. Classify the court decision into themes, evaluate the classification, and edit if necessary
-        8. Analyze the decision step-by-step, providing evaluations and edits as needed
+ 1. Search for a case in the [Choice of Law Dataverse](https://cold.global).
+ 2. Upload the PDF file for text extraction or copy and paste the decision content.
+ 3. Click to detect the jurisdiction.
+ 4. Confirm the jurisdiction and its legal system. The tool adapts to different contexts (Civil Law or Common Law).
+ 5. The extraction process begins automatically (please note that after the first step, it may take a couple of minutes for the second step to be completed). You can monitor active processing through the running indicators at the top of the page.
+ 6. The system processes the decision through a structured workflow. A complete summary is generated within five minutes. Please note that outputs are structured in English regardless of the input language, except for Choice of Law Sections.
+ 7. Once the results are displayed, you can review the content and the system's confidence level as to the quality of the analysis.
+ 8. Each category is editable. You can modify the case citation if necessary and select different theme tags within our research scope. If no indicated theme applies to the decision, use the tag “NA”.
+ 9. The system tends to overextract “Choice of Law Section”. You can delete parts that are not relevant for the analysis.
+ 10. If you notice any mistakes in the generated text for Relevant Facts, Sources, Choice of Law Issue, Court’s Position, and Abstract, please remove them before submitting a final analysis.
+ 11. You can provide your contact information to become a registered Case Analyzer user and gain access to additional features using your login credentials.
+ 12. Click to submit your (revised) analysis. You can then print or save a copy of the results for your records.
 
-        The analysis will include:
-        - Abstract
-        - Relevant Facts
-        - Private International Law Provisions
-        - Choice of Law Issue
-        - Court's Position
-
-        After evaluating and optionally editing the Court's Position, the analysis will be saved to a database. Note that results are only saved if you complete the analysis steps and click "Submit" at the end.
-        You can clear the history at any time to start fresh.
-        """)
+This tool is powered by OpenAI's GPT-5. It serves as a guide to be used alongside the original court decision, which may be in a foreign language. We recommend verifying the information, as the Case Analyzer may occasionally produce errors.
+""")
 
         # Add dynamic system prompt testing section
         if st.session_state.get("logged_in"):
@@ -67,9 +61,7 @@ def render_sidebar():
                 """)
 
                 # Show current prompt if available
-                if (st.session_state.get("precise_jurisdiction_confirmed") and
-                    st.session_state.get("precise_jurisdiction")):
-
+                if st.session_state.get("precise_jurisdiction_confirmed") and st.session_state.get("precise_jurisdiction"):
                     jurisdiction_name = st.session_state.get("precise_jurisdiction")
                     legal_system_type = st.session_state.get("legal_system_type", "Unknown")
 
@@ -78,27 +70,25 @@ def render_sidebar():
 
                     if st.button("Preview System Prompt", key="preview_prompt"):
                         from utils.system_prompt_generator import generate_jurisdiction_specific_prompt
+
                         prompt = generate_jurisdiction_specific_prompt(jurisdiction_name, legal_system_type)
                         st.text_area("AI System Prompt:", value=prompt, height=200, disabled=True)
 
-        # documentation download
-        doc_path = Path(__file__).parent.parent / "user_documentation.pdf"
-        try:
-            with open(doc_path, "rb") as doc_file:
-                doc_bytes = doc_file.read()
-            st.download_button(
-                label="Download User Documentation",
-                data=doc_bytes,
-                file_name="user_documentation.pdf",
-                mime="application/pdf"
-            )
-        except Exception as e:
-            st.error(f"Unable to load documentation: {e}")
+        # # documentation download
+        # doc_path = Path(__file__).parent.parent / "user_documentation.pdf"
+        # try:
+        #     with open(doc_path, "rb") as doc_file:
+        #         doc_bytes = doc_file.read()
+        #     st.download_button(
+        #         label="Download User Documentation", data=doc_bytes, file_name="user_documentation.pdf", mime="application/pdf"
+        #     )
+        # except Exception as e:
+        #     st.error(f"Unable to load documentation: {e}")
 
-        # clear history button
-        if st.button("Clear History", key="clear_history"):
-            st.session_state.clear()
-            st.rerun()
+        # # clear history button
+        # if st.button("Clear History", key="clear_history"):
+        #     st.session_state.clear()
+        #     st.rerun()
 
         # Footer endorsement and logo at the bottom of the sidebar
         st.markdown(

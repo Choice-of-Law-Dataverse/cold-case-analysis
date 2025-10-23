@@ -87,6 +87,7 @@ def load_css():
         .machine-message,
         div[data-testid="stStatusWidget"],
         .stMarkdown:has(.cold-main-logo),
+        .app-description,
         [role="tooltip"],
         .stTooltipHoverTarget,
         [data-testid="stTooltipHoverTarget"],

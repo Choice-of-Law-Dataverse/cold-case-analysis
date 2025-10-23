@@ -24,13 +24,26 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-st.title("CoLD Case Analyzer")
-st.markdown("""
-This tool helps you analyze court decisions and get structured summaries.
-You can provide feedback to improve the analysis until you're satisfied with the result.
+st.title("Case Analyzer")
+st.markdown(
+    """
+<div class="app-description">
 
-The CoLD Case Analyzer can make mistakes. Please review each answer carefully.
-""")
+This is a free AI tool that helps you interpret private international law decisions. The accuracy of results may vary depending on case complexity.
+
+
+Summaries are generated automatically within approximately five minutes after uploading the PDF and confirming the jurisdiction. The system extracts the main passages of the text (verbatim) pertinent to private international law, then organizes key information in English covering themes, relevant facts, applicable sources, choice of law issues, and the court's position on the choice of law issue. You can revise it and submit a final version of a case analysis.
+
+
+This tool is part of the [Choice of Law Dataverse](https://cold.global) (CoLD) project. The results generated with the Case Analyzer are reviewed by researchers and can be integrated as descriptions of court decisions from multiple countries worldwide, contributing to comparative law research. The scope of analysis centers on party autonomy, i.e., cases addressing freedom of choice, non-State law, express and tacit choice, overriding mandatory rules, public policy, and absence of choice.
+
+
+For details on the underlying methodology, please consult the prompting structure [documentation](https://github.com/Choice-of-Law-Dataverse/cold-case-analysis/blob/main/src/prompts/README.md).
+
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 render_model_selector()
 load_css()
