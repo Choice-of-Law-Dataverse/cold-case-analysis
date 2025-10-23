@@ -126,6 +126,14 @@ def render_email_input():
     )
 
 
+def render_editable_indicator():
+    """Display a consistent editable indicator for review inputs."""
+    st.markdown(
+        '<div class="editable-indicator"><span class="editable-icon" aria-hidden="true">✏️</span><span>Editable</span></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def get_step_display_name(step_name, state):
     """
     Get the proper display name for an analysis step based on jurisdiction.
@@ -421,6 +429,19 @@ def render_final_editing_phase():
     .pil-chips-container {
         margin: 10px 0;
     }
+
+    .editable-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        color: #1976d2;
+        margin-bottom: 4px;
+    }
+
+    .editable-icon {
+        font-size: 1rem;
+    }
     </style>
     """,
         unsafe_allow_html=True,
@@ -444,6 +465,7 @@ def render_final_editing_phase():
             if confidence:
                 render_confidence_chip(confidence, reasoning, "final_edit_case_citation")
 
+        render_editable_indicator()
         edited_case_citation = st.text_area(
             "Edit Case Citation",
             value=case_citation,
@@ -483,6 +505,7 @@ def render_final_editing_phase():
             elif theme.lower() in theme_mapping:
                 filtered_defaults.append(theme_mapping[theme.lower()])
 
+        render_editable_indicator()
         selected_themes = st.multiselect(
             "Select themes:",
             options=valid_themes,
@@ -509,6 +532,7 @@ def render_final_editing_phase():
             if confidence:
                 render_confidence_chip(confidence, reasoning, "final_edit_col_section")
 
+        render_editable_indicator()
         edited_col = st.text_area(
             "Edit Choice of Law Section",
             value=str(current_col),
@@ -553,11 +577,13 @@ def render_final_editing_phase():
             else:
                 edit_value = str(current_value)
 
+            render_editable_indicator()
             edited = st.text_area(
                 f"Edit {display_name} (JSON format):", value=edit_value, key=f"final_edit_{name}", label_visibility="collapsed"
             )
             edited_values[name] = edited
         else:
+            render_editable_indicator()
             edited = st.text_area(
                 f"{display_name}", value=str(current_value), key=f"final_edit_{name}", label_visibility="collapsed", height=300
             )
