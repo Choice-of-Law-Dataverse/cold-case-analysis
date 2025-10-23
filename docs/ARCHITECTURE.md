@@ -150,31 +150,6 @@ graph TB
     class CaseAnalyzer,COLExtractor,JurDetector,ThemeClassifier tool
     class LocalData,DemoCase data
 ```
-    LangGraph --> LLMHandler
-    StreamlitApp --> LLMHandler
-    
-    CLI --> PromptLibrary
-    LangGraph --> PromptLibrary
-    StreamlitApp --> PromptLibrary
-
-    CLI --> ConfigManager
-    LangGraph --> ConfigManager
-    StreamlitApp --> ConfigManager
-
-    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef cli fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef langgraph fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef streamlit fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef shared fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef data fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-
-    class OpenAI,Llama,Airtable,PostgreSQL external
-    class CLI,CaseAnalyzer,DataHandler,Evaluator cli
-    class LangGraph,GraphConfig,Nodes,Tools,Interrupts langgraph
-    class StreamlitApp,MainWorkflow,Components,StateManager,Database streamlit
-    class LLMHandler,PromptLibrary,ConfigManager shared
-    class LocalFiles,GroundTruth,DemoData data
-```
 
 ## Application Components
 
