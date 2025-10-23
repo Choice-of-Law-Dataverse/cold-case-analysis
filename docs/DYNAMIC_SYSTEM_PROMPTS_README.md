@@ -40,7 +40,7 @@ The dynamic system prompts feature enhances the CoLD Case Analyzer by providing 
 ### Files Modified
 - `utils/system_prompt_generator.py`: Core system prompt generation logic
 - `tools/case_analyzer.py`: Updated to use dynamic prompts for analysis functions
-- `tools/themes_classifier.py`: Updated for theme classification
+- `tools/theme_classifier.py`: Updated for theme classification
 - `tools/col_extractor.py`: Updated for choice of law section extraction
 - `components/sidebar.py`: Added preview functionality
 

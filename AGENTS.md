@@ -157,9 +157,10 @@ cold-case-analysis/
 │   ├── components/                     # UI components and workflow phases
 │   │   ├── auth.py                     # Authentication & model selection
 │   │   ├── input_handler.py            # Case input handling (PDF, text, demo)
-│   │   ├── jurisdiction_detection.py   # Jurisdiction detection phase
+│   │   ├── jurisdiction.py             # Jurisdiction detection phase
 │   │   ├── col_processor.py            # Choice of Law extraction phase
-│   │   ├── theme_classifier.py         # Theme classification phase
+│   │   ├── themes.py                   # Theme classification phase
+│   │   ├── confidence_display.py       # Confidence display component
 │   │   ├── analysis_workflow.py        # Analysis workflow execution
 │   │   ├── pil_provisions_handler.py   # PIL provisions extraction
 │   │   ├── main_workflow.py            # Main workflow orchestration
@@ -168,16 +169,26 @@ cold-case-analysis/
 │   │   └── css.py                      # Custom CSS styling
 │   ├── tools/                          # Analysis tools and LLM integration
 │   │   ├── jurisdiction_detector.py    # Legal system type detection
-│   │   ├── precise_jurisdiction_detector.py  # Precise jurisdiction detection
+│   │   ├── jurisdiction_classifier.py  # Precise jurisdiction classification
 │   │   ├── col_extractor.py            # Choice of Law section extraction
-│   │   ├── themes_classifier.py        # Theme classification
-│   │   └── case_analyzer.py            # Main case analysis logic
+│   │   ├── theme_classifier.py         # Theme classification
+│   │   ├── case_analyzer.py            # Main case analysis logic
+│   │   ├── abstract_generator.py       # Abstract generation
+│   │   ├── relevant_facts_extractor.py # Facts extraction
+│   │   ├── pil_provisions_extractor.py # PIL provisions extraction
+│   │   ├── col_issue_extractor.py      # COL issue extraction
+│   │   ├── courts_position_extractor.py  # Court position extraction
+│   │   ├── obiter_dicta_extractor.py   # Obiter dicta (Common Law)
+│   │   ├── dissenting_opinions_extractor.py  # Dissenting opinions (Common Law)
+│   │   └── case_citation_extractor.py  # Case citation extraction
 │   ├── utils/                          # Utility functions
 │   │   ├── state_manager.py            # Session state management
 │   │   ├── data_loaders.py             # Data loading utilities
 │   │   ├── pdf_handler.py              # PDF processing
 │   │   ├── system_prompt_generator.py  # Dynamic system prompt generation
-│   │   └── themes_extractor.py         # Theme extraction utilities
+│   │   ├── themes_extractor.py         # Theme extraction utilities
+│   │   ├── debug_print_state.py        # Debug utilities
+│   │   └── sample_cd.py                # Sample court decision data
 │   ├── prompts/                        # Prompt templates by jurisdiction
 │   │   ├── legal_system_type_detection.py    # Legal system detection prompt
 │   │   ├── precise_jurisdiction_detection_prompt.py  # Jurisdiction detection
