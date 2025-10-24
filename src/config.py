@@ -44,7 +44,16 @@ def get_llm(model: str | None = None):
     Return a ChatOpenAI instance. If `model` is provided, use it; otherwise fallback to env var or default.
     """
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-    return ChatOpenAI(model=selected)
+
+    # Get timeout and retry settings from environment
+    timeout = int(os.getenv("OPENAI_TIMEOUT", "120"))
+    max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
+
+    return ChatOpenAI(
+        model=selected,
+        timeout=timeout,
+        max_retries=max_retries
+    )
 
 
 def get_openai_client(model: str | None = None):
@@ -52,7 +61,17 @@ def get_openai_client(model: str | None = None):
     Return an OpenAI client instance with the specified model.
     """
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-    return OpenAI(), selected
+
+    # Get timeout and retry settings from environment
+    timeout = float(os.getenv("OPENAI_TIMEOUT", "120"))
+    max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
+
+    client = OpenAI(
+        timeout=timeout,
+        max_retries=max_retries
+    )
+
+    return client, selected
 
 
 # default llm instance (legacy)
