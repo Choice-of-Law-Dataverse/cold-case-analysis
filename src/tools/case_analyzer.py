@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import logfire
+import openai
 
 from models.analysis_models import (
     ColIssueOutput,
@@ -61,174 +62,203 @@ def analyze_case_workflow(
             - DissentingOpinionsOutput (Common Law only)
             - AbstractOutput
     """
-    with logfire.span("analyze_case_workflow"):
-        # Step: Extract CoL sections and case citation in parallel
-        col_section_output = None
-        future = []
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            future.append(
-                executor.submit(
-                    extract_col_section,
-                    text=text,
-                    legal_system=legal_system,
-                    jurisdiction=jurisdiction,
-                    model=model,
+    try:
+        with logfire.span("analyze_case_workflow"):
+            # Step: Extract CoL sections and case citation in parallel
+            col_section_output = None
+            future = []
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future.append(
+                    executor.submit(
+                        extract_col_section,
+                        text=text,
+                        legal_system=legal_system,
+                        jurisdiction=jurisdiction,
+                        model=model,
+                    )
                 )
-            )
-            future.append(
-                executor.submit(
-                    extract_case_citation,
-                    text=text,
-                    legal_system=legal_system,
-                    jurisdiction=jurisdiction,
-                    model=model,
+                future.append(
+                    executor.submit(
+                        extract_case_citation,
+                        text=text,
+                        legal_system=legal_system,
+                        jurisdiction=jurisdiction,
+                        model=model,
+                    )
                 )
+
+                for f in as_completed(future):
+                    result = f.result()
+                    if isinstance(result, ColSectionOutput):
+                        col_section_output = result
+                    yield result
+
+            if col_section_output is None:
+                raise RuntimeError("Choice of Law issue extraction failed - cannot proceed")
+
+            # Step: Classify themes
+            themes_output = theme_classification_node(
+                text=text,
+                col_section=str(col_section_output),
+                legal_system=legal_system,
+                jurisdiction=jurisdiction,
+                model=model,
             )
+            yield themes_output
 
-            for f in as_completed(future):
-                result = f.result()
-                if isinstance(result, ColSectionOutput):
-                    col_section_output = result
-                yield result
+            # Step: Run parallel analysis (relevant facts + PIL provisions + CoL issue)
+            facts_output = None
+            pil_provisions_output = None
+            col_issue_output = None
+            futures = []
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                futures.extend(
+                    [
+                        executor.submit(
+                            extract_relevant_facts,
+                            text,
+                            col_section_output,
+                            legal_system,
+                            jurisdiction,
+                            model,
+                        ),
+                        executor.submit(
+                            extract_pil_provisions,
+                            text,
+                            col_section_output,
+                            legal_system,
+                            jurisdiction,
+                            model,
+                        ),
+                        executor.submit(
+                            extract_col_issue,
+                            text,
+                            col_section_output,
+                            legal_system,
+                            jurisdiction,
+                            model,
+                            themes_output,
+                        ),
+                    ]
+                )
 
-        if col_section_output is None:
-            raise RuntimeError("Choice of Law issue extraction failed - cannot proceed")
+                for future in as_completed(futures):
+                    result = future.result()
+                    if isinstance(result, RelevantFactsOutput):
+                        facts_output = result
+                    elif isinstance(result, PILProvisionsOutput):
+                        pil_provisions_output = result
+                    elif isinstance(result, ColIssueOutput):
+                        col_issue_output = result
+                    yield result
 
-        # Step: Classify themes
-        themes_output = theme_classification_node(
-            text=text,
-            col_section=str(col_section_output),
-            legal_system=legal_system,
-            jurisdiction=jurisdiction,
-            model=model,
-        )
-        yield themes_output
+            if col_issue_output is None:
+                raise RuntimeError("Choice of Law issue extraction failed - cannot proceed")
 
-        # Step: Run parallel analysis (relevant facts + PIL provisions + CoL issue)
-        facts_output = None
-        pil_provisions_output = None
-        col_issue_output = None
-        futures = []
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            futures.extend(
-                [
+            # Step: Run parallel analysis (court's position + common law specific steps)
+            courts_position_output = None
+            obiter_dicta_output = None
+            dissenting_opinions_output = None
+            futures = []
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures.append(
                     executor.submit(
-                        extract_relevant_facts,
-                        text,
-                        col_section_output,
-                        legal_system,
-                        jurisdiction,
-                        model,
-                    ),
-                    executor.submit(
-                        extract_pil_provisions,
-                        text,
-                        col_section_output,
-                        legal_system,
-                        jurisdiction,
-                        model,
-                    ),
-                    executor.submit(
-                        extract_col_issue,
+                        extract_courts_position,
                         text,
                         col_section_output,
                         legal_system,
                         jurisdiction,
                         model,
                         themes_output,
-                    ),
-                ]
-            )
-
-            for future in as_completed(futures):
-                result = future.result()
-                if isinstance(result, RelevantFactsOutput):
-                    facts_output = result
-                elif isinstance(result, PILProvisionsOutput):
-                    pil_provisions_output = result
-                elif isinstance(result, ColIssueOutput):
-                    col_issue_output = result
-                yield result
-
-        if col_issue_output is None:
-            raise RuntimeError("Choice of Law issue extraction failed - cannot proceed")
-
-        # Step: Run parallel analysis (court's position + common law specific steps)
-        courts_position_output = None
-        obiter_dicta_output = None
-        dissenting_opinions_output = None
-        futures = []
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            futures.append(
-                executor.submit(
-                    extract_courts_position,
-                    text,
-                    col_section_output,
-                    legal_system,
-                    jurisdiction,
-                    model,
-                    themes_output,
-                    col_issue_output,
-                )
-            )
-
-            if legal_system == "Common-law jurisdiction":
-                futures.extend(
-                    [
-                        executor.submit(
-                            extract_obiter_dicta,
-                            text,
-                            col_section_output,
-                            legal_system,
-                            jurisdiction,
-                            model,
-                            themes_output,
-                            col_issue_output,
-                        ),
-                        executor.submit(
-                            extract_dissenting_opinions,
-                            text,
-                            col_section_output,
-                            legal_system,
-                            jurisdiction,
-                            model,
-                            themes_output,
-                            col_issue_output,
-                        ),
-                    ]
+                        col_issue_output,
+                    )
                 )
 
-            for future in as_completed(futures):
-                result = future.result()
-                if isinstance(result, CourtsPositionOutput):
-                    courts_position_output = result
-                elif isinstance(result, ObiterDictaOutput):
-                    obiter_dicta_output = result
-                elif isinstance(result, DissentingOpinionsOutput):
-                    dissenting_opinions_output = result
-                yield result
+                if legal_system == "Common-law jurisdiction":
+                    futures.extend(
+                        [
+                            executor.submit(
+                                extract_obiter_dicta,
+                                text,
+                                col_section_output,
+                                legal_system,
+                                jurisdiction,
+                                model,
+                                themes_output,
+                                col_issue_output,
+                            ),
+                            executor.submit(
+                                extract_dissenting_opinions,
+                                text,
+                                col_section_output,
+                                legal_system,
+                                jurisdiction,
+                                model,
+                                themes_output,
+                                col_issue_output,
+                            ),
+                        ]
+                    )
 
-        if facts_output is None:
-            raise RuntimeError("Relevant facts extraction failed - cannot generate abstract")
+                for future in as_completed(futures):
+                    result = future.result()
+                    if isinstance(result, CourtsPositionOutput):
+                        courts_position_output = result
+                    elif isinstance(result, ObiterDictaOutput):
+                        obiter_dicta_output = result
+                    elif isinstance(result, DissentingOpinionsOutput):
+                        dissenting_opinions_output = result
+                    yield result
 
-        if pil_provisions_output is None:
-            raise RuntimeError("PIL provisions extraction failed - cannot generate abstract")
+            if facts_output is None:
+                raise RuntimeError("Relevant facts extraction failed - cannot generate abstract")
 
-        if courts_position_output is None:
-            raise RuntimeError("Court's position extraction failed - cannot generate abstract")
+            if pil_provisions_output is None:
+                raise RuntimeError("PIL provisions extraction failed - cannot generate abstract")
 
-        # Step: Generate abstract (final step, depends on all previous steps)
-        result = extract_abstract(
-            text=text,
-            legal_system=legal_system,
-            jurisdiction=jurisdiction,
-            model=model,
-            themes_output=themes_output,
-            facts_output=facts_output,
-            pil_provisions_output=pil_provisions_output,
-            col_issue_output=col_issue_output,
-            court_position_output=courts_position_output,
-            obiter_dicta_output=obiter_dicta_output,
-            dissenting_opinions_output=dissenting_opinions_output,
-        )
-        yield result
+            if courts_position_output is None:
+                raise RuntimeError("Court's position extraction failed - cannot generate abstract")
+
+            # Step: Generate abstract (final step, depends on all previous steps)
+            result = extract_abstract(
+                text=text,
+                legal_system=legal_system,
+                jurisdiction=jurisdiction,
+                model=model,
+                themes_output=themes_output,
+                facts_output=facts_output,
+                pil_provisions_output=pil_provisions_output,
+                col_issue_output=col_issue_output,
+                court_position_output=courts_position_output,
+                obiter_dicta_output=obiter_dicta_output,
+                dissenting_opinions_output=dissenting_opinions_output,
+            )
+            yield result
+    except GeneratorExit:
+        logger.info("Analysis workflow generator closed early (user navigation or timeout)")
+        raise
+    except openai.APITimeoutError as e:
+        logger.error(f"OpenAI API timeout: {e}")
+        raise RuntimeError(
+            "The AI service request timed out. Please try again in a moment."
+        ) from e
+    except openai.RateLimitError as e:
+        logger.error(f"OpenAI rate limit exceeded: {e}")
+        raise RuntimeError(
+            "Too many requests to the AI service. Please wait a moment and try again."
+        ) from e
+    except openai.AuthenticationError as e:
+        logger.error(f"OpenAI authentication error: {e}")
+        raise RuntimeError(
+            "Authentication failed with the AI service. Please check your API key configuration."
+        ) from e
+    except openai.APIConnectionError as e:
+        logger.error(f"OpenAI API connection error: {e}")
+        raise RuntimeError(
+            "Unable to connect to the AI service. Please check your internet connection and try again."
+        ) from e
+    except openai.APIError as e:
+        logger.error(f"OpenAI API error: {e}")
+        raise RuntimeError(
+            f"AI service error: {str(e)}. Please try again or contact support if the problem persists."
+        ) from e
