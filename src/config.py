@@ -57,9 +57,37 @@ def get_llm(model: str | None = None):
     )
 
 
+# Singleton cache for OpenAI clients
+# Key is (timeout, max_retries) to support different configurations
+# This enables connection pooling and reuse while respecting different timeout/retry requirements
+_openai_client_cache: dict[tuple[float, int], OpenAI] = {}
+
+
 def get_openai_client(model: str | None = None):
     """
     Return an OpenAI client instance with the specified model.
+    Uses a singleton pattern to reuse client instances and leverage httpx connection pooling.
+
+    The client is cached based on its configuration (timeout, max_retries) to ensure
+    that different configurations get separate client instances while allowing reuse
+    of clients with the same configuration. This approach:
+
+    - Leverages httpx connection pooling for better performance
+    - Reduces the number of TCP connections to OpenAI's API
+    - Prevents connection errors from too many simultaneous connections
+    - Maintains thread-safe httpx connection pools within each client
+
+    Args:
+        model: Optional model name. If not provided, uses OPENAI_MODEL env var or defaults to "gpt-5-nano".
+               Note: The model parameter only affects the returned model name, not the cached client instance.
+
+    Returns:
+        A tuple of (OpenAI client instance, selected model name)
+
+    Environment Variables:
+        OPENAI_API_KEY: Required - OpenAI API key
+        OPENAI_TIMEOUT: Optional - Request timeout in seconds (default: 300)
+        OPENAI_MAX_RETRIES: Optional - Maximum retry attempts (default: 3)
     """
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
@@ -68,10 +96,21 @@ def get_openai_client(model: str | None = None):
     timeout = float(os.getenv("OPENAI_TIMEOUT", "300"))
     max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
 
+    # Create cache key based on configuration
+    cache_key = (timeout, max_retries)
+
+    # Return cached client if it exists with the same configuration
+    if cache_key in _openai_client_cache:
+        logger.debug("Reusing cached OpenAI client with timeout=%s, max_retries=%s", timeout, max_retries)
+        return _openai_client_cache[cache_key], selected
+
+    # Create new client and cache it
+    logger.info("Creating new OpenAI client with timeout=%s, max_retries=%s", timeout, max_retries)
     client = OpenAI(
         timeout=timeout,
         max_retries=max_retries
     )
+    _openai_client_cache[cache_key] = client
 
     return client, selected
 
