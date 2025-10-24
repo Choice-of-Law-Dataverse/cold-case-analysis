@@ -8,7 +8,7 @@ The application supports the following environment variables to improve connecti
 
 ### `OPENAI_TIMEOUT`
 
-**Default:** `120` (seconds)
+**Default:** `300` (seconds / 5 minutes)
 
 Controls how long the application will wait for an API response before timing out.
 
@@ -117,9 +117,9 @@ The application handles OpenAI API errors gracefully:
 
 ## Best Practices
 
-1. **Start with defaults:** The default values (120s timeout, 3 retries) work well for most scenarios
+1. **Start with defaults:** The default values (300s timeout, 3 retries) work well for most scenarios
 
-2. **Increase timeout for large documents:** If analyzing very long court decisions (>50 pages), consider increasing timeout to 180-240 seconds
+2. **Increase timeout for large documents:** If analyzing very long court decisions (>50 pages), consider increasing timeout to 360-480 seconds
 
 3. **Increase retries for unreliable networks:** If on mobile or Wi-Fi with intermittent connectivity, set `OPENAI_MAX_RETRIES` to 5 or higher
 
@@ -149,7 +149,7 @@ OPENAI_MAX_RETRIES="10"   # Many retry attempts
 
 ### Production (Balanced)
 ```bash
-OPENAI_TIMEOUT="120"      # 2 minutes (default)
+OPENAI_TIMEOUT="300"      # 5 minutes (default)
 OPENAI_MAX_RETRIES="3"    # Standard retries (default)
 ```
 
