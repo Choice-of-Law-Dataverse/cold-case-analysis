@@ -44,17 +44,29 @@ graph TB
                 Input[Input Handler<br/>PDF/Text/Demo]
                 Jurisdiction[Jurisdiction<br/>Detection]
                 COL[COL Processor<br/>Extraction]
-                Theme[Theme Classifier<br/>Classification]
+                Theme[Themes<br/>Classification]
+                Confidence[Confidence Display<br/>Scoring]
                 PIL[PIL Provisions<br/>Handler]
                 Analysis[Analysis Workflow<br/>Orchestration]
                 MainWF[Main Workflow<br/>Coordinator]
+                Sidebar[Sidebar<br/>Navigation]
+                CSS[CSS<br/>Styling]
             end
             
             subgraph "Tools Layer"
                 CaseAnalyzer[Case Analyzer<br/>Core Logic]
                 COLExtractor[COL Extractor<br/>Extraction Tool]
                 JurDetector[Jurisdiction<br/>Detector]
+                JurClassifier[Jurisdiction<br/>Classifier]
                 ThemeClassifier[Theme Classifier<br/>Classification Tool]
+                AbstractGen[Abstract<br/>Generator]
+                FactsExt[Relevant Facts<br/>Extractor]
+                PILProvExt[PIL Provisions<br/>Extractor]
+                IssueExt[COL Issue<br/>Extractor]
+                PositionExt[Court Position<br/>Extractor]
+                ObiterExt[Obiter Dicta<br/>Extractor]
+                DissentExt[Dissenting Opinions<br/>Extractor]
+                CitationExt[Case Citation<br/>Extractor]
             end
             
             subgraph "Utilities Layer"
@@ -62,6 +74,9 @@ graph TB
                 DataLoaders[Data Loaders<br/>Themes/Demos]
                 PDFHandler[PDF Handler<br/>Text Extraction]
                 PromptSelector[Prompt Selector<br/>Jurisdiction-based]
+                SystemPromptGen[System Prompt<br/>Generator]
+                DebugPrint[Debug Print<br/>State]
+                SampleCD[Sample CD<br/>Demo Data]
             end
             
             subgraph "Prompts Library"
@@ -135,31 +150,6 @@ graph TB
     class CaseAnalyzer,COLExtractor,JurDetector,ThemeClassifier tool
     class LocalData,DemoCase data
 ```
-    LangGraph --> LLMHandler
-    StreamlitApp --> LLMHandler
-    
-    CLI --> PromptLibrary
-    LangGraph --> PromptLibrary
-    StreamlitApp --> PromptLibrary
-
-    CLI --> ConfigManager
-    LangGraph --> ConfigManager
-    StreamlitApp --> ConfigManager
-
-    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef cli fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef langgraph fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef streamlit fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef shared fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef data fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-
-    class OpenAI,Llama,Airtable,PostgreSQL external
-    class CLI,CaseAnalyzer,DataHandler,Evaluator cli
-    class LangGraph,GraphConfig,Nodes,Tools,Interrupts langgraph
-    class StreamlitApp,MainWorkflow,Components,StateManager,Database streamlit
-    class LLMHandler,PromptLibrary,ConfigManager shared
-    class LocalFiles,GroundTruth,DemoData data
-```
 
 ## Application Components
 
@@ -179,9 +169,10 @@ The Streamlit application provides an interactive web interface for analyzing co
 **Components** (`components/`):
 - `auth.py`: Authentication and model selection
 - `input_handler.py`: Case citation, PDF upload, text input, demo case loading
-- `jurisdiction_detection.py`: Legal system identification interface
+- `jurisdiction.py`: Enhanced jurisdiction detection with precise jurisdiction identification
 - `col_processor.py`: Choice of Law section extraction and validation
-- `theme_classifier.py`: PIL theme classification and scoring
+- `themes.py`: PIL theme classification and scoring
+- `confidence_display.py`: Confidence score display with reasoning
 - `pil_provisions_handler.py`: PIL provisions extraction
 - `analysis_workflow.py`: Main analysis execution and step management
 - `main_workflow.py`: Overall workflow orchestration
@@ -189,12 +180,36 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `css.py`: Custom styling
 - `database.py`: PostgreSQL persistence
 
+**Configuration** (`config.py`):
+- Application initialization and environment setup
+- LLM client factory functions (`get_llm()`, `get_openai_client()`)
+- Logfire monitoring and instrumentation configuration
+- OpenAI, HTTP, and database call tracing
+- Environment variable management
+
+**Data Models** (`models/`):
+- `analysis_models.py`: Pydantic models for analysis outputs
+  - ColSectionOutput, CaseCitationOutput, RelevantFactsOutput
+  - PILProvisionsOutput, ColIssueOutput, CourtsPositionOutput
+  - ObiterDictaOutput, DissentingOpinionsOutput, AbstractOutput
+- `classification_models.py`: Pydantic models for classification tasks
+  - JurisdictionOutput, ThemeClassificationOutput
+  - Theme type definitions and validation
+
 **Tools** (`tools/`):
 - `case_analyzer.py`: Core case analysis logic with LLM integration
 - `col_extractor.py`: COL section extraction tool
 - `jurisdiction_detector.py`: Jurisdiction detection logic
-- `precise_jurisdiction_detector.py`: Precise jurisdiction identification
-- `themes_classifier.py`: Theme classification tool
+- `jurisdiction_classifier.py`: Precise jurisdiction identification with confidence
+- `theme_classifier.py`: Theme classification tool
+- `abstract_generator.py`: Abstract generation from analysis results
+- `relevant_facts_extractor.py`: Relevant facts extraction
+- `pil_provisions_extractor.py`: PIL provisions extraction
+- `col_issue_extractor.py`: Choice of Law issue identification
+- `courts_position_extractor.py`: Court position extraction
+- `obiter_dicta_extractor.py`: Obiter dicta extraction (Common Law only)
+- `dissenting_opinions_extractor.py`: Dissenting opinions extraction (Common Law only)
+- `case_citation_extractor.py`: Case citation extraction and normalization
 
 **Utilities** (`utils/`):
 - `state_manager.py`: Session state management
@@ -202,6 +217,8 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `pdf_handler.py`: PDF text extraction
 - `themes_extractor.py`: Theme extraction utilities
 - `system_prompt_generator.py`: Jurisdiction-specific prompt generation
+- `debug_print_state.py`: Debug utilities for printing session state
+- `sample_cd.py`: Sample court decision data for testing
 
 **Prompts** (`prompts/`):
 - `civil_law/`: Civil law jurisdiction prompts
@@ -323,9 +340,10 @@ graph TB
         subgraph "Main Workflow Components"
             MainWorkflow[Main Workflow<br/>Step Orchestration]
             InputHandler[Input Handler<br/>Case Input & Upload]
-            JurisdictionDetect[Jurisdiction Detection<br/>Legal System ID]
+            JurisdictionDetect[Jurisdiction<br/>Legal System ID]
             COLProcessor[COL Processor<br/>Section Extraction]
-            ThemeClassifier[Theme Classifier<br/>PIL Theme Analysis]
+            ThemesComponent[Themes<br/>PIL Theme Analysis]
+            ConfidenceDisplay[Confidence Display<br/>Score & Reasoning]
             AnalysisWorkflow[Analysis Workflow<br/>Complete Analysis]
         end
         
@@ -352,7 +370,8 @@ graph TB
     MainWorkflow --> InputHandler
     MainWorkflow --> JurisdictionDetect
     MainWorkflow --> COLProcessor
-    MainWorkflow --> ThemeClassifier
+    MainWorkflow --> ThemesComponent
+    MainWorkflow --> ConfidenceDisplay
     MainWorkflow --> AnalysisWorkflow
     
     InputHandler --> PDFHandler
@@ -361,8 +380,8 @@ graph TB
     COLProcessor --> COLExtractor
     COLProcessor --> StateManager
     
-    ThemeClassifier --> ThemeExtractor
-    ThemeClassifier --> StateManager
+    ThemesComponent --> ThemeExtractor
+    ThemesComponent --> StateManager
     
     AnalysisWorkflow --> AnalysisRunner
     AnalysisWorkflow --> Database
@@ -376,7 +395,7 @@ graph TB
 
     class App main
     class Auth,ModelSelector,CSS,Sidebar auth
-    class MainWorkflow,InputHandler,JurisdictionDetect,COLProcessor,ThemeClassifier,AnalysisWorkflow workflow
+    class MainWorkflow,InputHandler,JurisdictionDetect,COLProcessor,ThemesComponent,ConfidenceDisplay,AnalysisWorkflow workflow
     class StateManager,DataLoaders,PDFHandler,Database util
     class COLExtractor,ThemeExtractor,AnalysisRunner tool
 ```
@@ -819,22 +838,41 @@ cold-case-analysis/
 │   ├── components/                     # UI components
 │   │   ├── auth.py                     # Authentication
 │   │   ├── input_handler.py            # Input handling
-│   │   ├── jurisdiction_detection.py   # Jurisdiction detection
+│   │   ├── jurisdiction.py             # Jurisdiction detection
 │   │   ├── col_processor.py            # COL processing
-│   │   ├── theme_classifier.py         # Theme classification
+│   │   ├── themes.py                   # Theme classification
+│   │   ├── confidence_display.py       # Confidence display
 │   │   ├── pil_provisions_handler.py   # PIL provisions
 │   │   ├── analysis_workflow.py        # Analysis workflow
-│   │   └── main_workflow.py            # Main orchestration
+│   │   ├── main_workflow.py            # Main orchestration
+│   │   ├── sidebar.py                  # Sidebar component
+│   │   ├── css.py                      # Custom styling
+│   │   └── database.py                 # Database persistence
+│   ├── models/                         # Data models (Pydantic)
+│   │   ├── analysis_models.py          # Analysis output models
+│   │   └── classification_models.py    # Classification models
 │   ├── tools/                          # Analysis tools
 │   │   ├── case_analyzer.py            # Core analyzer
 │   │   ├── col_extractor.py            # COL extraction
 │   │   ├── jurisdiction_detector.py    # Jurisdiction detection
-│   │   └── themes_classifier.py        # Theme classification
+│   │   ├── jurisdiction_classifier.py  # Precise jurisdiction classification
+│   │   ├── theme_classifier.py         # Theme classification
+│   │   ├── abstract_generator.py       # Abstract generation
+│   │   ├── relevant_facts_extractor.py # Facts extraction
+│   │   ├── pil_provisions_extractor.py # PIL provisions
+│   │   ├── col_issue_extractor.py      # COL issue extraction
+│   │   ├── courts_position_extractor.py  # Court position
+│   │   ├── obiter_dicta_extractor.py   # Obiter dicta (Common Law)
+│   │   ├── dissenting_opinions_extractor.py  # Dissenting opinions (Common Law)
+│   │   └── case_citation_extractor.py  # Citation extraction
 │   ├── utils/                          # Utility functions
 │   │   ├── state_manager.py            # State management
 │   │   ├── data_loaders.py             # Data loading
 │   │   ├── pdf_handler.py              # PDF processing
-│   │   └── themes_extractor.py         # Theme extraction
+│   │   ├── themes_extractor.py         # Theme extraction
+│   │   ├── system_prompt_generator.py  # Dynamic prompt generation
+│   │   ├── debug_print_state.py        # Debug utilities
+│   │   └── sample_cd.py                # Sample court decision
 │   ├── prompts/                        # Prompt templates
 │   │   ├── civil_law/                  # Civil law prompts
 │   │   ├── common_law/                 # Common law prompts

@@ -32,26 +32,45 @@ The codebase uses modular components for authentication, input processing, datab
 cold-case-analysis/
 ├── src/                          # Main application source code
 │   ├── app.py                    # Streamlit app entry point
+│   ├── config.py                 # Configuration and initialization
 │   ├── components/               # UI components
 │   │   ├── auth.py              # Authentication & model selection
 │   │   ├── database.py          # Database persistence
 │   │   ├── input_handler.py    # Case input handling
-│   │   ├── jurisdiction_detection.py  # Jurisdiction detection
+│   │   ├── jurisdiction.py     # Jurisdiction detection
 │   │   ├── col_processor.py    # Choice of Law processing
-│   │   ├── theme_classifier.py # Theme classification
+│   │   ├── themes.py           # Theme classification
+│   │   ├── confidence_display.py  # Confidence scores display
 │   │   ├── pil_provisions_handler.py  # PIL provisions extraction
 │   │   ├── analysis_workflow.py # Main analysis workflow
-│   │   └── main_workflow.py    # Workflow orchestration
+│   │   ├── main_workflow.py    # Workflow orchestration
+│   │   ├── sidebar.py          # Sidebar component
+│   │   └── css.py              # Custom styling
+│   ├── models/                   # Data models (Pydantic)
+│   │   ├── analysis_models.py  # Analysis output models
+│   │   └── classification_models.py  # Classification models
 │   ├── utils/                    # Utility functions
 │   │   ├── state_manager.py    # Session state management
 │   │   ├── data_loaders.py     # Data loading utilities
 │   │   ├── pdf_handler.py      # PDF text extraction
-│   │   └── themes_extractor.py # Theme extraction logic
+│   │   ├── themes_extractor.py # Theme extraction logic
+│   │   ├── system_prompt_generator.py  # Dynamic prompt generation
+│   │   ├── debug_print_state.py  # Debug utilities
+│   │   └── sample_cd.py        # Sample court decision data
 │   ├── tools/                    # Analysis tools
 │   │   ├── case_analyzer.py    # Core case analysis
 │   │   ├── col_extractor.py    # COL section extraction
 │   │   ├── jurisdiction_detector.py    # Jurisdiction detection
-│   │   └── themes_classifier.py        # Theme classification
+│   │   ├── jurisdiction_classifier.py  # Precise jurisdiction classification
+│   │   ├── theme_classifier.py # Theme classification
+│   │   ├── abstract_generator.py  # Abstract generation
+│   │   ├── relevant_facts_extractor.py  # Facts extraction
+│   │   ├── pil_provisions_extractor.py  # PIL provisions extraction
+│   │   ├── col_issue_extractor.py  # COL issue extraction
+│   │   ├── courts_position_extractor.py  # Court position extraction
+│   │   ├── obiter_dicta_extractor.py  # Obiter dicta extraction (Common Law)
+│   │   ├── dissenting_opinions_extractor.py  # Dissenting opinions (Common Law)
+│   │   └── case_citation_extractor.py  # Case citation extraction
 │   ├── prompts/                  # Prompt templates
 │   │   ├── civil_law/          # Civil law jurisdiction prompts
 │   │   ├── common_law/         # Common law jurisdiction prompts
@@ -88,31 +107,137 @@ The core workflow logic is distributed across the following components:
 
 #### `input_handler.py`
 - Input handling for case citation, email, PDF upload, text input, demo case
-- Functions: `render_case_citation_input()`, `render_email_input()`, `render_pdf_uploader()`, `render_text_input()`, `render_demo_button()`, `render_input_phase()`
+- Functions: `render_pdf_uploader()`, `render_text_input()`, `render_input_phase()`
 
-#### `jurisdiction_detection.py`
-- Jurisdiction detection and validation interface
-- Functions: `detect_jurisdiction()`, `render_jurisdiction_detection()`
+#### `jurisdiction.py`
+- Enhanced jurisdiction detection with precise jurisdiction identification
+- Functions: `render_jurisdiction_detection()`, `get_final_jurisdiction_data()`
 
 #### `col_processor.py`
 - Choice of Law section processing and feedback
-- Functions: `display_jurisdiction_info()`, `display_case_info()`, `display_col_extractions()`, `handle_first_extraction_scoring()`, `handle_col_feedback_phase()`, `render_col_processing()`
+- Functions: `display_jurisdiction_info()`, `display_col_extractions()`, `handle_col_feedback_phase()`
 
-#### `theme_classifier.py`
+#### `themes.py`
 - Theme classification and editing interface
-- Functions: `display_theme_classification()`, `handle_theme_scoring()`, `handle_theme_editing()`, `display_final_themes()`, `render_theme_classification()`
+- Functions: `display_theme_classification()`, `handle_theme_editing()`, `render_theme_classification()`
+
+#### `confidence_display.py`
+- Confidence score display with reasoning
+- Functions: `render_confidence_chip()`, `render_confidence_modal()`, `add_confidence_chip_css()`
 
 #### `pil_provisions_handler.py`
 - PIL provisions extraction and processing
-- Functions: `render_pil_provisions_handler()`
+- Functions: `display_pil_provisions()`, `handle_pil_provisions_editing()`, `parse_pil_provisions()`, `format_pil_for_display()`, `format_pil_for_storage()`, `update_pil_provisions_state()`
 
 #### `analysis_workflow.py`
 - Analysis workflow execution and management
-- Functions: `display_analysis_history()`, `display_completion_message()`, `get_analysis_steps()`, `execute_analysis_step()`, `handle_step_scoring()`, `handle_step_editing()`, `process_current_analysis_step()`, `render_analysis_workflow()`
+- Functions: `render_email_input()`, `display_completion_message()`, `render_results_as_markdown()`
 
 #### `main_workflow.py`
 - Main workflow orchestration
 - Functions: `render_initial_input_phase()`, `render_processing_phases()`, `render_main_workflow()`
+
+#### `sidebar.py`
+- Sidebar navigation and information display
+- Functions: `render_sidebar()`
+
+#### `css.py`
+- Custom CSS styling for the application
+- Functions: `load_css()`
+
+Utilities are further specified under:
+
+### Configuration (`config.py`)
+
+The main configuration module that initializes the application environment:
+
+- **Environment Setup**: Loads environment variables from `.env` file
+- **Logging Configuration**: Sets up application-wide logging
+- **LLM Clients**: Provides factory functions for OpenAI clients
+  - `get_llm()`: Returns a LangChain ChatOpenAI instance
+  - `get_openai_client()`: Returns an OpenAI client instance
+- **Logfire Monitoring**: Configures and instruments:
+  - OpenAI API calls for automatic tracing
+  - HTTP requests via requests library
+  - PostgreSQL database calls via psycopg2
+- **Model Selection**: Supports configurable model selection via environment variables
+
+Key environment variables required:
+- `OPENAI_API_KEY` (required): OpenAI API key for LLM functionality
+- `OPENAI_MODEL` (optional): Default model to use (defaults to "gpt-5-nano")
+- `LOGFIRE_TOKEN` (optional): Token for Logfire monitoring service
+
+### Data Models (`models/`)
+
+Pydantic models that define structured outputs for analysis and classification tasks. These models ensure type safety and validation throughout the application.
+
+#### `analysis_models.py`
+
+Output models for case analysis steps:
+
+- **`ColSectionOutput`**: Choice of Law section extraction results
+  - `col_sections: list[str]` - List of extracted COL section texts
+  - `confidence: Literal["low", "medium", "high"]` - Confidence level
+  - `reasoning: str` - Explanation of extraction
+  
+- **`CaseCitationOutput`**: Case citation extraction results
+  - `case_citation: str` - Extracted academic-format citation
+  - `confidence` and `reasoning` fields
+  
+- **`RelevantFactsOutput`**: Relevant facts extraction results
+  - `relevant_facts: str` - Factual background of the case
+  - `confidence` and `reasoning` fields
+  
+- **`PILProvisionsOutput`**: PIL provisions extraction results
+  - `pil_provisions: list[str]` - List of legal provisions cited
+  - `confidence` and `reasoning` fields
+  
+- **`ColIssueOutput`**: Choice of Law issue identification results
+  - `col_issue: str` - The COL issue(s) in the case
+  - `confidence` and `reasoning` fields
+  
+- **`CourtsPositionOutput`**: Court's position analysis results
+  - `courts_position: str` - Court's reasoning and decision
+  - `confidence` and `reasoning` fields
+  
+- **`ObiterDictaOutput`**: Obiter dicta extraction results (Common Law)
+  - `obiter_dicta: str` - Non-binding statements from opinion
+  - `confidence` and `reasoning` fields
+  
+- **`DissentingOpinionsOutput`**: Dissenting opinions extraction results (Common Law)
+  - `dissenting_opinions: str` - Dissenting judge opinions
+  - `confidence` and `reasoning` fields
+  
+- **`AbstractOutput`**: Case abstract generation results
+  - `abstract: str` - Concise case summary
+  - `confidence` and `reasoning` fields
+
+#### `classification_models.py`
+
+Output models for classification tasks:
+
+- **`JurisdictionOutput`**: Jurisdiction detection results
+  - `legal_system_type: str` - Type of legal system (e.g., "Civil-law jurisdiction")
+  - `precise_jurisdiction: str` - Specific jurisdiction (e.g., "Switzerland")
+  - `jurisdiction_code: str` - ISO country code (e.g., "CH")
+  - `confidence` and `reasoning` fields
+  
+- **`ThemeClassificationOutput`**: PIL theme classification results
+  - `themes: list[ThemeWithNA]` - List of classified themes
+  - `confidence` and `reasoning` fields
+  
+- **`Theme`**: Literal type defining valid PIL themes:
+  - "Party autonomy", "Tacit choice", "Partial choice", "Absence of choice"
+  - "Arbitration", "Freedom of Choice", "Rules of Law", "Dépeçage"
+  - "Public policy", "Mandatory rules", "Consumer contracts", "Employment contracts"
+  
+- **`ThemeWithNA`**: Theme type extended with "NA" for non-applicable cases
+
+All models include:
+- Type-safe field definitions with Pydantic
+- Confidence levels (low, medium, high) for quality assessment
+- Reasoning fields for explainability and transparency
+- Field descriptions for documentation
 
 Utilities are further specified under:
 
@@ -137,6 +262,14 @@ Utilities are further specified under:
 #### `system_prompt_generator.py`
 - Dynamic system prompt generation for different jurisdictions
 - Functions: Jurisdiction-specific prompt generation
+
+#### `debug_print_state.py`
+- Debug utilities for printing session state
+- Functions: Debugging helper functions
+
+#### `sample_cd.py`
+- Sample court decision data for testing
+- Contains: Demo case text and metadata
 
 ## Quick Start
 
