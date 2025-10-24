@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import logfire
+import openai
 
 from models.analysis_models import (
     ColIssueOutput,
@@ -236,3 +237,28 @@ def analyze_case_workflow(
     except GeneratorExit:
         logger.info("Analysis workflow generator closed early (user navigation or timeout)")
         raise
+    except openai.APITimeoutError as e:
+        logger.error(f"OpenAI API timeout: {e}")
+        raise RuntimeError(
+            "The AI service request timed out. Please try again in a moment."
+        ) from e
+    except openai.RateLimitError as e:
+        logger.error(f"OpenAI rate limit exceeded: {e}")
+        raise RuntimeError(
+            "Too many requests to the AI service. Please wait a moment and try again."
+        ) from e
+    except openai.AuthenticationError as e:
+        logger.error(f"OpenAI authentication error: {e}")
+        raise RuntimeError(
+            "Authentication failed with the AI service. Please check your API key configuration."
+        ) from e
+    except openai.APIConnectionError as e:
+        logger.error(f"OpenAI API connection error: {e}")
+        raise RuntimeError(
+            "Unable to connect to the AI service. Please check your internet connection and try again."
+        ) from e
+    except openai.APIError as e:
+        logger.error(f"OpenAI API error: {e}")
+        raise RuntimeError(
+            f"AI service error: {str(e)}. Please try again or contact support if the problem persists."
+        ) from e

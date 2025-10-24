@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import openai
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -145,8 +147,67 @@ def test_generator_completes_normally():
         print(f"✓ Generator completed normally with {len(results)} results")
 
 
+def test_api_connection_error_handling():
+    """Test that OpenAI API connection errors are caught and converted to RuntimeError."""
+    from tools.case_analyzer import analyze_case_workflow
+
+    # Mock extract_col_section to raise an APIConnectionError
+    with patch("tools.case_analyzer.extract_col_section") as mock_col:
+        # Simulate an API connection error
+        # Create a mock request object
+        mock_request = MagicMock()
+        mock_col.side_effect = openai.APIConnectionError(message="Connection failed", request=mock_request)
+
+        # Create generator
+        gen = analyze_case_workflow(
+            text="Test text",
+            legal_system="Civil-law jurisdiction",
+            jurisdiction="Switzerland",
+            model="gpt-4"
+        )
+
+        # Try to consume results - should raise RuntimeError
+        try:
+            next(gen)
+            raise AssertionError("Should have raised RuntimeError for connection error")
+        except RuntimeError as e:
+            assert "Unable to connect to the AI service" in str(e)
+            print(f"✓ Connection error properly converted to RuntimeError: {e}")
+        except openai.APIConnectionError as exc:
+            raise AssertionError("APIConnectionError should be caught and converted to RuntimeError") from exc
+
+
+def test_api_timeout_error_handling():
+    """Test that OpenAI API timeout errors are caught and converted to RuntimeError."""
+    from tools.case_analyzer import analyze_case_workflow
+
+    # Mock extract_col_section to raise an APITimeoutError
+    with patch("tools.case_analyzer.extract_col_section") as mock_col:
+        # Simulate an API timeout error
+        mock_request = MagicMock()
+        mock_col.side_effect = openai.APITimeoutError(request=mock_request)
+
+        # Create generator
+        gen = analyze_case_workflow(
+            text="Test text",
+            legal_system="Civil-law jurisdiction",
+            jurisdiction="Switzerland",
+            model="gpt-4"
+        )
+
+        # Try to consume results - should raise RuntimeError
+        try:
+            next(gen)
+            raise AssertionError("Should have raised RuntimeError for timeout")
+        except RuntimeError as e:
+            assert "request timed out" in str(e).lower()
+            print(f"✓ Timeout error properly converted to RuntimeError: {e}")
+        except openai.APITimeoutError as exc:
+            raise AssertionError("APITimeoutError should be caught and converted to RuntimeError") from exc
+
+
 if __name__ == "__main__":
-    print("Testing GeneratorExit handling in analyze_case_workflow...\n")
+    print("Testing GeneratorExit and API error handling in analyze_case_workflow...\n")
 
     # Suppress logfire warnings for testing
     logging.getLogger("logfire").setLevel(logging.CRITICAL)
@@ -154,13 +215,20 @@ if __name__ == "__main__":
     try:
         test_generator_exit_is_handled()
         test_generator_completes_normally()
+        test_api_connection_error_handling()
+        test_api_timeout_error_handling()
         print("\n✅ All tests passed!")
         sys.exit(0)
     except AssertionError as e:
         print(f"\n❌ Test failed: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
     except Exception as e:
         print(f"\n❌ Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
         import traceback
         traceback.print_exc()
         sys.exit(1)
