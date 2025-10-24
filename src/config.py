@@ -46,7 +46,8 @@ def get_llm(model: str | None = None):
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
     # Get timeout and retry settings from environment
-    timeout = int(os.getenv("OPENAI_TIMEOUT", "300"))
+    # OpenAI SDK expects float for timeout
+    timeout = float(os.getenv("OPENAI_TIMEOUT", "300"))
     max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
 
     return ChatOpenAI(
@@ -63,6 +64,7 @@ def get_openai_client(model: str | None = None):
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
     # Get timeout and retry settings from environment
+    # OpenAI SDK expects float for timeout
     timeout = float(os.getenv("OPENAI_TIMEOUT", "300"))
     max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
 
