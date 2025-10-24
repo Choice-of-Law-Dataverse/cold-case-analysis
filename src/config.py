@@ -57,9 +57,15 @@ def get_llm(model: str | None = None):
     )
 
 
+# Singleton cache for OpenAI clients
+# Key is (timeout, max_retries) to support different configurations
+_openai_client_cache: dict[tuple[float, int], OpenAI] = {}
+
+
 def get_openai_client(model: str | None = None):
     """
     Return an OpenAI client instance with the specified model.
+    Uses a singleton pattern to reuse client instances and leverage httpx connection pooling.
     """
     selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
@@ -68,10 +74,21 @@ def get_openai_client(model: str | None = None):
     timeout = float(os.getenv("OPENAI_TIMEOUT", "300"))
     max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
 
+    # Create cache key based on configuration
+    cache_key = (timeout, max_retries)
+
+    # Return cached client if it exists with the same configuration
+    if cache_key in _openai_client_cache:
+        logger.debug("Reusing cached OpenAI client with timeout=%s, max_retries=%s", timeout, max_retries)
+        return _openai_client_cache[cache_key], selected
+
+    # Create new client and cache it
+    logger.info("Creating new OpenAI client with timeout=%s, max_retries=%s", timeout, max_retries)
     client = OpenAI(
         timeout=timeout,
         max_retries=max_retries
     )
+    _openai_client_cache[cache_key] = client
 
     return client, selected
 
