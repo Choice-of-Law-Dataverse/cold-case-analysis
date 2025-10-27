@@ -171,17 +171,21 @@ def display_completion_message(state):
     Args:
         state: The current analysis state
     """
-    if state.get("analysis_done"):
+    if not state.get("analysis_done"):
+        return False
+
+    if not state.get("results_saved_to_db"):
         logger.info("Analysis completed, saving state to database")
-        save_to_db(state)
-        st.markdown(
-            "<div class='machine-message'>Thank you for using the CoLD Case Analyzer.<br>"
-            "If you would like to find out more about the project, please visit "
-            '<a href="https://cold.global" target="_blank">cold.global</a></div>',
-            unsafe_allow_html=True,
-        )
-        return True
-    return False
+        if save_to_db(state):
+            state["results_saved_to_db"] = True
+
+    st.markdown(
+        "<div class='machine-message'>Thank you for using the CoLD Case Analyzer.<br>"
+        "If you would like to find out more about the project, please visit "
+        '<a href="https://cold.global" target="_blank">cold.global</a></div>',
+        unsafe_allow_html=True,
+    )
+    return True
 
 
 def render_results_as_markdown(state):
