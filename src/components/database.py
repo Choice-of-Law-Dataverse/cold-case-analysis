@@ -52,5 +52,7 @@ def save_to_db(state):
                         ),
                     )
                 conn_pg.commit()
+            return True
         except Exception as e:
             st.error(f"Failed to save results: {e}")
+            return False
