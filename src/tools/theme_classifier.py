@@ -35,34 +35,19 @@ def theme_classification_node(
     with logfire.span("classify_themes"):
         PIL_THEME_PROMPT = get_prompt_module(legal_system, "theme", jurisdiction).PIL_THEME_PROMPT
 
-        base_prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
+        prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "theme")
 
-        max_attempts = 5
-        attempt = 0
-        result = None
-        current_prompt = base_prompt
-
-        for attempt in range(1, max_attempts + 1):
-            try:
-                system_prompt = generate_system_prompt(legal_system, jurisdiction, "theme")
-
-                agent = Agent(
-                    name="ThemeClassifier",
-                    instructions=system_prompt,
-                    output_type=ThemeClassificationOutput,
-                    model=model,
-                )
-                result = asyncio.run(Runner.run(agent, current_prompt)).final_output_as(ThemeClassificationOutput)
-                break
-            except Exception as e:
-                logger.error("Error during theme classification attempt %d: %s", attempt, e)
-                if attempt == max_attempts:
-                    logger.error("Max attempts reached. Returning fallback result.")
-                    result = None
-                continue
-
-        if result is None:
-            fallback_reason = f"Classification failed after {max_attempts} attempts."
-            result = ThemeClassificationOutput(themes=["NA"], confidence="low", reasoning=fallback_reason)
-
-        return result
+        try:
+            agent = Agent(
+                name="ThemeClassifier",
+                instructions=system_prompt,
+                output_type=ThemeClassificationOutput,
+                model=model,
+            )
+            result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ThemeClassificationOutput)
+            return result
+        except Exception as e:
+            logger.error("Error during theme classification: %s", e)
+            fallback_reason = f"Classification failed: {str(e)}"
+            return ThemeClassificationOutput(themes=["NA"], confidence="low", reasoning=fallback_reason)
