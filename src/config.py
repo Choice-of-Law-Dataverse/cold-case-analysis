@@ -5,11 +5,17 @@ import uuid
 
 import agents
 import logfire
+import nest_asyncio
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI, OpenAI
 
 load_dotenv()
+
+# Apply nest_asyncio to allow asyncio.run() in Streamlit's event loop
+# This is necessary because Streamlit uses Tornado's event loop, which conflicts with asyncio.run()
+# See: https://github.com/openai/openai-agents-python/issues/77
+nest_asyncio.apply()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
