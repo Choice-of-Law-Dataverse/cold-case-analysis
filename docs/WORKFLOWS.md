@@ -7,47 +7,43 @@ This document provides detailed workflow diagrams and data flow patterns for the
 ```mermaid
 graph TB
     User[Legal Analyst/<br/>Researcher]
-    
+
     subgraph "CoLD Case Analyzer"
         WebUI[Streamlit<br/>Web Application]
     end
-    
+
     subgraph "Core Components"
         PromptEngine[Prompt Engine<br/>Jurisdiction-Specific]
         AnalysisCore[Analysis Core<br/>Case Processing]
         StateManager[State Manager<br/>Session State]
     end
-    
+
     subgraph "Data Layer"
         LocalData[Local CSV Files<br/>themes.csv<br/>jurisdictions.csv]
         DemoCase[Demo Case<br/>BGE 132 III 285]
         ResultsDB[(Optional PostgreSQL<br/>Results Storage)]
     end
-    
+
     subgraph "External Services"
         OpenAI[OpenAI API<br/>GPT Models]
     end
-    
-    subgraph "LATAM Module"
-        Airtable[(Airtable<br/>PDF Source)]
-    end
-    
+
     %% User Interface Connections
     User --> WebUI
     WebUI --> PromptEngine
     WebUI --> AnalysisCore
     WebUI --> StateManager
-    
+
     %% Core Connections
     PromptEngine --> AnalysisCore
     AnalysisCore --> OpenAI
-    
+
     %% Data Connections
     WebUI --> LocalData
     WebUI --> DemoCase
     WebUI --> ResultsDB
     Airtable --> LocalData
-    
+
     %% Results Flow
     AnalysisCore --> StateManager
     StateManager --> ResultsDB
@@ -70,7 +66,7 @@ This diagram shows the end-to-end analysis process with the new automated genera
 ```mermaid
 flowchart TD
     Start([User Opens Application])
-    
+
     subgraph "Input Phase"
         Citation[Enter Case Citation<br/>Required]
         InputSource{Choose Input Method}
@@ -79,7 +75,7 @@ flowchart TD
         DemoLoad[Use Demo Case<br/>BGE 132 III 285]
         EmailOpt[Optional Email<br/>Contact Info]
     end
-    
+
     subgraph "Jurisdiction Detection"
         DetectJuris[Detect Legal System<br/>Civil Law/Common Law/India]
         DisplayJuris[Display Jurisdiction<br/>Results]
@@ -88,33 +84,33 @@ flowchart TD
 
     subgraph "Automated Analysis Workflow"
         StartGen[Start Generator Workflow<br/>analyze_case_workflow]
-        
+
         subgraph "Step 1"
             ExtractCOL[Extract COL Sections<br/>Returns list of sections]
         end
-        
+
         subgraph "Step 2"
             ClassifyTheme[Classify PIL Themes<br/>Against Taxonomy]
         end
-        
+
         subgraph "Step 3 - Parallel Execution"
             Facts[Extract Relevant Facts]
             Provisions[Extract PIL Provisions]
             Issue[Identify COL Issue]
         end
-        
+
         subgraph "Step 4 - Parallel Execution"
             Position[Extract Court Position]
             CommonLaw{Common Law?}
             ObiterDicta[Extract Obiter Dicta<br/>Common Law Only]
             DissentOps[Extract Dissenting Opinions<br/>Common Law Only]
         end
-        
+
         subgraph "Step 5"
             Abstract[Generate Abstract<br/>Final Summary]
         end
     end
-    
+
     subgraph "Review & Edit"
         ReviewAll[Review Complete Analysis<br/>Edit ALL Results]
         EditThemes[Edit Themes<br/>Multiselect]
@@ -123,22 +119,22 @@ flowchart TD
         SaveDB[Save to Database<br/>Optional PostgreSQL]
         Complete[Analysis Complete<br/>Display Summary]
     end
-    
+
     End([User Completes Session])
-    
+
     %% Flow connections
     Start --> Citation
     Citation --> EmailOpt
     EmailOpt --> InputSource
-    
+
     InputSource --> TextInput
     InputSource --> PDFUpload
     InputSource --> DemoLoad
-    
+
     TextInput --> DetectJuris
     PDFUpload --> DetectJuris
     DemoLoad --> DetectJuris
-    
+
     DetectJuris --> DisplayJuris
     DisplayJuris --> ConfirmJuris
     ConfirmJuris --> StartGen
@@ -148,18 +144,18 @@ flowchart TD
     ClassifyTheme --> Facts
     ClassifyTheme --> Provisions
     ClassifyTheme --> Issue
-    
+
     Facts --> Position
     Provisions --> Position
     Issue --> Position
-    
+
     Position --> CommonLaw
     CommonLaw -->|Yes| ObiterDicta
     CommonLaw -->|Yes| DissentOps
     CommonLaw -->|No| Abstract
     ObiterDicta --> Abstract
     DissentOps --> Abstract
-    
+
     Abstract --> ReviewAll
     ReviewAll --> EditThemes
     ReviewAll --> EditCOL
@@ -201,15 +197,15 @@ sequenceDiagram
     User->>UI: Click "Detect Jurisdiction"
     UI->>State: Get case citation & text
     State-->>UI: Return input data
-    
+
     UI->>Tool: detect_jurisdiction(text, citation)
     Tool->>Prompt: Select detection prompt
     Prompt-->>Tool: System detection prompt
-    
+
     Tool->>LLM: Analyze legal system
     Note over LLM: Identifies:<br/>- Legal system type<br/>- Specific jurisdiction<br/>- Confidence level
     LLM-->>Tool: Jurisdiction data
-    
+
     Tool-->>UI: Display results
     UI->>User: Show jurisdiction with confirmation
     User->>UI: Confirm or override if needed
@@ -237,29 +233,29 @@ sequenceDiagram
     Auth->>User: Present login (optional)
     User->>Auth: Provide credentials
     Auth-->>App: Authentication complete
-    
+
     App->>StateManager: Initialize session state
     StateManager-->>App: State ready
-    
+
     App->>User: Display case input interface
     User->>Components: Enter case citation
     User->>Components: Provide court decision text
     Components->>StateManager: Update state with input
-    
+
     User->>App: Initiate jurisdiction detection
     App->>Tools: Detect jurisdiction
     Tools->>LLM: Analyze legal system
     LLM-->>Tools: Jurisdiction information
     Tools-->>Components: Display jurisdiction results
     User->>Components: Confirm jurisdiction
-    
+
     Components->>Tools: Extract COL section
     Tools->>LLM: Identify COL sections
     LLM-->>Tools: COL section candidates
     Tools-->>Components: Display COL sections
     User->>Components: Edit COL section if needed
     Components->>StateManager: Update COL state
-    
+
     Components->>Tools: Classify PIL theme
     Tools->>LLM: Analyze legal themes
     LLM-->>Tools: Theme classifications
@@ -295,20 +291,20 @@ sequenceDiagram
 
     User->>UI: Confirm jurisdiction
     UI->>Generator: Start analyze_case_workflow()
-    
+
     Generator->>Tool: extract_col_section(text, legal_system, jurisdiction)
     Tool->>Prompt: Get jurisdiction-specific prompt
     Prompt-->>Tool: COL extraction prompt
-    
+
     Tool->>LLM: Extract COL sections
     Note over LLM: Identifies relevant<br/>Choice of Law sections<br/>Returns list of sections
     LLM-->>Tool: col_sections: list[str]
-    
+
     Tool-->>Generator: Yield ColSectionOutput
     Generator-->>UI: Yield result object
     UI->>State: Save col_sections list
     UI->>User: Display progress
-    
+
     Note over Generator,UI: Continues with themes,<br/>parallel analysis steps
 ```
 
@@ -326,17 +322,17 @@ sequenceDiagram
     Note over Generator: After COL extraction
     Generator->>Data: Load valid themes
     Data-->>Generator: Theme taxonomy (themes.csv)
-    
+
     Generator->>Tool: theme_classification_node(text, col_section, legal_system, jurisdiction)
     Tool->>LLM: Classify against PIL taxonomy
     Note over LLM: Categorizes case<br/>against predefined<br/>PIL themes
     LLM-->>Tool: Theme classifications
-    
+
     Tool-->>Generator: Yield ThemeClassificationOutput
     Generator-->>UI: Yield result object
     UI->>State: Save themes
     UI->>User: Display progress
-    
+
     Note over Generator,UI: Continues with parallel<br/>facts, provisions, COL issue
 ```
 
@@ -352,28 +348,28 @@ flowchart LR
         DemoCase[Demo Case Data]
         CSVData[Local CSV Files<br/>themes.csv]
     end
-    
+
     subgraph "Processing Layer"
         PDFExtractor[PDF Text Extractor<br/>pymupdf4llm]
         TextCleaner[Text Cleaner<br/>Normalize Format]
         DataLoader[Data Loader<br/>CSV Parser]
         StateInit[State Initializer<br/>Session Setup]
     end
-    
+
     subgraph "Structured Data"
         CleanText[Cleaned Text<br/>Analysis Ready]
         ThemeData[Theme Taxonomy<br/>Structured]
         CaseContext[Case Context<br/>With Metadata]
         SessionState[Session State<br/>Application Context]
     end
-    
+
     ManualText --> TextCleaner
     PDFInput --> PDFExtractor
     DemoCase --> TextCleaner
     CSVData --> DataLoader
     PDFExtractor --> CleanText
     DataLoader --> ThemeData
-    
+
     TextCleaner --> CleanText
     CleanText --> CaseContext
     ThemeData --> CaseContext
@@ -403,7 +399,7 @@ flowchart TD
         Issue[COL Issue<br/>Legal Question]
         Position[Court Position<br/>Legal Ruling]
     end
-    
+
     subgraph "User Validation"
         ConfirmJuris[Confirm Jurisdiction]
         EditCOL[Edit COL Section]
@@ -461,24 +457,29 @@ This workflow documentation provides a comprehensive overview of the CoLD Case A
 ### Current Implementation
 
 **Generator-Based Workflow:**
+
 - All analysis steps after jurisdiction confirmation are automated
 - Uses `analyze_case_workflow()` generator function that yields result objects
 - User confirms jurisdiction only; all other steps run automatically
 
 **Parallel Execution:**
+
 - Step 3: Facts + PIL Provisions + COL Issue (3 parallel operations)
 - Step 4: Court Position + Obiter Dicta + Dissenting Opinions (up to 3 parallel operations for Common Law)
 
 **Parameter Naming:**
+
 - `legal_system`: Type of legal system (e.g., "Civil-law jurisdiction", "Common-law jurisdiction")
 - `jurisdiction`: Specific jurisdiction (e.g., "Switzerland", "United States", "India")
 - `themes`: Classified PIL themes
 
 **ColSectionOutput Model:**
+
 - Returns `col_sections: list[str]` supporting multiple Choice of Law sections
 - Sections are joined with double newlines for processing
 
 **Workflow Steps:**
+
 1. **COL Section Extraction**: Yields `ColSectionOutput` with list of sections
 2. **Theme Classification**: Yields `ThemeClassificationOutput` with themes list
 3. **Parallel Analysis Step 1**: Yields `RelevantFactsOutput`, `PILProvisionsOutput`, and `ColIssueOutput` in parallel
@@ -486,5 +487,6 @@ This workflow documentation provides a comprehensive overview of the CoLD Case A
 5. **Abstract**: Yields `AbstractOutput` synthesizing all previous steps
 
 **Final Editing Phase:**
+
 - User can edit all results including themes, COL sections, and all analysis steps
 - Single comprehensive review before saving

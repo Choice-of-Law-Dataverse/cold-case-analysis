@@ -93,7 +93,7 @@
 - Use appropriate log levels:
   - `logger.debug()` for detailed diagnostic information (prompts, responses, intermediate values)
   - `logger.info()` for general informational messages
-  - `logger.warning()` for potentially problematic situations  
+  - `logger.warning()` for potentially problematic situations
   - `logger.error()` for serious problems
 - DO NOT use section header logs like `logger.debug("--- SECTION NAME ---")` - the logger already includes module context via `__name__`
 - Print statements are acceptable in: scripts (`populate_readme.py`), test files, and `if __name__ == "__main__"` blocks
@@ -214,7 +214,6 @@ cold-case-analysis/
 │   ├── ARCHITECTURE.md                 # Architecture documentation
 │   ├── WORKFLOWS.md                    # Workflow documentation
 │   └── DYNAMIC_SYSTEM_PROMPTS_README.md  # Dynamic prompts documentation
-├── latam_case_analysis/                # Additional Latin America case tools
 ├── pyproject.toml                      # Project configuration & dependencies
 ├── uv.lock                             # Dependency lock file
 ├── .env.example                        # Environment variables template
