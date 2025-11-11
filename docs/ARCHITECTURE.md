@@ -32,13 +32,12 @@ graph TB
     subgraph "External Services"
         OpenAI[OpenAI API<br/>GPT Models]
         PostgreSQL[(PostgreSQL<br/>Optional Storage)]
-        Airtable[Airtable API<br/>LATAM Module]
     end
 
     subgraph "CoLD Case Analyzer"
         subgraph "Streamlit Application"
             App[Main App<br/>app.py]
-            
+
             subgraph "Components Layer"
                 Auth[Authentication<br/>Model Selection]
                 Input[Input Handler<br/>PDF/Text/Demo]
@@ -52,7 +51,7 @@ graph TB
                 Sidebar[Sidebar<br/>Navigation]
                 CSS[CSS<br/>Styling]
             end
-            
+
             subgraph "Tools Layer"
                 CaseAnalyzer[Case Analyzer<br/>Core Logic]
                 COLExtractor[COL Extractor<br/>Extraction Tool]
@@ -68,7 +67,7 @@ graph TB
                 DissentExt[Dissenting Opinions<br/>Extractor]
                 CitationExt[Case Citation<br/>Extractor]
             end
-            
+
             subgraph "Utilities Layer"
                 StateManager[State Manager<br/>Session State]
                 DataLoaders[Data Loaders<br/>Themes/Demos]
@@ -78,18 +77,13 @@ graph TB
                 DebugPrint[Debug Print<br/>State]
                 SampleCD[Sample CD<br/>Demo Data]
             end
-            
+
             subgraph "Prompts Library"
                 CivilLaw[Civil Law<br/>Prompts]
                 CommonLaw[Common Law<br/>Prompts]
                 India[India<br/>Prompts]
                 System[System-Level<br/>Prompts]
             end
-        end
-        
-        subgraph "LATAM Module"
-            PDFExtractor[PDF Extractor<br/>Airtable Download]
-            TXTConverter[TXT Converter<br/>Format Conversion]
         end
     end
 
@@ -102,7 +96,7 @@ graph TB
     App --> OpenAI
     App --> PostgreSQL
     PDFExtractor --> Airtable
-    
+
     %% Component connections
     App --> MainWF
     MainWF --> Auth
@@ -112,13 +106,13 @@ graph TB
     MainWF --> Theme
     MainWF --> PIL
     MainWF --> Analysis
-    
+
     %% Tools usage
     Jurisdiction --> JurDetector
     COL --> COLExtractor
     Theme --> ThemeClassifier
     Analysis --> CaseAnalyzer
-    
+
     %% Utilities usage
     Auth --> StateManager
     Input --> PDFHandler
@@ -127,23 +121,23 @@ graph TB
     COL --> PromptSelector
     Theme --> PromptSelector
     Analysis --> PromptSelector
-    
+
     %% Prompts usage
     PromptSelector --> CivilLaw
     PromptSelector --> CommonLaw
     PromptSelector --> India
     PromptSelector --> System
-    
+
     %% Data access
     DataLoaders --> LocalData
     DataLoaders --> DemoCase
-    
+
     classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef app fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef component fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef tool fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
     classDef data fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
+
     class OpenAI,PostgreSQL,Airtable external
     class App,MainWF app
     class Auth,Input,Jurisdiction,COL,Theme,PIL,Analysis component
@@ -164,9 +158,11 @@ The Streamlit application provides an interactive web interface for analyzing co
 #### Application Structure:
 
 **Entry Point**:
+
 - `app.py`: Main application initialization, page config, authentication, and workflow rendering
 
 **Components** (`components/`):
+
 - `auth.py`: Authentication and model selection
 - `input_handler.py`: Case citation, PDF upload, text input, demo case loading
 - `jurisdiction.py`: Enhanced jurisdiction detection with precise jurisdiction identification
@@ -181,6 +177,7 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `database.py`: PostgreSQL persistence
 
 **Configuration** (`config.py`):
+
 - Application initialization and environment setup
 - LLM client factory functions (`get_llm()`, `get_openai_client()`)
 - Logfire monitoring and instrumentation configuration
@@ -188,6 +185,7 @@ The Streamlit application provides an interactive web interface for analyzing co
 - Environment variable management
 
 **Data Models** (`models/`):
+
 - `analysis_models.py`: Pydantic models for analysis outputs
   - ColSectionOutput, CaseCitationOutput, RelevantFactsOutput
   - PILProvisionsOutput, ColIssueOutput, CourtsPositionOutput
@@ -197,6 +195,7 @@ The Streamlit application provides an interactive web interface for analyzing co
   - Theme type definitions and validation
 
 **Tools** (`tools/`):
+
 - `case_analyzer.py`: Core case analysis logic with LLM integration
 - `col_extractor.py`: COL section extraction tool
 - `jurisdiction_detector.py`: Jurisdiction detection logic
@@ -212,6 +211,7 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `case_citation_extractor.py`: Case citation extraction and normalization
 
 **Utilities** (`utils/`):
+
 - `state_manager.py`: Session state management
 - `data_loaders.py`: Data loading (themes, demo cases)
 - `pdf_handler.py`: PDF text extraction
@@ -221,6 +221,7 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `sample_cd.py`: Sample court decision data for testing
 
 **Prompts** (`prompts/`):
+
 - `civil_law/`: Civil law jurisdiction prompts
 - `common_law/`: Common law jurisdiction prompts
 - `india/`: Indian law jurisdiction prompts
@@ -229,6 +230,7 @@ The Streamlit application provides an interactive web interface for analyzing co
 - `prompt_selector.py`: Jurisdiction-based prompt selection
 
 **Data** (`data/`):
+
 - `themes.csv`: PIL theme taxonomy
 - `jurisdictions.csv`: Jurisdiction reference data
 
@@ -246,7 +248,7 @@ sequenceDiagram
     User->>App: Access application
     App->>Components: Render input phase
     User->>Components: Enter citation & text/PDF
-    
+
     User->>Components: Click "Detect Jurisdiction"
     Components->>Tools: Detect jurisdiction
     Tools->>LLM: Analyze court decision
@@ -294,49 +296,20 @@ The LangGraph engine provides advanced workflow orchestration with human-in-the-
 - **Analysis Tools** (`tools/`): LLM integration utilities
 - **Interrupt Handlers** (`nodes/interrupt_handler.py`): Human validation checkpoints
 
-#### Workflow Architecture:
-
-### LATAM Case Analysis Module
-
-**Location**: `latam_case_analysis/`
-
-A specialized module for processing Latin American court cases with Airtable integration.
-
-#### Components:
-
-- `pdf_extractor.py`: Downloads PDFs from Airtable for South & Latin America region cases
-- `txt_converter.py`: Converts downloaded PDFs to text format for analysis
-
-#### Usage:
-
-```python
-# Set environment variables
-export AIRTABLE_API_KEY="your_key"
-export AIRTABLE_BASE_ID="base_id"
-
-# Download PDFs from Airtable
-python latam_case_analysis/pdf_extractor.py
-
-# Convert to text
-python latam_case_analysis/txt_converter.py
-```
-
-This module integrates with Airtable's Court Decisions table and filters records by region for targeted data extraction.
-
 #### Component Architecture:
 
 ```mermaid
 graph TB
     subgraph "Streamlit Application Structure"
         App[app.py<br/>Main Orchestrator]
-        
+
         subgraph "Authentication & Config"
             Auth[Auth Component<br/>User Management]
             ModelSelector[Model Selector<br/>LLM Configuration]
             CSS[CSS Loader<br/>Styling]
             Sidebar[Sidebar<br/>Navigation]
         end
-        
+
         subgraph "Main Workflow Components"
             MainWorkflow[Main Workflow<br/>Step Orchestration]
             InputHandler[Input Handler<br/>Case Input & Upload]
@@ -346,14 +319,14 @@ graph TB
             ConfidenceDisplay[Confidence Display<br/>Score & Reasoning]
             AnalysisWorkflow[Analysis Workflow<br/>Complete Analysis]
         end
-        
+
         subgraph "Utilities"
             StateManager[State Manager<br/>Session Management]
             DataLoaders[Data Loaders<br/>Demo & Theme Data]
             PDFHandler[PDF Handler<br/>Document Processing]
             Database[Database<br/>Result Persistence]
         end
-        
+
         subgraph "Analysis Tools"
             COLExtractor[COL Extractor<br/>Section Identification]
             ThemeExtractor[Theme Extractor<br/>Classification]
@@ -366,23 +339,23 @@ graph TB
     App --> CSS
     App --> Sidebar
     App --> MainWorkflow
-    
+
     MainWorkflow --> InputHandler
     MainWorkflow --> JurisdictionDetect
     MainWorkflow --> COLProcessor
     MainWorkflow --> ThemesComponent
     MainWorkflow --> ConfidenceDisplay
     MainWorkflow --> AnalysisWorkflow
-    
+
     InputHandler --> PDFHandler
     InputHandler --> DataLoaders
-    
+
     COLProcessor --> COLExtractor
     COLProcessor --> StateManager
-    
+
     ThemesComponent --> ThemeExtractor
     ThemesComponent --> StateManager
-    
+
     AnalysisWorkflow --> AnalysisRunner
     AnalysisWorkflow --> Database
     AnalysisWorkflow --> StateManager
@@ -407,13 +380,13 @@ graph TB
 ```mermaid
 flowchart TD
     Start([User Opens App]) --> Input[Input Phase]
-    
+
     subgraph Input[Input Phase]
         Citation[Enter Case Citation]
         Upload[Upload PDF or Enter Text]
         Demo[Or Use Demo Case]
     end
-    
+
     Input --> Jurisdiction[Jurisdiction Detection]
 
     subgraph Jurisdiction[Jurisdiction Detection]
@@ -445,13 +418,13 @@ flowchart TD
         Issue[4. COL Issue]
         Position[5. Court Position]
     end
-    
+
     Analysis --> Save[Save to Database]
     Save --> Complete([Analysis Complete])
-    
+
     classDef phase fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef step fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    
+
     Analysis --> Save[Save to Database]
     Save --> Complete([Analysis Complete])
 
@@ -471,26 +444,26 @@ flowchart LR
         Citation[Case Citation]
         Jurisdiction[Jurisdiction Info]
     end
-    
+
     subgraph "Prompt Generation"
         PromptSelector[Prompt Selector]
         CivilLaw[Civil Law Prompts]
         CommonLaw[Common Law Prompts]
         India[India Prompts]
     end
-    
+
     subgraph "LLM Processing"
         OpenAI[OpenAI API]
         Context[Context:<br/>• Decision Text<br/>• Jurisdiction<br/>• Previous Results]
         Response[LLM Response]
     end
-    
+
     subgraph "Result Processing"
         Parse[Parse Response]
         Validate[Validate Format]
         Store[Store in State]
     end
-    
+
     subgraph "User Review"
         Display[Display to User]
         Edit[User Edits if Needed]
@@ -541,7 +514,7 @@ flowchart TD
         InitState[Initialize State<br/>initialize_col_state]
         SessionDict[st.session_state Dictionary]
     end
-    
+
     subgraph "State Keys"
         CaseCit[case_citation]
         FullText[full_text_input]
@@ -635,12 +608,12 @@ The system uses consistent data structures for case analysis:
     "case_citation": str,
     "full_text_input": str,
     "user_email": str,
-    
+
     # Authentication
     "authenticated": bool,
     "username": str,
     "selected_model": str,
-    
+
     # Jurisdiction Detection
     "jurisdiction": str,
     "precise_jurisdiction": str,
@@ -660,7 +633,7 @@ The system uses consistent data structures for case analysis:
     "analysis_results": Dict[str, str],
     "analysis_done": bool,
     "parallel_execution_started": bool,
-    
+
     # Demo Case
     "demo_case_loaded": bool
 }
@@ -699,7 +672,7 @@ graph TB
         Components[UI Components]
         Tools[Analysis Tools]
     end
-    
+
     subgraph "Prompt Layer"
         PromptSelector[Prompt Selector<br/>prompt_selector.py]
         CivilLaw[Civil Law Prompts]
@@ -707,29 +680,29 @@ graph TB
         India[India Prompts]
         SystemPrompts[System Prompts]
     end
-    
+
     subgraph "LLM Layer"
         LangChain[LangChain<br/>langchain-openai]
         Config[Config Manager<br/>config.py]
     end
-    
+
     subgraph "External API"
         OpenAI[OpenAI API<br/>GPT Models]
     end
-    
+
     Components --> Tools
     Tools --> PromptSelector
-    
+
     PromptSelector --> CivilLaw
     PromptSelector --> CommonLaw
     PromptSelector --> India
     PromptSelector --> SystemPrompts
-    
+
     CivilLaw --> LangChain
     CommonLaw --> LangChain
     India --> LangChain
     SystemPrompts --> LangChain
-    
+
     LangChain --> Config
     Config --> OpenAI
 
@@ -753,27 +726,23 @@ graph TB
     subgraph "Data Sources"
         LocalCSV[Local CSV Files<br/>themes.csv<br/>jurisdictions.csv]
         DemoData[Demo Case Data<br/>BGE 132 III 285]
-        AirtableDB[Airtable Database<br/>LATAM Module Only]
     end
-    
+
     subgraph "Data Loaders"
         ThemeLoader[Theme Loader<br/>load_valid_themes]
         DemoLoader[Demo Loader<br/>get_demo_case_text]
-        AirtableExtractor[PDF Extractor<br/>latam_case_analysis]
     end
-    
+
     subgraph "Application"
         StreamlitApp[Streamlit Application]
-        LATAMModule[LATAM Processing Module]
     end
 
     LocalCSV --> ThemeLoader
     DemoData --> DemoLoader
     AirtableDB --> AirtableExtractor
-    
+
     ThemeLoader --> StreamlitApp
     DemoLoader --> StreamlitApp
-    AirtableExtractor --> LATAMModule
 
     classDef data fill:#e8f5e9,stroke:#388e3c
     classDef loader fill:#fff3e0,stroke:#f57c00
@@ -781,7 +750,7 @@ graph TB
 
     class LocalCSV,DemoData,AirtableDB data
     class ThemeLoader,DemoLoader,AirtableExtractor loader
-    class StreamlitApp,LATAMModule app
+    class StreamlitApp
 ```
 
 ## Setup and Configuration
@@ -805,11 +774,6 @@ POSTGRESQL_PASSWORD=your_password
 
 # Optional Authentication
 USER_CREDENTIALS='{"username":"password","admin":"admin123"}'
-
-# Optional LATAM Module (Airtable Integration)
-AIRTABLE_API_KEY=your_airtable_key
-AIRTABLE_BASE_ID=your_base_id
-AIRTABLE_CONCEPTS_TABLE=your_concepts_table
 
 # Optional NoCode Database
 NOCODB_BASE_URL=https://your-nocodb-instance/api/v1/db/data/noco/project_id
@@ -883,21 +847,20 @@ cold-case-analysis/
 │   │   ├── themes.csv                  # PIL theme taxonomy
 │   │   └── jurisdictions.csv           # Jurisdiction data
 │   └── tests/                          # Test suite
-├── latam_case_analysis/                # LATAM module
-│   ├── pdf_extractor.py                # PDF extraction from Airtable
-│   └── txt_converter.py                # Text conversion
 └── .streamlit/                         # Streamlit configuration
 ```
 
 ### Installation and Setup
 
 1. **Clone Repository**:
+
    ```bash
    git clone https://github.com/Choice-of-Law-Dataverse/cold-case-analysis.git
    cd cold-case-analysis
    ```
 
 2. **Environment Setup**:
+
    ```bash
    cp .env.example .env
    # Edit .env with your OPENAI_API_KEY
@@ -906,21 +869,24 @@ cold-case-analysis/
 3. **Install Dependencies**:
 
    Using pip:
+
    ```bash
    pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
    ```
 
    Or using uv (recommended):
+
    ```bash
    uv sync
    ```
 
 4. **Run Application**:
+
    ```bash
    # With pip
    cd src
    streamlit run app.py
-   
+
    # With uv
    uv run streamlit run src/app.py
    ```
@@ -949,7 +915,6 @@ The CoLD Case Analyzer is a comprehensive Streamlit-based application for analyz
 - **Parallel Processing**: Automated analysis with parallel execution for efficiency
 - **Streamlined Editing**: Final review phase where all results can be edited at once
 - **Optional Persistence**: PostgreSQL database integration
-- **LATAM Module**: Specialized tools for Latin American case processing
 
 The modular architecture with separate components, tools, utilities, and jurisdiction-specific prompts allows for easy maintenance and extension. The system integrates with OpenAI's API for language model processing and supports optional database persistence for storing analysis results.
 
