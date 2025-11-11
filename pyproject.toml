@@ -8,7 +8,6 @@ dependencies = [
     "langchain-core>=0.3.78",
     "langchain-openai>=0.3.34",
     "logfire[psycopg2,requests]>=4.11.0",
-    "nest-asyncio>=1.6.0",
     "openai-agents>=0.3.3",
     "pandas>=2.3.3",
     "psycopg2-binary>=2.9.10",
