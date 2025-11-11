@@ -1,6 +1,0 @@
-What needs to be done:
-- Make sure all generated outputs and inputs are stored in a list, not updated in the AppState
-
-- Make inputs conditional on state of st.session_state
-
-- Display full lists of messages
