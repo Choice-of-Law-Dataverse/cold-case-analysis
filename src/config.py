@@ -4,11 +4,16 @@ import os
 import uuid
 
 import logfire
+import nest_asyncio
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 load_dotenv()
+
+# Apply nest_asyncio to allow asyncio.run() in Streamlit's event loop
+# This is necessary because Streamlit uses Tornado's event loop, which conflicts with asyncio.run()
+# See: https://github.com/openai/openai-agents-python/issues/77
+nest_asyncio.apply()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -39,87 +44,48 @@ logfire.instrument_requests()
 logfire.instrument_psycopg()
 
 
-def get_llm(model: str | None = None):
+def get_openai_client():
     """
-    Return a ChatOpenAI instance. If `model` is provided, use it; otherwise fallback to env var or default.
+    Return an AsyncOpenAI client instance for use with openai-agents library.
     """
-    selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-
-    # Get timeout and retry settings from environment
-    # OpenAI SDK expects float for timeout
     timeout = float(os.getenv("OPENAI_TIMEOUT", "300"))
     max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
 
-    return ChatOpenAI(
-        model=selected,
-        timeout=timeout,
-        max_retries=max_retries
-    )
+    # Always create a new client to ensure thread-safety across event loops
+    # logger.debug("Creating new AsyncOpenAI client for thread/loop safety")
+    client = AsyncOpenAI(timeout=timeout, max_retries=max_retries)
+
+    return client
 
 
-# Singleton cache for OpenAI clients
-# Key is (timeout, max_retries) to support different configurations
-# This enables connection pooling and reuse while respecting different timeout/retry requirements
-_openai_client_cache: dict[tuple[float, int], OpenAI] = {}
+# Configuration for Model Routing
+# Maps analysis steps to specific models to optimize for cost and quality
+# gpt-5-nano: Fast, cheap, good for classification and simple extraction
+# gpt-5-mini: Balanced, good for summarization and text generation
+# gpt-5.1: High reasoning capability, best for complex legal analysis
+TASK_MODELS = {
+    "abstract": "gpt-5-mini",
+    "case_citation": "gpt-5-nano",
+    "col_issue": "gpt-5.1",
+    "col_section": "gpt-5-mini",
+    "courts_position": "gpt-5.1",
+    "dissenting_opinions": "gpt-5.1",
+    "jurisdiction_classification": "gpt-5-nano",
+    "legal_system": "gpt-5-nano",
+    "obiter_dicta": "gpt-5.1",
+    "pil_provisions": "gpt-5-nano",
+    "relevant_facts": "gpt-5-mini",
+    "themes": "gpt-5-nano",
+}
 
 
-def get_openai_client(model: str | None = None):
+def get_model(task: str) -> str:
     """
-    Return an OpenAI client instance with the specified model.
-    Uses a singleton pattern to reuse client instances and leverage httpx connection pooling.
-
-    The client is cached based on its configuration (timeout, max_retries) to ensure
-    that different configurations get separate client instances while allowing reuse
-    of clients with the same configuration. This approach:
-
-    - Leverages httpx connection pooling for better performance
-    - Reduces the number of TCP connections to OpenAI's API
-    - Prevents connection errors from too many simultaneous connections
-    - Maintains thread-safe httpx connection pools within each client
-
-    Args:
-        model: Optional model name. If not provided, uses OPENAI_MODEL env var or defaults to "gpt-5-nano".
-               Note: The model parameter only affects the returned model name, not the cached client instance.
-
-    Returns:
-        A tuple of (OpenAI client instance, selected model name)
-
-    Environment Variables:
-        OPENAI_API_KEY: Required - OpenAI API key
-        OPENAI_TIMEOUT: Optional - Request timeout in seconds (default: 300)
-        OPENAI_MAX_RETRIES: Optional - Maximum retry attempts (default: 3)
+    Get the appropriate model for a specific task.
     """
-    selected = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
-    # Get timeout and retry settings from environment
-    # OpenAI SDK expects float for timeout
-    timeout = float(os.getenv("OPENAI_TIMEOUT", "300"))
-    max_retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
+    return TASK_MODELS.get(task, "gpt-5-nano")
 
-    # Create cache key based on configuration
-    cache_key = (timeout, max_retries)
-
-    # Return cached client if it exists with the same configuration
-    if cache_key in _openai_client_cache:
-        logger.debug("Reusing cached OpenAI client with timeout=%s, max_retries=%s", timeout, max_retries)
-        return _openai_client_cache[cache_key], selected
-
-    # Create new client and cache it
-    logger.info("Creating new OpenAI client with timeout=%s, max_retries=%s", timeout, max_retries)
-    client = OpenAI(
-        timeout=timeout,
-        max_retries=max_retries
-    )
-    _openai_client_cache[cache_key] = client
-
-    return client, selected
-
-
-# default llm instance (legacy)
-llm = get_llm()
-
-# default OpenAI client
-openai_client, default_model = get_openai_client()
 
 AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")

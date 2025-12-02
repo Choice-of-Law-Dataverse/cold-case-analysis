@@ -6,12 +6,13 @@ Identifies the precise jurisdiction from court decision text using the jurisdict
 import asyncio
 import csv
 import logging
-import os
 from pathlib import Path
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.classification_models import JurisdictionOutput
 from prompts.precise_jurisdiction_detection_prompt import PRECISE_JURISDICTION_DETECTION_PROMPT
 
@@ -73,12 +74,12 @@ def detect_precise_jurisdiction(text: str) -> str:
     return result.precise_jurisdiction
 
 
-def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = None) -> JurisdictionOutput:
+def detect_precise_jurisdiction_with_confidence(text: str) -> JurisdictionOutput:
     """
     Uses an LLM to identify the precise jurisdiction from court decision text with confidence.
     Returns a JurisdictionOutput Pydantic model with jurisdiction data including confidence and reasoning.
     """
-    with logfire.span("detect_precise_jurisdiction"):
+    with logfire.span("jurisdiction_classification"):
         if not text or len(text.strip()) < 50:
             return JurisdictionOutput(
                 precise_jurisdiction="Unknown",
@@ -99,12 +100,14 @@ def detect_precise_jurisdiction_with_confidence(text: str, model: str | None = N
         try:
             system_prompt = "You are an expert in legal systems and court jurisdictions worldwide. Analyze the court decision and identify the precise jurisdiction, legal system type, and provide your confidence level and reasoning."
 
-            selected_model = model or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
             agent = Agent(
                 name="JurisdictionDetector",
                 instructions=system_prompt,
                 output_type=JurisdictionOutput,
-                model=selected_model,
+                model=OpenAIChatCompletionsModel(
+                    model=get_model("jurisdiction_classification"),
+                    openai_client=get_openai_client(),
+                ),
             )
 
             result = asyncio.run(Runner.run(agent, prompt)).final_output_as(JurisdictionOutput)

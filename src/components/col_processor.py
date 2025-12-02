@@ -3,8 +3,6 @@
 Choice of Law section processing components.
 """
 
-import os
-
 import streamlit as st
 
 from tools.col_extractor import extract_col_section
@@ -72,13 +70,10 @@ def render_feedback_input():
             if feedback:
                 col_state["col_section_feedback"].append(feedback)
 
-                model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-
                 result = extract_col_section(
                     text=col_state["full_text"],
                     legal_system=col_state.get("jurisdiction", "Civil-law jurisdiction"),
                     jurisdiction=col_state.get("precise_jurisdiction"),
-                    model=model,
                 )
 
                 col_state.setdefault("col_section", []).append(result.col_sections)
@@ -152,14 +147,11 @@ def render_edit_section():
 
                 from tools.theme_classifier import theme_classification_node
 
-                model = col_state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
-
                 result = theme_classification_node(
                     text=col_state["full_text"],
                     col_section=edited_extraction,
                     legal_system=col_state.get("jurisdiction", "Civil-law jurisdiction"),
                     jurisdiction=col_state.get("precise_jurisdiction"),
-                    model=model,
                 )
 
                 cls_str = ", ".join(str(item) for item in result.themes)

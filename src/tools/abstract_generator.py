@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.analysis_models import (
     AbstractOutput,
     ColIssueOutput,
@@ -24,7 +26,6 @@ def extract_abstract(
     text: str,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
     themes_output: ThemeClassificationOutput,
     facts_output: RelevantFactsOutput,
     pil_provisions_output: PILProvisionsOutput,
@@ -40,7 +41,6 @@ def extract_abstract(
         text: Full court decision text
         legal_system: Legal system type (e.g., "Civil-law jurisdiction")
         jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for generation
         themes_output: Classified themes output
         facts_output: Relevant facts output
         pil_provisions_output: PIL provisions output
@@ -52,7 +52,7 @@ def extract_abstract(
     Returns:
         AbstractOutput: Generated abstract with confidence and reasoning
     """
-    with logfire.span("generate_abstract"):
+    with logfire.span("abstract"):
         ABSTRACT_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).ABSTRACT_PROMPT
 
         themes = ", ".join(themes_output.themes)
@@ -82,7 +82,10 @@ def extract_abstract(
             name="AbstractGenerator",
             instructions=system_prompt,
             output_type=AbstractOutput,
-            model=model,
+            model=OpenAIChatCompletionsModel(
+                model=get_model("abstract"),
+                openai_client=get_openai_client(),
+            ),
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(AbstractOutput)
 

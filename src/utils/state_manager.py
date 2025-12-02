@@ -12,13 +12,12 @@ def initialize_col_state():
         st.session_state.col_state = {}
 
 
-def create_initial_analysis_state(case_citation, username, model, full_text, final_jurisdiction_data, user_email=None):
+def create_initial_analysis_state(case_citation, username, full_text, final_jurisdiction_data, user_email=None):
     """
     Create the initial analysis state dictionary.
 
     Args:
         username: The current user
-        model: The selected LLM model
         full_text: The full court decision text
         final_jurisdiction_data: The jurisdiction detection results
 
@@ -27,7 +26,6 @@ def create_initial_analysis_state(case_citation, username, model, full_text, fin
     """
     return {
         "username": username,
-        "model": model,
         "full_text": full_text,
         "col_section": [],
         "col_section_feedback": [],

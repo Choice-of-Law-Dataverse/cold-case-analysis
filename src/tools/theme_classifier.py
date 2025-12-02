@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import generate_system_prompt
@@ -17,7 +19,6 @@ def theme_classification_node(
     col_section: str,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
 ):
     """
     Classify themes for a court decision.
@@ -32,37 +33,25 @@ def theme_classification_node(
     Returns:
         ThemeClassificationOutput: Classified themes with confidence and reasoning
     """
-    with logfire.span("classify_themes"):
+    with logfire.span("themes"):
         PIL_THEME_PROMPT = get_prompt_module(legal_system, "theme", jurisdiction).PIL_THEME_PROMPT
 
-        base_prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
+        prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
+        system_prompt = generate_system_prompt(legal_system, jurisdiction, "theme")
 
-        max_attempts = 5
-        attempt = 0
-        result = None
-        current_prompt = base_prompt
-
-        for attempt in range(1, max_attempts + 1):
-            try:
-                system_prompt = generate_system_prompt(legal_system, jurisdiction, "theme")
-
-                agent = Agent(
-                    name="ThemeClassifier",
-                    instructions=system_prompt,
-                    output_type=ThemeClassificationOutput,
-                    model=model,
-                )
-                result = asyncio.run(Runner.run(agent, current_prompt)).final_output_as(ThemeClassificationOutput)
-                break
-            except Exception as e:
-                logger.error("Error during theme classification attempt %d: %s", attempt, e)
-                if attempt == max_attempts:
-                    logger.error("Max attempts reached. Returning fallback result.")
-                    result = None
-                continue
-
-        if result is None:
-            fallback_reason = f"Classification failed after {max_attempts} attempts."
-            result = ThemeClassificationOutput(themes=["NA"], confidence="low", reasoning=fallback_reason)
-
-        return result
+        try:
+            agent = Agent(
+                name="ThemeClassifier",
+                instructions=system_prompt,
+                output_type=ThemeClassificationOutput,
+                model=OpenAIChatCompletionsModel(
+                    model=get_model("themes"),
+                    openai_client=get_openai_client(),
+                ),
+            )
+            result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ThemeClassificationOutput)
+            return result
+        except Exception as e:
+            logger.error("Error during theme classification: %s", e)
+            fallback_reason = f"Classification failed: {str(e)}"
+            return ThemeClassificationOutput(themes=["NA"], confidence="low", reasoning=fallback_reason)

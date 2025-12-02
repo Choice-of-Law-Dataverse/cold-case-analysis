@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.analysis_models import ColSectionOutput, PILProvisionsOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import generate_system_prompt
@@ -16,7 +18,6 @@ def extract_pil_provisions(
     col_section_output: ColSectionOutput,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
 ):
     """
     Extract PIL provisions from court decision.
@@ -26,12 +27,11 @@ def extract_pil_provisions(
         col_section: Choice of Law section text
         legal_system: Legal system type (e.g., "Civil-law jurisdiction")
         jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
 
     Returns:
         PILProvisionsOutput: Extracted provisions with confidence and reasoning
     """
-    with logfire.span("extract_pil_provisions"):
+    with logfire.span("pil_provisions"):
         PIL_PROVISIONS_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).PIL_PROVISIONS_PROMPT
 
         prompt = PIL_PROVISIONS_PROMPT.format(text=text, col_section=str(col_section_output))
@@ -41,7 +41,10 @@ def extract_pil_provisions(
             name="PILProvisionsExtractor",
             instructions=system_prompt,
             output_type=PILProvisionsOutput,
-            model=model,
+            model=OpenAIChatCompletionsModel(
+                model=get_model("pil_provisions"),
+                openai_client=get_openai_client(),
+            ),
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(PILProvisionsOutput)
 

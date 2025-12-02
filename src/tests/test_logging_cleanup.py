@@ -1,6 +1,7 @@
 """
 Test that logging has been properly implemented and print statements removed.
 """
+
 import os
 import re
 
@@ -13,10 +14,9 @@ def test_no_print_statements_in_tools():
         "case_analyzer.py",
         "col_extractor.py",
         "jurisdiction_detector.py",
-        "precise_jurisdiction_detector.py",
-        "themes_classifier.py"
+        "jurisdiction_classifier.py",
+        "theme_classifier.py",
     ]
-
     for filename in files_to_check:
         filepath = os.path.join(tools_dir, filename)
         with open(filepath, encoding="utf-8") as f:
@@ -30,9 +30,7 @@ def test_no_print_statements_in_tools():
                 continue
             # Check for print statements
             if re.search(r"\bprint\s*\(", line):
-                raise AssertionError(
-                    f"Found print statement in {filename} at line {i}: {line.strip()}"
-                )
+                raise AssertionError(f"Found print statement in {filename} at line {i}: {line.strip()}")
 
 
 def test_logging_imports():
@@ -41,13 +39,12 @@ def test_logging_imports():
         "case_analyzer.py": "tools",
         "col_extractor.py": "tools",
         "jurisdiction_detector.py": "tools",
-        "precise_jurisdiction_detector.py": "tools",
-        "themes_classifier.py": "tools",
+        "jurisdiction_classifier.py": "tools",
+        "theme_classifier.py": "tools",
         "themes_extractor.py": "utils",
         "debug_print_state.py": "utils",
-        "pil_provisions_handler.py": "components"
+        "pil_provisions_handler.py": "components",
     }
-
     for filename, subdir in files_with_logging.items():
         filepath = os.path.join(os.path.dirname(__file__), "..", subdir, filename)
         with open(filepath, encoding="utf-8") as f:
@@ -78,9 +75,7 @@ def test_no_redundant_comments_in_case_analyzer():
 
     for pattern in redundant_patterns:
         if pattern in content:
-            raise AssertionError(
-                f"Found redundant comment in case_analyzer.py: '{pattern}'"
-            )
+            raise AssertionError(f"Found redundant comment in case_analyzer.py: '{pattern}'")
 
 
 def test_conventions_in_agents_md():
@@ -120,7 +115,7 @@ if __name__ == "__main__":
         test_logging_imports,
         test_no_redundant_comments_in_case_analyzer,
         test_conventions_in_agents_md,
-        test_readme_references_agents_md
+        test_readme_references_agents_md,
     ]
 
     passed = 0
