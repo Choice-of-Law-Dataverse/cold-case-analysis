@@ -5,7 +5,6 @@ Analysis workflow components for the CoLD Case Analyzer.
 
 import json
 import logging
-import os
 import time
 
 import streamlit as st
@@ -47,67 +46,73 @@ class WorkflowStateUpdater:
             str: The step name for this result type
         """
 
+        def append_if_changed(key: str, value: object):
+            """Append value to list in state only if it differs from the last element."""
+            lst = state.setdefault(key, [])
+            if not lst or lst[-1] != value:
+                lst.append(value)
+
         if isinstance(result, CaseCitationOutput):
             state["case_citation"] = result.case_citation
-            state.setdefault("case_citation_confidence", []).append(result.confidence)
-            state.setdefault("case_citation_reasoning", []).append(result.reasoning)
+            append_if_changed("case_citation_confidence", result.confidence)
+            append_if_changed("case_citation_reasoning", result.reasoning)
             return "case_citation"
 
         if isinstance(result, ColSectionOutput):
             # Join multiple sections with newlines
             col_section_text = "\n\n".join(result.col_sections) if result.col_sections else ""
-            state.setdefault("col_section", []).append(col_section_text)
-            state.setdefault("col_section_confidence", []).append(result.confidence)
-            state.setdefault("col_section_reasoning", []).append(result.reasoning)
+            append_if_changed("col_section", col_section_text)
+            append_if_changed("col_section_confidence", result.confidence)
+            append_if_changed("col_section_reasoning", result.reasoning)
             return "col_section"
 
         elif isinstance(result, ThemeClassificationOutput):
             themes_str = ", ".join(result.themes) if isinstance(result.themes, list) else str(result.themes)
-            state.setdefault("classification", []).append(themes_str)
-            state.setdefault("classification_confidence", []).append(result.confidence)
-            state.setdefault("classification_reasoning", []).append(result.reasoning)
+            append_if_changed("classification", themes_str)
+            append_if_changed("classification_confidence", result.confidence)
+            append_if_changed("classification_reasoning", result.reasoning)
             return "themes"
 
         elif isinstance(result, RelevantFactsOutput):
-            state.setdefault("relevant_facts", []).append(result.relevant_facts)
-            state.setdefault("relevant_facts_confidence", []).append(result.confidence)
-            state.setdefault("relevant_facts_reasoning", []).append(result.reasoning)
+            append_if_changed("relevant_facts", result.relevant_facts)
+            append_if_changed("relevant_facts_confidence", result.confidence)
+            append_if_changed("relevant_facts_reasoning", result.reasoning)
             return "relevant_facts"
 
         elif isinstance(result, PILProvisionsOutput):
-            state.setdefault("pil_provisions", []).append(result.pil_provisions)
-            state.setdefault("pil_provisions_confidence", []).append(result.confidence)
-            state.setdefault("pil_provisions_reasoning", []).append(result.reasoning)
+            append_if_changed("pil_provisions", result.pil_provisions)
+            append_if_changed("pil_provisions_confidence", result.confidence)
+            append_if_changed("pil_provisions_reasoning", result.reasoning)
             return "pil_provisions"
 
         elif isinstance(result, ColIssueOutput):
-            state.setdefault("col_issue", []).append(result.col_issue)
-            state.setdefault("col_issue_confidence", []).append(result.confidence)
-            state.setdefault("col_issue_reasoning", []).append(result.reasoning)
+            append_if_changed("col_issue", result.col_issue)
+            append_if_changed("col_issue_confidence", result.confidence)
+            append_if_changed("col_issue_reasoning", result.reasoning)
             return "col_issue"
 
         elif isinstance(result, CourtsPositionOutput):
-            state.setdefault("courts_position", []).append(result.courts_position)
-            state.setdefault("courts_position_confidence", []).append(result.confidence)
-            state.setdefault("courts_position_reasoning", []).append(result.reasoning)
+            append_if_changed("courts_position", result.courts_position)
+            append_if_changed("courts_position_confidence", result.confidence)
+            append_if_changed("courts_position_reasoning", result.reasoning)
             return "courts_position"
 
         elif isinstance(result, ObiterDictaOutput):
-            state.setdefault("obiter_dicta", []).append(result.obiter_dicta)
-            state.setdefault("obiter_dicta_confidence", []).append(result.confidence)
-            state.setdefault("obiter_dicta_reasoning", []).append(result.reasoning)
+            append_if_changed("obiter_dicta", result.obiter_dicta)
+            append_if_changed("obiter_dicta_confidence", result.confidence)
+            append_if_changed("obiter_dicta_reasoning", result.reasoning)
             return "obiter_dicta"
 
         elif isinstance(result, DissentingOpinionsOutput):
-            state.setdefault("dissenting_opinions", []).append(result.dissenting_opinions)
-            state.setdefault("dissenting_opinions_confidence", []).append(result.confidence)
-            state.setdefault("dissenting_opinions_reasoning", []).append(result.reasoning)
+            append_if_changed("dissenting_opinions", result.dissenting_opinions)
+            append_if_changed("dissenting_opinions_confidence", result.confidence)
+            append_if_changed("dissenting_opinions_reasoning", result.reasoning)
             return "dissenting_opinions"
 
         elif isinstance(result, AbstractOutput):
-            state.setdefault("abstract", []).append(result.abstract)
-            state.setdefault("abstract_confidence", []).append(result.confidence)
-            state.setdefault("abstract_reasoning", []).append(result.reasoning)
+            append_if_changed("abstract", result.abstract)
+            append_if_changed("abstract_confidence", result.confidence)
+            append_if_changed("abstract_reasoning", result.reasoning)
             return "abstract"
 
         else:
@@ -313,6 +318,111 @@ def get_analysis_steps(state):
     return steps
 
 
+def reconstruct_outputs_from_state(state: dict) -> dict:
+    """
+    Reconstruct output objects from the session state to resume analysis.
+
+    Args:
+        state: The current analysis state
+
+    Returns:
+        dict: Dictionary of existing outputs to pass to analyze_case_workflow
+    """
+    outputs = {}
+
+    # Helper to get last item from list or None
+    def get_last(key):
+        val = state.get(key)
+        return val[-1] if val and isinstance(val, list) else None
+
+    # ColSectionOutput
+    col_sections_text = get_last("col_section")
+    if col_sections_text:
+        # Split back into list if it was joined
+        col_sections = col_sections_text.split("\n\n")
+        outputs["existing_col_section"] = ColSectionOutput(
+            col_sections=col_sections,
+            confidence=get_last("col_section_confidence") or "medium",
+            reasoning=get_last("col_section_reasoning") or "Resumed from previous state",
+        )
+
+    # CaseCitationOutput
+    case_citation = state.get("case_citation")
+    if case_citation:
+        outputs["existing_case_citation"] = CaseCitationOutput(
+            case_citation=case_citation,
+            confidence=get_last("case_citation_confidence") or "medium",
+            reasoning=get_last("case_citation_reasoning") or "Resumed from previous state",
+        )
+
+    # ThemeClassificationOutput
+    themes_str = get_last("classification")
+    if themes_str:
+        # Split back into list
+        themes = [t.strip() for t in themes_str.split(",")]
+        outputs["existing_themes"] = ThemeClassificationOutput(
+            themes=themes,
+            confidence=get_last("classification_confidence") or "medium",
+            reasoning=get_last("classification_reasoning") or "Resumed from previous state",
+        )
+
+    # RelevantFactsOutput
+    facts = get_last("relevant_facts")
+    if facts:
+        outputs["existing_facts"] = RelevantFactsOutput(
+            relevant_facts=facts,
+            confidence=get_last("relevant_facts_confidence") or "medium",
+            reasoning=get_last("relevant_facts_reasoning") or "Resumed from previous state",
+        )
+
+    # PILProvisionsOutput
+    provisions = get_last("pil_provisions")
+    if provisions:
+        outputs["existing_pil_provisions"] = PILProvisionsOutput(
+            pil_provisions=provisions,
+            confidence=get_last("pil_provisions_confidence") or "medium",
+            reasoning=get_last("pil_provisions_reasoning") or "Resumed from previous state",
+        )
+
+    # ColIssueOutput
+    col_issue = get_last("col_issue")
+    if col_issue:
+        outputs["existing_col_issue"] = ColIssueOutput(
+            col_issue=col_issue,
+            confidence=get_last("col_issue_confidence") or "medium",
+            reasoning=get_last("col_issue_reasoning") or "Resumed from previous state",
+        )
+
+    # CourtsPositionOutput
+    courts_position = get_last("courts_position")
+    if courts_position:
+        outputs["existing_courts_position"] = CourtsPositionOutput(
+            courts_position=courts_position,
+            confidence=get_last("courts_position_confidence") or "medium",
+            reasoning=get_last("courts_position_reasoning") or "Resumed from previous state",
+        )
+
+    # ObiterDictaOutput
+    obiter_dicta = get_last("obiter_dicta")
+    if obiter_dicta:
+        outputs["existing_obiter_dicta"] = ObiterDictaOutput(
+            obiter_dicta=obiter_dicta,
+            confidence=get_last("obiter_dicta_confidence") or "medium",
+            reasoning=get_last("obiter_dicta_reasoning") or "Resumed from previous state",
+        )
+
+    # DissentingOpinionsOutput
+    dissenting_opinions = get_last("dissenting_opinions")
+    if dissenting_opinions:
+        outputs["existing_dissenting_opinions"] = DissentingOpinionsOutput(
+            dissenting_opinions=dissenting_opinions,
+            confidence=get_last("dissenting_opinions_confidence") or "medium",
+            reasoning=get_last("dissenting_opinions_reasoning") or "Resumed from previous state",
+        )
+
+    return outputs
+
+
 def execute_all_analysis_steps_with_generator(state):
     """
     Execute all analysis steps using the generator pattern.
@@ -324,7 +434,6 @@ def execute_all_analysis_steps_with_generator(state):
     text = state["full_text"]
     legal_system = state.get("jurisdiction", "Civil-law jurisdiction")
     jurisdiction = state.get("precise_jurisdiction")
-    model = state.get("model") or os.getenv("OPENAI_MODEL") or "gpt-5-nano"
 
     # Create progress placeholder
     progress_placeholder = st.empty()
@@ -341,12 +450,15 @@ def execute_all_analysis_steps_with_generator(state):
     completed = 0
 
     try:
+        # Reconstruct existing outputs to resume if needed
+        existing_outputs = reconstruct_outputs_from_state(state)
+
         # Use the generator to orchestrate the workflow
         for result in analyze_case_workflow(
             text=text,
             legal_system=legal_system,
             jurisdiction=jurisdiction,
-            model=model,
+            **existing_outputs,
         ):
             # Update state using helper class
             step_name = WorkflowStateUpdater.update_state(state, result)
@@ -367,9 +479,9 @@ def execute_all_analysis_steps_with_generator(state):
         progress_placeholder.empty()
     except Exception as e:
         progress_placeholder.empty()
-        st.error(f"Error during analysis: {str(e)}")
         logger.error(f"Analysis workflow error: {e}", exc_info=True)
-        raise
+        state["analysis_error"] = str(e)
+        # Do not raise - allow UI to handle retry
 
 
 def render_final_editing_phase():
@@ -647,10 +759,25 @@ def render_analysis_workflow():
     if not state.get("analysis_ready"):
         return
 
+    # Check for error state first
+    if state.get("analysis_error"):
+        st.error(f"Analysis failed: {state['analysis_error']}")
+        if st.button("Retry Analysis", type="primary"):
+            del state["analysis_error"]
+            # Reset parallel_execution_started to trigger execution again
+            state["parallel_execution_started"] = False
+            st.rerun()
+        return
+
     if not state.get("parallel_execution_started"):
         execute_all_analysis_steps_with_generator(state)
-        state["parallel_execution_started"] = True
-        st.rerun()
+
+        # If error occurred during execution, it will be set in state
+        if state.get("analysis_error"):
+            st.rerun()
+        else:
+            state["parallel_execution_started"] = True
+            st.rerun()
     elif not state.get("analysis_done"):
         render_final_editing_phase()
     else:

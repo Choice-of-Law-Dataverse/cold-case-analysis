@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.analysis_models import ColIssueOutput, ColSectionOutput, ObiterDictaOutput
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
@@ -17,7 +19,6 @@ def extract_obiter_dicta(
     col_section_output: ColSectionOutput,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
     themes_output: ThemeClassificationOutput,
     col_issue_output: ColIssueOutput,
 ):
@@ -29,14 +30,13 @@ def extract_obiter_dicta(
         col_section_output: Extracted Choice of Law sections
         legal_system: Legal system type (e.g., "Civil-law jurisdiction")
         jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
         themes_output: Classified themes output
         col_issue_output: Extracted Choice of Law issue
 
     Returns:
         ObiterDictaOutput: Extracted obiter dicta with confidence and reasoning
     """
-    with logfire.span("extract_obiter_dicta"):
+    with logfire.span("obiter_dicta"):
         prompt_module = get_prompt_module(legal_system, "analysis", jurisdiction)
         OBITER_PROMPT = prompt_module.COURTS_POSITION_OBITER_DICTA_PROMPT
 
@@ -52,7 +52,10 @@ def extract_obiter_dicta(
             name="ObiterDictaExtractor",
             instructions=system_prompt,
             output_type=ObiterDictaOutput,
-            model=model,
+            model=OpenAIChatCompletionsModel(
+                model=get_model("obiter_dicta"),
+                openai_client=get_openai_client(),
+            ),
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ObiterDictaOutput)
 

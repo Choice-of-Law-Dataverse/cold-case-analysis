@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import generate_system_prompt
@@ -17,7 +19,6 @@ def theme_classification_node(
     col_section: str,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
 ):
     """
     Classify themes for a court decision.
@@ -32,7 +33,7 @@ def theme_classification_node(
     Returns:
         ThemeClassificationOutput: Classified themes with confidence and reasoning
     """
-    with logfire.span("classify_themes"):
+    with logfire.span("themes"):
         PIL_THEME_PROMPT = get_prompt_module(legal_system, "theme", jurisdiction).PIL_THEME_PROMPT
 
         prompt = PIL_THEME_PROMPT.format(text=text, col_section=col_section, themes_table=THEMES_TABLE_STR)
@@ -43,7 +44,10 @@ def theme_classification_node(
                 name="ThemeClassifier",
                 instructions=system_prompt,
                 output_type=ThemeClassificationOutput,
-                model=model,
+                model=OpenAIChatCompletionsModel(
+                    model=get_model("themes"),
+                    openai_client=get_openai_client(),
+                ),
             )
             result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ThemeClassificationOutput)
             return result

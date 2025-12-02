@@ -1,6 +1,6 @@
 import streamlit as st
 
-from components.auth import initialize_auth, render_model_selector
+from components.auth import initialize_auth
 from components.css import load_css
 from components.main_workflow import render_main_workflow
 from components.sidebar import render_sidebar
@@ -45,7 +45,6 @@ For details on the underlying methodology, please consult the prompting structur
     unsafe_allow_html=True,
 )
 
-render_model_selector()
 load_css()
 render_sidebar()
 initialize_col_state()

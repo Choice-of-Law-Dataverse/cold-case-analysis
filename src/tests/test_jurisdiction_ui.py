@@ -1,6 +1,7 @@
 """
 Test for jurisdiction detection UI changes.
 """
+
 import os
 import sys
 from unittest.mock import Mock, patch
@@ -27,7 +28,7 @@ def test_jurisdiction_detection_session_state_initialization():
             "legal_system_type",
             "precise_jurisdiction_eval_score",
             "precise_jurisdiction_confirmed",
-            "jurisdiction_manual_override"
+            "jurisdiction_manual_override",
         ]
 
         # Verify that precise_jurisdiction_eval_submitted is NOT in the expected keys
@@ -37,8 +38,8 @@ def test_jurisdiction_detection_session_state_initialization():
 
 def test_no_evaluation_phase_in_code():
     """Test that the evaluation phase code has been removed."""
-    # Read the jurisdiction_detection.py file
-    file_path = os.path.join(os.path.dirname(__file__), "..", "components", "jurisdiction_detection.py")
+    # Read the jurisdiction.py file
+    file_path = os.path.join(os.path.dirname(__file__), "..", "components", "jurisdiction.py")
     with open(file_path) as f:
         content = f.read()
 
@@ -60,7 +61,7 @@ def test_no_evaluation_phase_in_code():
 
 def test_dropdown_defaults_logic():
     """Test that dropdowns use detected values as defaults."""
-    file_path = os.path.join(os.path.dirname(__file__), "..", "components", "jurisdiction_detection.py")
+    file_path = os.path.join(os.path.dirname(__file__), "..", "components", "jurisdiction.py")
     with open(file_path) as f:
         content = f.read()
 

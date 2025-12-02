@@ -2,13 +2,15 @@
 """
 Detects the jurisdiction type of a court decision: Civil-law, Common-law, or No court decision using an LLM.
 """
+
+import asyncio
 import logging
-from typing import Any
 
 import logfire
-from langchain_core.messages import HumanMessage, SystemMessage
+from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
-import config
+from config import get_model, get_openai_client
 from prompts.legal_system_type_detection import LEGAL_SYSTEM_TYPE_DETECTION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -23,29 +25,141 @@ def get_jurisdiction_legal_system_mapping():
 
     # Known civil law jurisdictions based on jurisdictions.csv analysis
     civil_law_jurisdictions = {
-        "Switzerland", "Germany", "France", "Italy", "Spain", "Austria", "Netherlands", "Belgium",
-        "Luxembourg", "Portugal", "Greece", "Finland", "Sweden", "Denmark", "Norway", "Poland",
-        "Czech Republic", "Slovakia", "Hungary", "Romania", "Bulgaria", "Croatia", "Slovenia",
-        "Estonia", "Latvia", "Lithuania", "Malta", "Cyprus", "Japan", "South Korea", "China (Mainland)",
-        "Taiwan", "Brazil", "Argentina", "Mexico", "Chile", "Colombia", "Peru", "Ecuador",
-        "Bolivia", "Paraguay", "Uruguay", "Venezuela", "Russia", "Ukraine", "Turkey", "Egypt",
-        "Morocco", "Tunisia", "Algeria", "Iran", "Lebanon", "Jordan", "Qatar", "Kuwait", "Bahrain",
-        "UAE", "Saudi Arabia", "Israel", "Indonesia", "Thailand", "Vietnam", "Cambodia", "Laos",
-        "Ethiopia", "Angola", "Mozambique", "Kazakhstan", "Uzbekistan", "Tajikistan", "Kyrgyzstan",
-        "Belarus", "Moldova", "Georgia", "Armenia", "Azerbaijan", "Albania", "Bosnia and Herzegovina",
-        "North Macedonia", "Montenegro", "Serbia", "Kosovo", "Iceland", "Liechtenstein", "Monaco",
-        "San Marino", "Andorra", "European Union", "OHADA"
+        "Switzerland",
+        "Germany",
+        "France",
+        "Italy",
+        "Spain",
+        "Austria",
+        "Netherlands",
+        "Belgium",
+        "Luxembourg",
+        "Portugal",
+        "Greece",
+        "Finland",
+        "Sweden",
+        "Denmark",
+        "Norway",
+        "Poland",
+        "Czech Republic",
+        "Slovakia",
+        "Hungary",
+        "Romania",
+        "Bulgaria",
+        "Croatia",
+        "Slovenia",
+        "Estonia",
+        "Latvia",
+        "Lithuania",
+        "Malta",
+        "Cyprus",
+        "Japan",
+        "South Korea",
+        "China (Mainland)",
+        "Taiwan",
+        "Brazil",
+        "Argentina",
+        "Mexico",
+        "Chile",
+        "Colombia",
+        "Peru",
+        "Ecuador",
+        "Bolivia",
+        "Paraguay",
+        "Uruguay",
+        "Venezuela",
+        "Russia",
+        "Ukraine",
+        "Turkey",
+        "Egypt",
+        "Morocco",
+        "Tunisia",
+        "Algeria",
+        "Iran",
+        "Lebanon",
+        "Jordan",
+        "Qatar",
+        "Kuwait",
+        "Bahrain",
+        "UAE",
+        "Saudi Arabia",
+        "Israel",
+        "Indonesia",
+        "Thailand",
+        "Vietnam",
+        "Cambodia",
+        "Laos",
+        "Ethiopia",
+        "Angola",
+        "Mozambique",
+        "Kazakhstan",
+        "Uzbekistan",
+        "Tajikistan",
+        "Kyrgyzstan",
+        "Belarus",
+        "Moldova",
+        "Georgia",
+        "Armenia",
+        "Azerbaijan",
+        "Albania",
+        "Bosnia and Herzegovina",
+        "North Macedonia",
+        "Montenegro",
+        "Serbia",
+        "Kosovo",
+        "Iceland",
+        "Liechtenstein",
+        "Monaco",
+        "San Marino",
+        "Andorra",
+        "European Union",
+        "OHADA",
     }
 
     # Known common law jurisdictions
     common_law_jurisdictions = {
-        "United States", "United States of America", "USA", "United Kingdom", "England", "Scotland",
-        "Wales", "Northern Ireland", "Ireland", "Canada", "Australia", "New Zealand", "India",
-        "Pakistan", "Bangladesh", "Sri Lanka", "Malaysia", "Singapore", "Hong Kong", "South Africa",
-        "Nigeria", "Ghana", "Kenya", "Uganda", "Tanzania", "Zambia", "Zimbabwe", "Botswana",
-        "Malawi", "Sierra Leone", "Gambia", "Jamaica", "Barbados", "Trinidad and Tobago",
-        "Bahamas", "Belize", "Guyana", "Cyprus (Common Law aspects)", "Malta (Common Law aspects)",
-        "Israel (Common Law aspects)", "Philippines", "Myanmar"
+        "United States",
+        "United States of America",
+        "USA",
+        "United Kingdom",
+        "England",
+        "Scotland",
+        "Wales",
+        "Northern Ireland",
+        "Ireland",
+        "Canada",
+        "Australia",
+        "New Zealand",
+        "India",
+        "Pakistan",
+        "Bangladesh",
+        "Sri Lanka",
+        "Malaysia",
+        "Singapore",
+        "Hong Kong",
+        "South Africa",
+        "Nigeria",
+        "Ghana",
+        "Kenya",
+        "Uganda",
+        "Tanzania",
+        "Zambia",
+        "Zimbabwe",
+        "Botswana",
+        "Malawi",
+        "Sierra Leone",
+        "Gambia",
+        "Jamaica",
+        "Barbados",
+        "Trinidad and Tobago",
+        "Bahamas",
+        "Belize",
+        "Guyana",
+        "Cyprus (Common Law aspects)",
+        "Malta (Common Law aspects)",
+        "Israel (Common Law aspects)",
+        "Philippines",
+        "Myanmar",
     }
 
     # Create the mapping
@@ -56,13 +170,6 @@ def get_jurisdiction_legal_system_mapping():
         mapping[jurisdiction.lower()] = "Common-law jurisdiction"
 
     return mapping
-
-def _coerce_to_text(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "\n".join(str(item) for item in content if item is not None)
-    return str(content) if content is not None else ""
 
 
 def detect_legal_system_by_jurisdiction(jurisdiction_name: str) -> str | None:
@@ -86,6 +193,7 @@ def detect_legal_system_by_jurisdiction(jurisdiction_name: str) -> str | None:
 
     return None
 
+
 def detect_legal_system_type(jurisdiction_name: str, text: str) -> str:
     """
     Uses jurisdiction mapping first, then LLM analysis to classify the input text as:
@@ -93,7 +201,7 @@ def detect_legal_system_type(jurisdiction_name: str, text: str) -> str:
     - 'Common-law jurisdiction'
     - 'No court decision'
     """
-    with logfire.span("detect_legal_system_type", jurisdiction=jurisdiction_name):
+    with logfire.span("legal_system", jurisdiction=jurisdiction_name):
         if not text or len(text.strip()) < 50:
             return "No court decision"
 
@@ -107,11 +215,19 @@ def detect_legal_system_type(jurisdiction_name: str, text: str) -> str:
         logger.debug("Using LLM analysis for jurisdiction: %s", jurisdiction_name)
         logger.debug("Prompting LLM with: %s", prompt)
 
-        response = config.llm.invoke([
-            SystemMessage(content="You are an expert in legal systems and court decisions."),
-            HumanMessage(content=prompt)
-        ])
-        result = _coerce_to_text(getattr(response, "content", "")).strip()
+        system_prompt = "You are an expert in legal systems and court decisions."
+
+        agent = Agent(
+            name="LegalSystemDetector",
+            instructions=system_prompt,
+            model=OpenAIChatCompletionsModel(
+                model=get_model("legal_system"),
+                openai_client=get_openai_client(),
+            ),
+        )
+
+        result_obj = asyncio.run(Runner.run(agent, prompt))
+        result = result_obj.final_output.strip()
 
         allowed = ["Civil-law jurisdiction", "Common-law jurisdiction", "No court decision"]
         for option in allowed:

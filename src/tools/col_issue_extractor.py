@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.analysis_models import ColIssueOutput, ColSectionOutput
 from models.classification_models import ThemeClassificationOutput
 from prompts.prompt_selector import get_prompt_module
@@ -18,7 +20,6 @@ def extract_col_issue(
     col_section_output: ColSectionOutput,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
     themes_output: ThemeClassificationOutput,
 ):
     """
@@ -29,13 +30,12 @@ def extract_col_issue(
         col_section_output: Extracted Choice of Law sections
         legal_system: Legal system type (e.g., "Civil-law jurisdiction")
         jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
         themes_output: Classified themes output
 
     Returns:
         ColIssueOutput: Extracted issue with confidence and reasoning
     """
-    with logfire.span("extract_col_issue"):
+    with logfire.span("col_issue"):
         COL_ISSUE_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).COL_ISSUE_PROMPT
 
         themes = themes_output.themes
@@ -50,7 +50,10 @@ def extract_col_issue(
             name="ColIssueExtractor",
             instructions=system_prompt,
             output_type=ColIssueOutput,
-            model=model,
+            model=OpenAIChatCompletionsModel(
+                model=get_model("col_issue"),
+                openai_client=get_openai_client(),
+            ),
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(ColIssueOutput)
 

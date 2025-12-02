@@ -3,7 +3,9 @@ import logging
 
 import logfire
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 
+from config import get_model, get_openai_client
 from models.analysis_models import ColSectionOutput, RelevantFactsOutput
 from prompts.prompt_selector import get_prompt_module
 from utils.system_prompt_generator import generate_system_prompt
@@ -16,7 +18,6 @@ def extract_relevant_facts(
     col_section_output: ColSectionOutput,
     legal_system: str,
     jurisdiction: str | None,
-    model: str,
 ):
     """
     Extract relevant facts from court decision.
@@ -26,12 +27,11 @@ def extract_relevant_facts(
         col_section: Choice of Law section text
         legal_system: Legal system type (e.g., "Civil-law jurisdiction")
         jurisdiction: Precise jurisdiction (e.g., "Switzerland")
-        model: Model to use for extraction
 
     Returns:
         RelevantFactsOutput: Extracted facts with confidence and reasoning
     """
-    with logfire.span("extract_relevant_facts"):
+    with logfire.span("relevant_facts"):
         FACTS_PROMPT = get_prompt_module(legal_system, "analysis", jurisdiction).FACTS_PROMPT
 
         prompt = FACTS_PROMPT.format(text=text, col_section=str(col_section_output))
@@ -41,7 +41,10 @@ def extract_relevant_facts(
             name="RelevantFactsExtractor",
             instructions=system_prompt,
             output_type=RelevantFactsOutput,
-            model=model,
+            model=OpenAIChatCompletionsModel(
+                model=get_model("relevant_facts"),
+                openai_client=get_openai_client(),
+            ),
         )
         result = asyncio.run(Runner.run(agent, prompt)).final_output_as(RelevantFactsOutput)
 
