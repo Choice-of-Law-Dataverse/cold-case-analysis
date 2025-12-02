@@ -17,6 +17,7 @@ The CoLD Case Analyzer is a Streamlit-based web application that processes court
 ## System Architecture
 
 The application processes cases through sequential steps:
+
 1. **Input Phase**: PDF upload, text entry, or demo case selection
 2. **Jurisdiction Detection**: Identifies the legal system and jurisdiction
 3. **COL Section Extraction**: Extracts Choice of Law sections with user validation
@@ -79,9 +80,6 @@ cold-case-analysis/
 │   │   ├── themes.csv          # PIL theme taxonomy
 │   │   └── jurisdictions.csv   # Jurisdiction data
 │   └── tests/                    # Test suite
-├── latam_case_analysis/          # LATAM-specific utilities
-│   ├── pdf_extractor.py         # Airtable PDF extraction
-│   └── txt_converter.py         # Text conversion utilities
 ├── docs/                         # Documentation
 ├── Dockerfile                    # Docker deployment
 ├── pyproject.toml               # Python project configuration
@@ -98,50 +96,62 @@ The core workflow logic is distributed across the following components:
 ### Components (`components/`)
 
 #### `auth.py`
+
 - Authentication and model selection functionality
 - Functions: `initialize_auth()`, `render_model_selector()`
 
-#### `database.py`  
+#### `database.py`
+
 - Database persistence functionality
 - Functions: `save_to_db()`
 
 #### `input_handler.py`
+
 - Input handling for case citation, email, PDF upload, text input, demo case
 - Functions: `render_pdf_uploader()`, `render_text_input()`, `render_input_phase()`
 
 #### `jurisdiction.py`
+
 - Enhanced jurisdiction detection with precise jurisdiction identification
 - Functions: `render_jurisdiction_detection()`, `get_final_jurisdiction_data()`
 
 #### `col_processor.py`
+
 - Choice of Law section processing and feedback
 - Functions: `display_jurisdiction_info()`, `display_col_extractions()`, `handle_col_feedback_phase()`
 
 #### `themes.py`
+
 - Theme classification and editing interface
 - Functions: `display_theme_classification()`, `handle_theme_editing()`, `render_theme_classification()`
 
 #### `confidence_display.py`
+
 - Confidence score display with reasoning
 - Functions: `render_confidence_chip()`, `render_confidence_modal()`, `add_confidence_chip_css()`
 
 #### `pil_provisions_handler.py`
+
 - PIL provisions extraction and processing
 - Functions: `display_pil_provisions()`, `handle_pil_provisions_editing()`, `parse_pil_provisions()`, `format_pil_for_display()`, `format_pil_for_storage()`, `update_pil_provisions_state()`
 
 #### `analysis_workflow.py`
+
 - Analysis workflow execution and management
 - Functions: `render_email_input()`, `display_completion_message()`, `render_results_as_markdown()`
 
 #### `main_workflow.py`
+
 - Main workflow orchestration
 - Functions: `render_initial_input_phase()`, `render_processing_phases()`, `render_main_workflow()`
 
 #### `sidebar.py`
+
 - Sidebar navigation and information display
 - Functions: `render_sidebar()`
 
 #### `css.py`
+
 - Custom CSS styling for the application
 - Functions: `load_css()`
 
@@ -163,6 +173,7 @@ The main configuration module that initializes the application environment:
 - **Model Selection**: Supports configurable model selection via environment variables
 
 Key environment variables required:
+
 - `OPENAI_API_KEY` (required): OpenAI API key for LLM functionality
 - `OPENAI_MODEL` (optional): Default model to use (defaults to "gpt-5-nano")
 - `LOGFIRE_TOKEN` (optional): Token for Logfire monitoring service
@@ -179,35 +190,27 @@ Output models for case analysis steps:
   - `col_sections: list[str]` - List of extracted COL section texts
   - `confidence: Literal["low", "medium", "high"]` - Confidence level
   - `reasoning: str` - Explanation of extraction
-  
 - **`CaseCitationOutput`**: Case citation extraction results
   - `case_citation: str` - Extracted academic-format citation
   - `confidence` and `reasoning` fields
-  
 - **`RelevantFactsOutput`**: Relevant facts extraction results
   - `relevant_facts: str` - Factual background of the case
   - `confidence` and `reasoning` fields
-  
 - **`PILProvisionsOutput`**: PIL provisions extraction results
   - `pil_provisions: list[str]` - List of legal provisions cited
   - `confidence` and `reasoning` fields
-  
 - **`ColIssueOutput`**: Choice of Law issue identification results
   - `col_issue: str` - The COL issue(s) in the case
   - `confidence` and `reasoning` fields
-  
 - **`CourtsPositionOutput`**: Court's position analysis results
   - `courts_position: str` - Court's reasoning and decision
   - `confidence` and `reasoning` fields
-  
 - **`ObiterDictaOutput`**: Obiter dicta extraction results (Common Law)
   - `obiter_dicta: str` - Non-binding statements from opinion
   - `confidence` and `reasoning` fields
-  
 - **`DissentingOpinionsOutput`**: Dissenting opinions extraction results (Common Law)
   - `dissenting_opinions: str` - Dissenting judge opinions
   - `confidence` and `reasoning` fields
-  
 - **`AbstractOutput`**: Case abstract generation results
   - `abstract: str` - Concise case summary
   - `confidence` and `reasoning` fields
@@ -221,19 +224,17 @@ Output models for classification tasks:
   - `precise_jurisdiction: str` - Specific jurisdiction (e.g., "Switzerland")
   - `jurisdiction_code: str` - ISO country code (e.g., "CH")
   - `confidence` and `reasoning` fields
-  
 - **`ThemeClassificationOutput`**: PIL theme classification results
   - `themes: list[ThemeWithNA]` - List of classified themes
   - `confidence` and `reasoning` fields
-  
 - **`Theme`**: Literal type defining valid PIL themes:
   - "Party autonomy", "Tacit choice", "Partial choice", "Absence of choice"
   - "Arbitration", "Freedom of Choice", "Rules of Law", "Dépeçage"
   - "Public policy", "Mandatory rules", "Consumer contracts", "Employment contracts"
-  
 - **`ThemeWithNA`**: Theme type extended with "NA" for non-applicable cases
 
 All models include:
+
 - Type-safe field definitions with Pydantic
 - Confidence levels (low, medium, high) for quality assessment
 - Reasoning fields for explainability and transparency
@@ -244,71 +245,84 @@ Utilities are further specified under:
 ### Utilities (`utils/`)
 
 #### `state_manager.py`
+
 - Session state management utilities
 - Functions: `initialize_col_state()`, `create_initial_analysis_state()`, `update_col_state()`, `get_col_state()`, `load_demo_case()`
 
 #### `data_loaders.py`
+
 - Data loading utilities (themes, demo case)
 - Functions: `load_valid_themes()`, `get_demo_case_text()`
 
 #### `pdf_handler.py`
+
 - PDF text extraction utilities
 - Functions: `extract_text_from_pdf()`
 
 #### `themes_extractor.py`
+
 - Theme extraction and classification logic
 - Functions: Theme extraction and processing utilities
 
 #### `system_prompt_generator.py`
+
 - Dynamic system prompt generation for different jurisdictions
 - Functions: Jurisdiction-specific prompt generation
 
 #### `debug_print_state.py`
+
 - Debug utilities for printing session state
 - Functions: Debugging helper functions
 
 #### `sample_cd.py`
+
 - Sample court decision data for testing
 - Contains: Demo case text and metadata
 
 ## Quick Start
 
 ### Prerequisites
+
 - Python 3.12+
 - OpenAI API Key
 
 ### Setup
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/Choice-of-Law-Dataverse/cold-case-analysis.git
    cd cold-case-analysis
    ```
 
 2. **Set up environment variables**:
+
    ```bash
    cp .env.example .env
    # Edit .env and add your OPENAI_API_KEY
    ```
 
 3. **Install dependencies**:
-   
+
    Using pip:
+
    ```bash
    pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
    ```
-   
+
    Or using uv (recommended):
+
    ```bash
    uv sync
    ```
 
 4. **Run the application**:
+
    ```bash
    # With pip installation
    cd src
    streamlit run app.py
-   
+
    # With uv
    uv run streamlit run src/app.py
    ```
@@ -330,13 +344,15 @@ docker run -p 8501:8501 --env-file .env cold-case-analyzer
 The application uses environment variables for configuration. Copy `.env.example` to `.env` and configure:
 
 ### Required
+
 - `OPENAI_API_KEY`: Your OpenAI API key for LLM functionality
 - `OPENAI_MODEL`: Model to use (default: "gpt-5-nano")
 
 ### Optional
+
 - `SQL_CONN_STRING`: PostgreSQL connection for storing analysis results
 - `USER_CREDENTIALS`: JSON object for user authentication (e.g., `{"admin":"password"}`)
-- `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`: For Airtable integration (LATAM module)
+- `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`: For Airtable integration
 - `NOCODB_BASE_URL`, `NOCODB_API_TOKEN`: For NoCode database interface
 
 ## Usage Examples
@@ -361,6 +377,7 @@ The application uses environment variables for configuration. Copy `.env.example
 ### Analyzing Cases
 
 The analysis workflow consists of:
+
 1. **Jurisdiction Detection**: Identify the legal system
 2. **COL Extraction**: Extract Choice of Law sections
 3. **Theme Classification**: Categorize PIL themes
@@ -368,6 +385,7 @@ The analysis workflow consists of:
 5. **Detailed Analysis**: Generate comprehensive legal analysis
 
 At each step, you can:
+
 - Score the AI output (0-100)
 - Edit the results
 - Provide feedback for refinement
@@ -384,6 +402,7 @@ At each step, you can:
 ### Adding a New Analysis Phase
 
 1. Create a new component in `src/components/new_phase.py`:
+
    ```python
    def render_new_phase(state):
        # Your phase logic here
@@ -391,9 +410,10 @@ At each step, you can:
    ```
 
 2. Add to `src/components/main_workflow.py`:
+
    ```python
    from components.new_phase import render_new_phase
-   
+
    def render_processing_phases():
        # ... existing phases
        render_new_phase(col_state)
@@ -402,6 +422,7 @@ At each step, you can:
 ### Adding Jurisdiction-Specific Prompts
 
 1. Create prompts in the appropriate jurisdiction directory:
+
    - `src/prompts/civil_law/` for civil law jurisdictions
    - `src/prompts/common_law/` for common law jurisdictions
    - `src/prompts/india/` for Indian law
@@ -411,23 +432,10 @@ At each step, you can:
 ### Testing
 
 Run tests with pytest:
+
 ```bash
 cd src
 pytest tests/ -v
-```
-
-## LATAM Case Analysis Module
-
-The `latam_case_analysis/` module provides utilities for processing Latin American court cases:
-
-- **pdf_extractor.py**: Downloads PDFs from Airtable for South & Latin America cases
-- **txt_converter.py**: Converts PDFs to text format
-
-To use:
-```bash
-export AIRTABLE_API_KEY="your_key_here"
-python latam_case_analysis/pdf_extractor.py
-python latam_case_analysis/txt_converter.py
 ```
 
 ## Documentation
@@ -441,12 +449,13 @@ python latam_case_analysis/txt_converter.py
 ## Contributing
 
 Contributions are welcome! Please ensure:
+
 1. Code follows the coding conventions in `AGENTS.md`
 2. Use logging instead of print statements in application code
 3. Minimize comments - only explain "why", not "what"
 4. Components are properly modularized
 5. Tests are added for new functionality
-4. Documentation is updated accordingly
+6. Documentation is updated accordingly
 
 ## License
 

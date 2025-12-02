@@ -9,17 +9,17 @@ The CoLD Case Analyzer is a Streamlit web application for analyzing court decisi
 ```mermaid
 graph TB
     User[Legal Analyst/Researcher]
-    
+
     subgraph "CoLD Case Analyzer"
         WebApp[🌐 Streamlit Web Application]
     end
-    
+
     subgraph "Key Features"
         Interactive[Interactive Analysis<br/>Step-by-step Workflow]
         Validation[User Validation<br/>Edit & Score Results]
         Storage[Database Storage<br/>Save Analyses]
     end
-    
+
     User --> WebApp
     WebApp --> Interactive
     WebApp --> Validation
@@ -27,7 +27,7 @@ graph TB
 
     classDef app fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef feature fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    
+
     class WebApp app
     class Interactive,Validation,Storage feature
 ```
@@ -35,18 +35,21 @@ graph TB
 ## Quick Setup
 
 ### Prerequisites
+
 - Python 3.12+
 - OpenAI API Key
 
 ### Installation Steps
 
 1. **Clone the repository**:
+
 ```bash
 git clone https://github.com/Choice-of-Law-Dataverse/cold-case-analysis.git
 cd cold-case-analysis
 ```
 
 2. **Set up environment**:
+
 ```bash
 # Copy environment template
 cp .env.example .env
@@ -58,16 +61,19 @@ cp .env.example .env
 3. **Install dependencies**:
 
 Using pip:
+
 ```bash
 pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
 ```
 
 Or using uv (recommended):
+
 ```bash
 uv sync
 ```
 
 4. **Run the application**:
+
 ```bash
 # With pip installation
 cd src
@@ -94,19 +100,23 @@ The easiest way to try the application:
 ### Analyzing Your Own Case
 
 1. **Enter Case Citation**:
+
    - Required field
    - Example: "Federal Court, 20.12.2005 - BGE 132 III 285"
    - Include court, parties, case number, and date
 
 2. **Provide Court Decision Text**:
+
    - Option A: Upload PDF file
    - Option B: Paste text directly into the text area
 
 3. **Start Analysis**:
+
    - Click "Detect Jurisdiction" to begin
    - The system will identify the legal system (Civil Law, Common Law, or Indian)
 
 4. **Review Each Step**:
+
    - **Jurisdiction Detection**: Confirm or correct the identified jurisdiction
    - **COL Extraction**: Review extracted Choice of Law sections
    - **Theme Classification**: Validate PIL theme categorization
@@ -121,6 +131,7 @@ The easiest way to try the application:
 ### Optional: Save to Database
 
 If you've configured `SQL_CONN_STRING` in your `.env` file, analyses will be automatically saved to the PostgreSQL database with:
+
 - User identification
 - Model information
 - Timestamps
@@ -137,7 +148,7 @@ flowchart LR
     COL --> Theme[🏷️ Classify Theme]
     Theme --> Analysis[🔍 Complete Analysis]
     Analysis --> Output[📊 Structured Results]
-    
+
     subgraph "Analysis Components"
         Abstract[Abstract]
         Facts[Relevant Facts]
@@ -145,7 +156,7 @@ flowchart LR
         Issue[COL Issue]
         Position[Court Position]
     end
-    
+
     Analysis --> Abstract
     Analysis --> Facts
     Analysis --> Provisions
@@ -154,7 +165,7 @@ flowchart LR
 
     classDef process fill:#e3f2fd,stroke:#1976d2
     classDef component fill:#f3e5f5,stroke:#7b1fa2
-    
+
     class Input,Jurisdiction,COL,Theme,Analysis,Output process
     class Abstract,Facts,Provisions,Issue,Position component
 ```
@@ -162,12 +173,14 @@ flowchart LR
 ## Sample Input/Output
 
 ### Input: Court Decision Text
+
 ```
 Federal Court, 20.12.2005 - BGE 132 III 285
 ...Swiss Federal Supreme Court decision regarding FIFA rules and choice of law...
 ```
 
 ### Output: Structured Analysis
+
 ```json
 {
   "Abstract": "Article 116 of the Swiss Private International Law Act (PILA); admissibility of choice of law...",
@@ -182,6 +195,7 @@ Federal Court, 20.12.2005 - BGE 132 III 285
 ## Validation & Testing
 
 ### Basic Validation
+
 ```bash
 # Test Python environment
 python --version  # Should show Python 3.12+
@@ -193,11 +207,13 @@ python -c "from components.input_handler import render_input_phase; print('✓ A
 ```
 
 ### Demo Case Testing
+
 1. Open the web application
 2. Click "Use Demo Case" to load BGE 132 III 285
 3. Follow the workflow to test all features
 
 ### Run Tests
+
 ```bash
 cd src
 pytest tests/ -v
@@ -208,6 +224,7 @@ pytest tests/ -v
 ### Common Issues
 
 1. **Module Import Errors**
+
    ```bash
    # Make sure you're in the src/ directory
    cd src
@@ -215,18 +232,21 @@ pytest tests/ -v
    ```
 
 2. **Missing API Key**
+
    ```bash
    # Check .env file in repository root
    cat ../.env | grep OPENAI_API_KEY
    ```
 
 3. **Missing Dependencies**
+
    ```bash
    # Install all required packages
    pip install streamlit langchain-core langchain-openai pandas pymupdf4llm psycopg2-binary python-dotenv requests
    ```
 
 4. **PDF Upload Not Working**
+
    - Ensure `pymupdf4llm` is installed
    - Check PDF file is not encrypted or corrupted
 
@@ -239,21 +259,24 @@ pytest tests/ -v
 ### Environment Variables
 
 Required:
+
 - `OPENAI_API_KEY`: Your OpenAI API key
 
 Optional:
+
 - `OPENAI_MODEL`: Model to use (default: "gpt-5-nano")
 - `SQL_CONN_STRING`: PostgreSQL connection string
 - `USER_CREDENTIALS`: JSON for authentication (e.g., `{"admin":"password"}`)
-- `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`: For LATAM module integration
 
 ### Model Selection
 
 Different models available based on authentication:
+
 - **Guest users**: Limited to basic models
 - **Authenticated users**: Access to advanced models
 
 Configure authentication in `.env`:
+
 ```bash
 USER_CREDENTIALS='{"username":"password","admin":"admin123"}'
 ```
@@ -267,11 +290,11 @@ USER_CREDENTIALS='{"username":"password","admin":"admin123"}'
 - **Customize Prompts**: Edit jurisdiction-specific prompts in `src/prompts/`
 - **Review Themes**: Check `src/data/themes.csv` for PIL theme taxonomy
 - **Database Integration**: Set up PostgreSQL for persistent storage
-- **LATAM Module**: Explore `latam_case_analysis/` for regional case processing
 
 ## Support
 
 For issues and questions:
+
 - Review comprehensive documentation in the `docs/` folder
 - Check existing GitHub repository issues
 - Consult the [CoLD project website](https://cold.global/) for research context
