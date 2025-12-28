@@ -3,14 +3,20 @@
 Input handling components for the CoLD Case Analyzer.
 """
 
+import logging
+
 import streamlit as st
 
+from utils.azure_storage import upload_pdf_to_azure
 from utils.pdf_handler import extract_text_from_pdf
+
+logger = logging.getLogger(__name__)
 
 
 def render_pdf_uploader():
     """
     Render the PDF uploader and handle automatic text extraction.
+    Also uploads the PDF to Azure Blob Storage if configured.
 
     Returns:
         bool: True if PDF was successfully processed
@@ -25,12 +31,24 @@ def render_pdf_uploader():
 
     if pdf_file is not None:
         try:
+            # Upload to Azure Blob Storage if configured
+            azure_result = upload_pdf_to_azure(pdf_file, original_filename=pdf_file.name)
+            if azure_result:
+                st.session_state.pdf_url = azure_result["url"]
+                st.session_state.pdf_uuid = azure_result["uuid"]
+                st.session_state.pdf_filename = azure_result["filename"]
+                logger.info(f"PDF uploaded to Azure with UUID: {azure_result['uuid']}")
+            else:
+                logger.warning("PDF not uploaded to Azure Storage (not configured or failed)")
+
+            # Extract text from PDF
             extracted = extract_text_from_pdf(pdf_file)
             st.session_state.full_text_input = extracted
             st.success("Extracted text from PDF successfully.")
             return True
         except Exception as e:
             st.error(f"Failed to extract text from PDF: {e}")
+            logger.error(f"PDF processing error: {e}", exc_info=True)
             return False
 
     return False

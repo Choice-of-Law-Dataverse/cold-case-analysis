@@ -17,14 +17,19 @@ def create_initial_analysis_state(case_citation, username, full_text, final_juri
     Create the initial analysis state dictionary.
 
     Args:
+        case_citation: The case citation
         username: The current user
         full_text: The full court decision text
         final_jurisdiction_data: The jurisdiction detection results
+        user_email: Optional user email for contact
 
     Returns:
         dict: Initial state dictionary
     """
-    return {
+    import streamlit as st
+
+    state = {
+        "case_citation": case_citation,
         "username": username,
         "full_text": full_text,
         "col_section": [],
@@ -34,6 +39,16 @@ def create_initial_analysis_state(case_citation, username, full_text, final_juri
         "jurisdiction_eval_score": final_jurisdiction_data.get("evaluation_score"),
         "user_email": user_email,
     }
+
+    # Include PDF metadata if available in session state
+    if "pdf_url" in st.session_state:
+        state["pdf_url"] = st.session_state.pdf_url
+    if "pdf_uuid" in st.session_state:
+        state["pdf_uuid"] = st.session_state.pdf_uuid
+    if "pdf_filename" in st.session_state:
+        state["pdf_filename"] = st.session_state.pdf_filename
+
+    return state
 
 
 def update_col_state(state_updates):
