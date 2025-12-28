@@ -42,11 +42,11 @@ def create_initial_analysis_state(case_citation, username, full_text, final_juri
 
     # Include PDF metadata if available in session state
     if "pdf_url" in st.session_state:
-        state["pdf_url"] = st.session_state.pdf_url
+        state["pdf_url"] = st.session_state["pdf_url"]
     if "pdf_uuid" in st.session_state:
-        state["pdf_uuid"] = st.session_state.pdf_uuid
+        state["pdf_uuid"] = st.session_state["pdf_uuid"]
     if "pdf_filename" in st.session_state:
-        state["pdf_filename"] = st.session_state.pdf_filename
+        state["pdf_filename"] = st.session_state["pdf_filename"]
 
     return state
 
