@@ -9,24 +9,89 @@ The CoLD Case Analyzer now supports automatic upload of PDF files to Azure Blob 
 3. Stores the Azure URL, UUID, and filename in the analysis state
 4. Saves this metadata to the database as part of the analysis results
 
-## Configuration
+## Authentication Methods
 
-To enable Azure Blob Storage integration, set the following environment variables in your `.env` file:
+The system supports two authentication methods:
 
+### Option 1: Managed Identity (Recommended for Azure Container Apps)
+
+Uses Azure's built-in Managed Identity for secure, credential-free authentication.
+
+**Environment Variables:**
 ```bash
-# Azure Blob Storage connection string
-AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
+AZURE_STORAGE_ACCOUNT_NAME="your_storage_account_name"
+AZURE_STORAGE_CONTAINER_NAME="case-pdfs"
 
-# Azure Blob Storage container name for PDFs
+# Optional: For User-assigned Managed Identity
+# AZURE_CLIENT_ID="your-user-assigned-identity-client-id"
+```
+
+**Setup Steps:**
+1. Enable Managed Identity on your Container App (Settings → Identity)
+2. Assign "Storage Blob Data Contributor" role to the identity
+3. Configure environment variables (no secrets needed!)
+
+**Benefits:**
+- No connection strings or keys to manage
+- Automatic credential rotation
+- Works seamlessly with Azure Container Apps
+- Supports both System-assigned and User-assigned identities
+
+### Option 2: Connection String (Traditional)
+
+Uses storage account connection string with access keys.
+
+**Environment Variables:**
+```bash
+AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
 AZURE_STORAGE_CONTAINER_NAME="case-pdfs"
 ```
 
-### Getting Your Azure Credentials
-
+**Getting Connection String:**
 1. Create an Azure Storage Account in the Azure Portal
 2. Create a container (e.g., `case-pdfs`) in the storage account
 3. Go to "Access keys" under the storage account settings
 4. Copy the connection string
+
+## Configuration
+
+### For Azure Container Apps (Managed Identity)
+
+1. **Enable Managed Identity:**
+   - Navigate to your Container App in Azure Portal
+   - Settings → Identity → System assigned
+   - Toggle Status to "On" and Save
+
+2. **Grant Storage Access:**
+   - Navigate to your Storage Account
+   - Access Control (IAM) → Add role assignment
+   - Select "Storage Blob Data Contributor"
+   - Assign to your Container App's Managed Identity
+
+3. **Configure Environment Variables:**
+   - In Container App: Settings → Environment variables
+   - Add: `AZURE_STORAGE_ACCOUNT_NAME` = your storage account name
+   - Add: `AZURE_STORAGE_CONTAINER_NAME` = `case-pdfs`
+   - (Remove `AZURE_STORAGE_CONNECTION_STRING` if present)
+
+### For Local Development
+
+**With Managed Identity:**
+1. Install Azure CLI: `az login`
+2. Grant your user account "Storage Blob Data Contributor" role on the storage account
+3. Set environment variables:
+   ```bash
+   export AZURE_STORAGE_ACCOUNT_NAME="your_account_name"
+   export AZURE_STORAGE_CONTAINER_NAME="case-pdfs"
+   ```
+4. Run your app - `DefaultAzureCredential` will use Azure CLI credentials
+
+**With Connection String:**
+1. Set environment variables in `.env`:
+   ```bash
+   AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=..."
+   AZURE_STORAGE_CONTAINER_NAME="case-pdfs"
+   ```
 
 ## Behavior
 
@@ -63,7 +128,7 @@ The PDF metadata is stored in the `suggestions_case_analyzer` table's `data` JSO
 
 ### `upload_pdf_to_azure(pdf_file, original_filename)`
 
-Uploads a PDF file to Azure Blob Storage.
+Uploads a PDF file to Azure Blob Storage using configured authentication method.
 
 **Parameters:**
 - `pdf_file` (file-like): The PDF file object from Streamlit's file uploader
@@ -72,6 +137,11 @@ Uploads a PDF file to Azure Blob Storage.
 **Returns:**
 - `dict` with keys `uuid`, `url`, `filename` on success
 - `None` if Azure is not configured or upload fails
+
+**Authentication:**
+- Automatically uses Managed Identity if `AZURE_STORAGE_ACCOUNT_NAME` is set
+- Falls back to connection string if `AZURE_STORAGE_CONNECTION_STRING` is set
+- Works with both System-assigned and User-assigned Managed Identities
 
 **Example:**
 ```python

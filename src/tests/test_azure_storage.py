@@ -17,15 +17,23 @@ from utils.azure_storage import is_azure_storage_configured, upload_pdf_to_azure
 class TestAzureStorageConfiguration:
     """Tests for Azure Storage configuration checking."""
 
-    def test_is_configured_with_both_values(self, monkeypatch):
-        """Test that is_azure_storage_configured returns True when both values are set."""
+    def test_is_configured_with_connection_string(self, monkeypatch):
+        """Test that is_azure_storage_configured returns True with connection string."""
         monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "test_connection_string")
         monkeypatch.setenv("AZURE_STORAGE_CONTAINER_NAME", "test_container")
         assert is_azure_storage_configured() is True
 
-    def test_is_not_configured_missing_connection_string(self, monkeypatch):
-        """Test that is_azure_storage_configured returns False when connection string is missing."""
+    def test_is_configured_with_account_name(self, monkeypatch):
+        """Test that is_azure_storage_configured returns True with account name (Managed Identity)."""
         monkeypatch.delenv("AZURE_STORAGE_CONNECTION_STRING", raising=False)
+        monkeypatch.setenv("AZURE_STORAGE_ACCOUNT_NAME", "test_account")
+        monkeypatch.setenv("AZURE_STORAGE_CONTAINER_NAME", "test_container")
+        assert is_azure_storage_configured() is True
+
+    def test_is_not_configured_missing_auth(self, monkeypatch):
+        """Test that is_azure_storage_configured returns False when both auth methods are missing."""
+        monkeypatch.delenv("AZURE_STORAGE_CONNECTION_STRING", raising=False)
+        monkeypatch.delenv("AZURE_STORAGE_ACCOUNT_NAME", raising=False)
         monkeypatch.setenv("AZURE_STORAGE_CONTAINER_NAME", "test_container")
         assert is_azure_storage_configured() is False
 
@@ -35,9 +43,10 @@ class TestAzureStorageConfiguration:
         monkeypatch.delenv("AZURE_STORAGE_CONTAINER_NAME", raising=False)
         assert is_azure_storage_configured() is False
 
-    def test_is_not_configured_both_missing(self, monkeypatch):
-        """Test that is_azure_storage_configured returns False when both values are missing."""
+    def test_is_not_configured_all_missing(self, monkeypatch):
+        """Test that is_azure_storage_configured returns False when all values are missing."""
         monkeypatch.delenv("AZURE_STORAGE_CONNECTION_STRING", raising=False)
+        monkeypatch.delenv("AZURE_STORAGE_ACCOUNT_NAME", raising=False)
         monkeypatch.delenv("AZURE_STORAGE_CONTAINER_NAME", raising=False)
         assert is_azure_storage_configured() is False
 
@@ -48,6 +57,7 @@ class TestUploadPdfToAzure:
     def test_upload_returns_none_when_not_configured(self, monkeypatch):
         """Test that upload returns None when Azure is not configured."""
         monkeypatch.delenv("AZURE_STORAGE_CONNECTION_STRING", raising=False)
+        monkeypatch.delenv("AZURE_STORAGE_ACCOUNT_NAME", raising=False)
         monkeypatch.delenv("AZURE_STORAGE_CONTAINER_NAME", raising=False)
 
         pdf_file = BytesIO(b"fake pdf content")
@@ -128,3 +138,34 @@ class TestUploadPdfToAzure:
 
         assert result is not None
         assert result["filename"] == "uploaded.pdf"
+
+    @patch("utils.azure_storage.DefaultAzureCredential")
+    @patch("utils.azure_storage.BlobServiceClient")
+    def test_upload_with_managed_identity(self, mock_blob_service, mock_credential, monkeypatch):
+        """Test successful PDF upload using Managed Identity."""
+        monkeypatch.delenv("AZURE_STORAGE_CONNECTION_STRING", raising=False)
+        monkeypatch.setenv("AZURE_STORAGE_ACCOUNT_NAME", "test_account")
+        monkeypatch.setenv("AZURE_STORAGE_CONTAINER_NAME", "test_container")
+
+        # Setup mock
+        mock_blob_client = MagicMock()
+        mock_blob_client.url = "https://test_account.blob.core.windows.net/test_container/test-uuid.pdf"
+        mock_blob_service.return_value.get_blob_client.return_value = mock_blob_client
+
+        pdf_file = BytesIO(b"fake pdf content")
+        result = upload_pdf_to_azure(pdf_file, "test.pdf")
+
+        assert result is not None
+        assert "uuid" in result
+        assert "url" in result
+        assert result["filename"] == "test.pdf"
+
+        # Verify DefaultAzureCredential was used
+        mock_credential.assert_called_once()
+        # Verify BlobServiceClient was created with account URL and credential
+        mock_blob_service.assert_called_once()
+        call_args = mock_blob_service.call_args
+        assert "https://test_account.blob.core.windows.net" in str(call_args)
+
+        # Verify blob was uploaded
+        mock_blob_client.upload_blob.assert_called_once()
