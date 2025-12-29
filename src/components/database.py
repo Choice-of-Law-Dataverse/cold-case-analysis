@@ -20,6 +20,9 @@ def save_to_db(state):
     """
     with logfire.span("save_to_db"):
         try:
+            case_citation_list = state.get("case_citation", [])
+            case_citation_str = case_citation_list[-1] if case_citation_list else None
+
             with psycopg2.connect(
                 host=os.getenv("POSTGRESQL_HOST"),
                 port=int(os.getenv("POSTGRESQL_PORT", "5432")),
@@ -44,7 +47,7 @@ def save_to_db(state):
                         "INSERT INTO suggestions_case_analyzer(username, case_citation, user_email, data) VALUES (%s, %s, %s, %s)",
                         (
                             state.get("username"),
-                            state.get("case_citation"),
+                            case_citation_str,
                             state.get("user_email"),
                             json.dumps(state),
                         ),

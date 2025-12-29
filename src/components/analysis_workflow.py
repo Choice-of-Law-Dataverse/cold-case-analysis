@@ -53,7 +53,7 @@ class WorkflowStateUpdater:
                 lst.append(value)
 
         if isinstance(result, CaseCitationOutput):
-            state["case_citation"] = result.case_citation
+            append_if_changed("case_citation", result.case_citation)
             append_if_changed("case_citation_confidence", result.confidence)
             append_if_changed("case_citation_reasoning", result.reasoning)
             return "case_citation"
@@ -208,8 +208,9 @@ def render_results_as_markdown(state):
     st.header("Analysis Results")
 
     # Case Citation
-    case_citation = state.get("case_citation", "N/A")
-    if case_citation:
+    case_citation_list = state.get("case_citation", [])
+    case_citation = case_citation_list[-1] if case_citation_list else "N/A"
+    if case_citation and case_citation != "N/A":
         confidence_key = "case_citation_confidence"
         reasoning_key = "case_citation_reasoning"
         confidence_list = state.get(confidence_key, [])
@@ -347,7 +348,7 @@ def reconstruct_outputs_from_state(state: dict) -> dict:
         )
 
     # CaseCitationOutput
-    case_citation = state.get("case_citation")
+    case_citation = get_last("case_citation")
     if case_citation:
         outputs["existing_case_citation"] = CaseCitationOutput(
             case_citation=case_citation,
@@ -567,8 +568,9 @@ def render_final_editing_phase():
 
     # Section 0: Case Citation
 
-    case_citation = state.get("case_citation", "N/A")
-    if case_citation:
+    case_citation_list = state.get("case_citation", [])
+    case_citation = case_citation_list[-1] if case_citation_list else "N/A"
+    if case_citation and case_citation != "N/A":
         confidence_key = "case_citation_confidence"
         reasoning_key = "case_citation_reasoning"
         confidence_list = state.get(confidence_key, [])
