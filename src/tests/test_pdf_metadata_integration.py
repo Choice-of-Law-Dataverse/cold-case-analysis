@@ -21,8 +21,13 @@ def test_pdf_metadata_in_state():
 
         pass
 
-    mock_st = type("MockStreamlit", (), {})()
-    mock_st.session_state = MockSessionState()
+    class MockStreamlit:
+        session_state: MockSessionState
+
+        def __init__(self):
+            self.session_state = MockSessionState()
+
+    mock_st = MockStreamlit()
 
     # Set PDF metadata in mock session state
     mock_st.session_state["pdf_url"] = "https://test.blob.core.windows.net/container/test-uuid.pdf"
@@ -30,7 +35,7 @@ def test_pdf_metadata_in_state():
     mock_st.session_state["pdf_filename"] = "test_case.pdf"
 
     # Mock streamlit module
-    sys.modules["streamlit"] = mock_st
+    sys.modules["streamlit"] = mock_st  # type: ignore
 
     try:
         # Create initial state
@@ -82,11 +87,16 @@ def test_state_without_pdf_metadata():
 
         pass
 
-    mock_st = type("MockStreamlit", (), {})()
-    mock_st.session_state = MockSessionState()
+    class MockStreamlit:
+        session_state: MockSessionState
+
+        def __init__(self):
+            self.session_state = MockSessionState()
+
+    mock_st = MockStreamlit()
 
     # Mock streamlit module
-    sys.modules["streamlit"] = mock_st
+    sys.modules["streamlit"] = mock_st  # type: ignore
 
     try:
         # Create initial state without PDF metadata

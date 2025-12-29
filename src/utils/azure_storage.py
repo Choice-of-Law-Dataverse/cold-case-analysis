@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class SupportsRead(Protocol):
-    def read(self, size: int | None = None) -> bytes:
-        ...
+    def read(self, size: int | None = None) -> bytes: ...
 
 
 def is_azure_storage_configured() -> bool:
@@ -81,6 +80,8 @@ def upload_pdf_to_azure(pdf_file: SupportsRead | BinaryIO, original_filename: st
 
     try:
         container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
+        if not container_name:
+            raise ValueError("AZURE_STORAGE_CONTAINER_NAME not configured")
 
         # Generate UUID for the file
         file_uuid = str(uuid.uuid4())
@@ -88,10 +89,6 @@ def upload_pdf_to_azure(pdf_file: SupportsRead | BinaryIO, original_filename: st
 
         # Read the file content
         file_content = pdf_file.read()
-
-        # Reset the file pointer if possible (for later text extraction)
-        if hasattr(pdf_file, "seek"):
-            pdf_file.seek(0)
 
         # Create blob service client and upload
         blob_service_client = _get_blob_service_client()

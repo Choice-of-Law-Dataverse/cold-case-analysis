@@ -48,7 +48,10 @@ class WorkflowStateUpdater:
 
         def append_if_changed(key: str, value: object):
             """Append value to list in state only if it differs from the last element."""
-            lst = state.setdefault(key, [])
+            lst = state.get(key)
+            if lst is None:
+                lst = []
+                state[key] = lst
             if not lst or lst[-1] != value:
                 lst.append(value)
 
