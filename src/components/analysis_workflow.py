@@ -130,8 +130,8 @@ def render_email_input():
     # Prefill with logged-in user's email if available
     default_email = ""
     try:
-        if hasattr(st, "user") and st.user.is_logged_in and hasattr(st.user, "name"):
-            default_email = st.user.name
+        if hasattr(st, "user") and st.user.is_logged_in and hasattr(st.user, "email"):
+            default_email = st.user.email
     except Exception:
         pass
 

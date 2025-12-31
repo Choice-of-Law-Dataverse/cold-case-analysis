@@ -10,7 +10,7 @@ def render_sidebar():
 
         try:
             if hasattr(st, "user") and st.user.is_logged_in:
-                st.success(f"Logged in as: {st.user.name}")
+                st.success(f"Logged in as: {st.user.email}")
                 if st.button("Log out"):
                     st.logout()
             else:
