@@ -40,6 +40,26 @@ def load_css():
         line-height: 28px !important;
     }
 
+    /* Login required message */
+    .login-required-message {
+        background-color: #FEF3C7;
+        border-left: 4px solid #F59E0B;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 4px;
+    }
+
+    .login-required-message p {
+        margin: 0;
+        color: #0F0035;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .login-required-message strong {
+        font-size: 16px;
+    }
+
 
     .cold-sidebar-footer {
         margin: 24px 0 0 0;

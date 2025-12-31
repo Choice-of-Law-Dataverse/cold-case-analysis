@@ -11,6 +11,14 @@ from components.jurisdiction import get_final_jurisdiction_data, render_jurisdic
 from utils.state_manager import create_initial_analysis_state, get_col_state
 
 
+def is_user_logged_in():
+    """Check if user is currently logged in."""
+    try:
+        return hasattr(st, "user") and st.user.is_logged_in
+    except Exception:
+        return False
+
+
 def render_initial_input_phase():
     """
     Render the initial input phase before any processing has begun.
@@ -55,6 +63,25 @@ def render_initial_input_phase():
 
 def render_main_workflow():
     """Render the complete main workflow."""
+    # Check authentication before allowing access to the tool
+    if not is_user_logged_in():
+        st.markdown(
+            """
+            <div class="login-required-message">
+                <p>
+                    <strong>🔒 Login Required</strong><br><br>
+                    You'll need a free account to submit content. We use authentication solely to prevent automated
+                    spam and vandalism, ensuring the integrity of our database. Your account is completely free and takes just moments to create.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("🔐 Log in or Sign up", type="primary"):
+            st.login("auth0")
+        return
+
+    # User is authenticated, proceed with normal workflow
     if not get_col_state().get("full_text"):
         render_initial_input_phase()
     else:

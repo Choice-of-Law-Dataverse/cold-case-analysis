@@ -126,9 +126,19 @@ def render_email_input():
     """Render optional email input for contact consent."""
     st.markdown("**Contact Email (optional):**")
     st.caption("If you agree to be contacted about your contributed cases and analyses, provide an email address.")
+
+    # Prefill with logged-in user's email if available
+    default_email = ""
+    try:
+        if hasattr(st, "user") and st.user.is_logged_in and hasattr(st.user, "email"):
+            default_email = st.user.email
+    except Exception:
+        pass
+
     return st.text_input(
         label="Email",
         key="user_email",
+        value=default_email if "user_email" not in st.session_state else st.session_state.user_email,
         placeholder="name@example.com",
         label_visibility="collapsed",
     )

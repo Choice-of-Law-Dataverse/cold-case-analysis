@@ -1,33 +1,23 @@
 import streamlit as st
 
-import config
-
 
 def render_sidebar():
     """
     Render the sidebar with login controls, instructions, and documentation.
     """
-    credentials = config.USER_CREDENTIALS
     with st.sidebar:
         st.subheader("Login")
-        if not st.session_state.get("logged_in"):
-            username = st.text_input("Username", key="login_user")
-            password = st.text_input("Password", type="password", key="login_pass")
-            if st.button("Login", key="login_button"):
-                if credentials.get(username) == password:
-                    st.session_state["logged_in"] = True
-                    st.session_state["user"] = username
-                    st.success(f"Logged in as {username}")
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password")
-        else:
-            st.write(f"Logged in as: {st.session_state['user']}")
-            if st.button("Logout", key="logout_button"):
-                st.session_state["logged_in"] = False
-                st.session_state["user"] = ""
-                st.success("Logged out")
-                st.rerun()
+
+        try:
+            if hasattr(st, "user") and st.user.is_logged_in:
+                st.success(f"Logged in as: {st.user.email}")
+                if st.button("Log out"):
+                    st.logout()
+            else:
+                if st.button("Log in or Sign up"):
+                    st.login("auth0")
+        except Exception:
+            st.info("Not logged in")
 
         st.header("How to Use")
         st.markdown("""
